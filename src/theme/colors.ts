@@ -1,116 +1,110 @@
-// Glowera Color System - "Golden Hour Sanctuary"
-// Warm, nurturing palette inspired by sunrise moments
+// Glowera Color System - "Lavender Bloom"
+// Soft lavender and plum palette inspired by spring blossoms
 
 export const colors = {
-  // Primary - Warm Peach to Rose gradient range
-  peach50: '#FFF8F5',
-  peach100: '#FFEDE5',
-  peach200: '#FFDDD0',
-  peach300: '#FFCAB8',
-  peach400: '#FFB199',  // Primary accent
-  peach500: '#FF9B7A',
+  // Primary - Lavender range (flower petals)
+  lavender50: '#FAF5FC',
+  lavender100: '#F5EBF8',
+  lavender200: '#E8D9F0',
+  lavender300: '#D4C4E8',  // Main lavender accent
+  lavender400: '#C4B0E0',
+  lavender500: '#B09AD6',
 
-  // Secondary - Soft Blush Pinks
-  blush50: '#FFF5F7',
-  blush100: '#FFE8ED',
-  blush200: '#FFD4DE',
-  blush300: '#FFBDCC',
-  blush400: '#FF99B5',  // Original primary
-  blush500: '#FF7A9C',
+  // Secondary - Blush Pink
+  blush50: '#FDF5F8',
+  blush100: '#FAE8ED',  // Main background
+  blush200: '#F5D6E0',
+  blush300: '#EDBED0',
+  blush400: '#E8A4C8',  // Pink border/accent
+  blush500: '#DE8AB8',
 
-  // Tertiary - Dusty Rose / Mauve
-  rose50: '#FDF5F8',
-  rose100: '#F8E8ED',
-  rose200: '#F0D4DE',
-  rose300: '#E5BDC9',
-  rose400: '#D4A3B3',
+  // Tertiary - Deep Plum (for headlines)
+  plum50: '#F5EBF0',
+  plum100: '#E8D4DE',
+  plum200: '#D4A8C0',
+  plum300: '#A86890',
+  plum400: '#7A4068',
+  plum500: '#5C2D5C',  // Deep plum text
 
-  // Accent - Soft Sage (more muted than mint)
+  // Accent - Soft Sage (kept for variety)
   sage50: '#F5FAF7',
   sage100: '#E8F4ED',
   sage200: '#D1E9DB',
   sage300: '#B8DCC6',
   sage400: '#9ECFB0',
 
-  // Lavender - kept for variety
-  lavender50: '#F9F7FF',
-  lavender100: '#F0EBFF',
-  lavender200: '#E2D9FF',
-  lavender300: '#C9ADFF',
-  lavender400: '#B591F5',
+  // Neutral backgrounds - soft pink tints
+  cream50: '#FEFCFD',
+  cream100: '#FCF8FA',
+  cream200: '#FAF5F7',
+  cream300: '#F5EDF0',
+  cream400: '#EDE3E8',
 
-  // Warm Cream backgrounds
-  cream50: '#FFFDFB',
-  cream100: '#FFF9F5',
-  cream200: '#FFF3EB',
-  cream300: '#FFEDE0',
-  cream400: '#FFE5D4',
+  // Warm neutrals
+  tan50: '#FAF7F8',
+  tan100: '#F5EEEF',
+  tan200: '#EBE3E5',
+  tan300: '#DED3D6',
 
-  // Warm Tan for depth
-  tan50: '#FAF7F5',
-  tan100: '#F5EDE8',
-  tan200: '#EBE0D8',
-  tan300: '#DED0C5',
+  // Text - with plum undertones
+  textPrimary: '#1A1A1A',      // Near black for body
+  textSecondary: '#5C4A52',    // Warm gray-plum
+  textMuted: '#8A7A82',        // Muted plum-gray
+  textLight: '#B8A8B0',        // Light muted
 
-  // Text - warmer undertones
-  textPrimary: '#3D3535',
-  textSecondary: '#6B5B5B',
-  textMuted: '#9A8B8B',
-  textLight: '#C4B8B8',
-
-  // Semantic - warmer versions
+  // Semantic
   success: '#9ECFB0',
-  warning: '#FFD4A8',
-  error: '#FFADA8',
+  warning: '#F5D4A8',
+  error: '#E89090',
 
   // Base
   white: '#FFFFFF',
-  black: '#1A1A1A',
+  black: '#000000',
   transparent: 'transparent',
 };
 
-// Category colors - harmonious warm palette
+// Category colors - lavender bloom palette
 export const categoryColors: Record<string, string> = {
-  nutrition: '#FFB199',     // Warm peach
+  nutrition: '#D4C4E8',     // Lavender
   movement: '#9ECFB0',      // Soft sage
-  supplements: '#FFD4A8',   // Honey
-  hobbies: '#C9ADFF',       // Lavender
-  'self-care': '#FFBDCC',   // Blush
-  reflection: '#E5BDC9',    // Dusty rose
+  supplements: '#E8A4C8',   // Pink
+  hobbies: '#B09AD6',       // Deep lavender
+  'self-care': '#EDBED0',   // Blush
+  reflection: '#7A4068',    // Plum
 };
 
 // Gradient definitions for backgrounds
 export const gradients = {
-  warmSunrise: ['#FFF9F5', '#FFEDE5', '#FFE8ED'],
-  peachGlow: ['#FFFDFB', '#FFF3EB', '#FFDDD0'],
-  softBlush: ['#FFF5F7', '#FFE8ED', '#FFEDE5'],
-  creamyRose: ['#FFFDFB', '#FFF8F5', '#FFF5F7'],
+  lavenderBloom: ['#FAE8ED', '#F5EBF8', '#E8D9F0'],
+  softBlush: ['#FDF5F8', '#FAE8ED', '#F5D6E0'],
+  lavenderMist: ['#FAF5FC', '#F5EBF8', '#FAE8ED'],
+  plumGlow: ['#FAE8ED', '#E8D4DE', '#D4A8C0'],
 };
 
 // Default theme
 export const theme = {
   // Core colors
-  primary: colors.blush400,
-  primaryLight: colors.blush200,
-  primaryDark: colors.blush500,
+  primary: colors.plum500,       // Deep plum for primary actions
+  primaryLight: colors.plum200,
+  primaryDark: colors.plum500,
 
-  secondary: colors.peach400,
-  secondaryLight: colors.peach200,
+  secondary: colors.lavender300, // Lavender accent
+  secondaryLight: colors.lavender100,
 
-  accent: colors.sage400,
-  accentLight: colors.sage200,
+  accent: colors.blush400,       // Pink accent
+  accentLight: colors.blush200,
 
-  tertiary: colors.lavender300,
+  tertiary: colors.sage400,
 
   // Backgrounds
-  background: colors.cream50,
-  backgroundWarm: colors.cream100,
-  backgroundGradientStart: '#FFF9F5',
-  backgroundGradientEnd: '#FFEDE5',
+  background: colors.blush100,   // Main background - light pink
+  backgroundWarm: colors.blush50,
+  backgroundGradientStart: '#FAE8ED',
+  backgroundGradientEnd: '#F5EBF8',
 
   // Surfaces
   surface: colors.white,
-  surfaceSecondary: colors.cream100,
+  surfaceSecondary: colors.blush50,
   surfaceTertiary: colors.cream200,
   surfaceElevated: colors.white,
 
@@ -122,17 +116,17 @@ export const theme = {
   textOnPrimary: colors.white,
 
   // Borders
-  border: colors.cream300,
-  borderLight: colors.cream200,
-  borderSubtle: colors.tan100,
+  border: colors.blush300,
+  borderLight: colors.blush200,
+  borderSubtle: colors.cream200,
 
   // Semantic
   success: colors.success,
   warning: colors.warning,
   error: colors.error,
 
-  // Shadows (warm-tinted)
-  shadowColor: '#D4A3B3',
+  // Shadows (lavender-tinted)
+  shadowColor: colors.lavender300,
 };
 
 export type ThemeColors = typeof theme;
