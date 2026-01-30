@@ -16,8 +16,9 @@ import {
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useUserStore, useHabitStore, usePlantStore, useJournalStore, useChallengeStore } from '../../src/stores';
+import { useUserStore, useHabitStore, usePlantStore, useJournalStore, useChallengeStore, useSupplementStore } from '../../src/stores';
 import { PlantDisplay } from '../../src/components/garden';
+import { GoalsSelectionModal } from '../../src/components/supplements';
 import { theme, spacing, borderRadius, shadows } from '../../src/theme';
 
 const THEME_OPTIONS = [
@@ -34,6 +35,7 @@ export default function ProfileScreen() {
   const { plant, getProgressToNext, getPointsToNext, resetPlant } = usePlantStore();
   const { entries, resetJournal } = useJournalStore();
   const { challenges, getCompletedChallenges, resetChallenges } = useChallengeStore();
+  const { wellnessGoals, resetSupplementPreferences } = useSupplementStore();
 
   // Modal states
   const [showEditNameModal, setShowEditNameModal] = useState(false);
@@ -45,6 +47,7 @@ export default function ProfileScreen() {
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showTimePickerModal, setShowTimePickerModal] = useState(false);
   const [showAddHabitModal, setShowAddHabitModal] = useState(false);
+  const [showWellnessGoalsModal, setShowWellnessGoalsModal] = useState(false);
   const [editedGardenName, setEditedGardenName] = useState(user?.gardenName || '');
   const [editingTimeType, setEditingTimeType] = useState<'morning' | 'evening'>('morning');
   const [selectedHour, setSelectedHour] = useState(8);
@@ -74,6 +77,7 @@ export default function ProfileScreen() {
             resetPlant();
             resetJournal();
             resetChallenges();
+            resetSupplementPreferences();
             router.replace('/(auth)/welcome');
           },
         },
@@ -376,6 +380,12 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Settings</Text>
           <View style={styles.card}>
+            <MenuItem
+              icon="🎯"
+              label="Wellness Goals"
+              value={wellnessGoals.length > 0 ? `${wellnessGoals.length} selected` : 'None'}
+              onPress={() => setShowWellnessGoalsModal(true)}
+            />
             <MenuItem
               icon="🔔"
               label="Notifications"
@@ -1086,6 +1096,12 @@ export default function ProfileScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {/* Wellness Goals Modal */}
+      <GoalsSelectionModal
+        visible={showWellnessGoalsModal}
+        onClose={() => setShowWellnessGoalsModal(false)}
+      />
     </View>
   );
 }

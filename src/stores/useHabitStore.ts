@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import { Habit, HabitCompletion, CompletionType, DailyHabitSummary } from '../types/habit';
+import { SupplementInfo, SupplementMetadata } from '../types/supplement';
 import { zustandStorage } from '../utils/storage';
 import { formatDateKey, getISOTimestamp } from '../utils/dateUtils';
 import { calculateHabitPoints } from '../utils/pointsCalculator';
@@ -13,6 +14,7 @@ interface HabitState {
   // Actions
   addHabit: (habit: Omit<Habit, 'id' | 'createdAt' | 'order' | 'isActive'>) => void;
   addHabits: (habits: Omit<Habit, 'id' | 'createdAt' | 'order' | 'isActive'>[]) => void;
+  addSupplementHabit: (supplementInfo: SupplementInfo, metadata: SupplementMetadata) => string;
   removeHabit: (habitId: string) => void;
   toggleHabitActive: (habitId: string) => void;
   updateHabitOrder: (habitId: string, newOrder: number) => void;
@@ -59,6 +61,27 @@ export const useHabitStore = create<HabitState>()(
           isActive: true,
         }));
         set({ habits: [...habits, ...newHabits] });
+      },
+
+      addSupplementHabit: (supplementInfo, metadata) => {
+        const { habits } = get();
+        const habitId = uuidv4();
+        const newHabit: Habit = {
+          id: habitId,
+          name: supplementInfo.name,
+          category: 'supplements',
+          icon: supplementInfo.icon,
+          isCustom: false,
+          isActive: true,
+          createdAt: getISOTimestamp(),
+          order: habits.length,
+          supplementMeta: {
+            ...metadata,
+            supplementInfoId: supplementInfo.id,
+          },
+        };
+        set({ habits: [...habits, newHabit] });
+        return habitId;
       },
 
       removeHabit: (habitId) => {

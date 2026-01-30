@@ -1,16 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   Dimensions,
+  Pressable,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useUserStore, useHabitStore, usePlantStore } from '../../src/stores';
+import { useUserStore, useHabitStore, usePlantStore, useSupplementStore } from '../../src/stores';
 import { HabitCard } from '../../src/components/habits';
 import { GlowMeter } from '../../src/components/garden';
 import { PlantDisplay } from '../../src/components/garden';
+import { SupplementLibraryModal, SupplementSuggestionCard } from '../../src/components/supplements';
+import { SupplementInfo } from '../../src/types/supplement';
 import { theme, spacing, borderRadius, shadows } from '../../src/theme';
 import { getGreeting, formatDisplayDate } from '../../src/utils/dateUtils';
 import { CompletionType } from '../../src/types/habit';
@@ -18,6 +21,9 @@ import { CompletionType } from '../../src/types/habit';
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
+  const [showSupplementLibrary, setShowSupplementLibrary] = useState(false);
+  const [selectedSuggestion, setSelectedSuggestion] = useState<SupplementInfo | null>(null);
+
   const { user } = useUserStore();
   const { addPoints } = usePlantStore();
   const { plant, getProgressToNext, getPointsToNext } = usePlantStore();
@@ -90,6 +96,41 @@ export default function HomeScreen() {
           </Text>
         </View>
 
+        {/* Explore Supplements Card */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.exploreCard,
+            pressed && styles.exploreCardPressed,
+          ]}
+          onPress={() => setShowSupplementLibrary(true)}
+        >
+          <LinearGradient
+            colors={['rgba(232, 164, 200, 0.15)', 'rgba(212, 196, 232, 0.15)']}
+            style={styles.exploreCardGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          />
+          <View style={styles.exploreIconContainer}>
+            <Text style={styles.exploreIcon}>💊</Text>
+          </View>
+          <View style={styles.exploreContent}>
+            <Text style={styles.exploreTitle}>Explore Supplements</Text>
+            <Text style={styles.exploreSubtitle}>
+              Discover vitamins, minerals & more
+            </Text>
+          </View>
+          <Text style={styles.exploreArrow}>›</Text>
+        </Pressable>
+
+        {/* Personalized Suggestions */}
+        <SupplementSuggestionCard
+          onViewSupplement={(supplement) => {
+            setSelectedSuggestion(supplement);
+            setShowSupplementLibrary(true);
+          }}
+          onViewMore={() => setShowSupplementLibrary(true)}
+        />
+
         {/* Today's Habits Section */}
         <View style={styles.habitsSection}>
           <View style={styles.sectionHeader}>
@@ -141,6 +182,12 @@ export default function HomeScreen() {
         {/* Bottom spacing for tab bar */}
         <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      {/* Supplement Library Modal */}
+      <SupplementLibraryModal
+        visible={showSupplementLibrary}
+        onClose={() => setShowSupplementLibrary(false)}
+      />
     </View>
   );
 }
@@ -204,6 +251,55 @@ const styles = StyleSheet.create({
     color: theme.textSecondary,
     marginTop: spacing.md,
     letterSpacing: 0.3,
+  },
+  exploreCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.surface,
+    borderRadius: borderRadius.card,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(232, 164, 200, 0.3)',
+    overflow: 'hidden',
+    ...shadows.sm,
+  },
+  exploreCardPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.99 }],
+  },
+  exploreCardGradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  exploreIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(232, 164, 200, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  exploreIcon: {
+    fontSize: 22,
+  },
+  exploreContent: {
+    flex: 1,
+  },
+  exploreTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.text,
+    marginBottom: 2,
+  },
+  exploreSubtitle: {
+    fontSize: 13,
+    color: theme.textSecondary,
+  },
+  exploreArrow: {
+    fontSize: 24,
+    fontWeight: '300',
+    color: theme.textMuted,
   },
   habitsSection: {
     marginBottom: spacing.lg,

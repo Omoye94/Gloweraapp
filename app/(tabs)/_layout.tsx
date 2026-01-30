@@ -47,6 +47,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="glowstack"
+        options={{
+          title: 'Glow Stack',
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon="💊" label="Stack" focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="journal"
         options={{
           title: 'Reflections',

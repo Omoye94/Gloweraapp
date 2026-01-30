@@ -1,3 +1,5 @@
+import { SupplementMetadata } from './supplement';
+
 export type HabitCategory =
   | 'nutrition'
   | 'movement'
@@ -15,6 +17,7 @@ export interface Habit {
   isActive: boolean;
   createdAt: string;
   order: number;
+  supplementMeta?: SupplementMetadata; // Optional supplement-specific data
 }
 
 export type CompletionType = 'gentle' | 'full';

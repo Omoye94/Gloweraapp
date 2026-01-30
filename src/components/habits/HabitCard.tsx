@@ -52,9 +52,36 @@ export const HabitCard: React.FC<HabitCardProps> = ({
           <View style={[styles.iconContainer, { backgroundColor: `${categoryColor}15` }]}>
             <Text style={styles.icon}>{habit.icon}</Text>
           </View>
-          <Text style={[styles.name, isCompleted && styles.completedText]} numberOfLines={2}>
-            {habit.name}
-          </Text>
+          <View style={styles.habitTextContainer}>
+            <Text style={[styles.name, isCompleted && styles.completedText]} numberOfLines={2}>
+              {habit.name}
+            </Text>
+            {/* Supplement metadata */}
+            {habit.category === 'supplements' && habit.supplementMeta && (
+              <View style={styles.supplementMeta}>
+                {habit.supplementMeta.dosage && (
+                  <View style={styles.metaItem}>
+                    <Text style={styles.metaIcon}>💊</Text>
+                    <Text style={styles.metaText}>{habit.supplementMeta.dosage}</Text>
+                  </View>
+                )}
+                {habit.supplementMeta.timingPreference && (
+                  <View style={styles.metaItem}>
+                    <Text style={styles.metaIcon}>
+                      {habit.supplementMeta.timingPreference === 'morning' ? '🌅' :
+                       habit.supplementMeta.timingPreference === 'evening' ? '🌙' :
+                       habit.supplementMeta.timingPreference === 'with-food' ? '🍽️' : '⏰'}
+                    </Text>
+                    <Text style={styles.metaText}>
+                      {habit.supplementMeta.timingPreference === 'morning' ? 'Morning' :
+                       habit.supplementMeta.timingPreference === 'evening' ? 'Evening' :
+                       habit.supplementMeta.timingPreference === 'with-food' ? 'With food' : 'Any time'}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
         </View>
 
         {/* Completion buttons */}
@@ -132,7 +159,7 @@ const styles = StyleSheet.create({
   },
   habitInfo: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: spacing.md,
   },
   iconContainer: {
@@ -146,15 +173,40 @@ const styles = StyleSheet.create({
   icon: {
     fontSize: 22,
   },
+  habitTextContainer: {
+    flex: 1,
+  },
   name: {
     fontSize: 16,
     fontWeight: '500',
     color: theme.text,
-    flex: 1,
     letterSpacing: -0.2,
   },
   completedText: {
     color: theme.textSecondary,
+  },
+  supplementMeta: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 6,
+    gap: spacing.sm,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(232, 164, 200, 0.1)',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: borderRadius.pill,
+  },
+  metaIcon: {
+    fontSize: 10,
+    marginRight: 4,
+  },
+  metaText: {
+    fontSize: 11,
+    color: theme.textSecondary,
+    fontWeight: '500',
   },
   buttonsContainer: {
     flexDirection: 'row',
