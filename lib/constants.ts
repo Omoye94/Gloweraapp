@@ -1,4 +1,4 @@
-import { FocusArea, HabitCategory, PlantGrowthStage } from '../types';
+import { FocusArea, HabitCategory, PlantGrowthStage, SupplementTimeOfDay } from '../types';
 
 // Color palette
 export const colors = {
@@ -57,6 +57,8 @@ export const POINTS = {
   DAILY_COMPLETE: 25,
   CHALLENGE_COMPLETE: 50,
   REFLECTION_COMPLETE: 10,
+  SUPPLEMENT_TAKEN: 5,
+  ALL_SUPPLEMENTS_TAKEN: 15,
 } as const;
 
 // Plant growth thresholds
@@ -176,6 +178,54 @@ export const moodOptions = [
   { emoji: '💪', label: 'Motivated' },
   { emoji: '🥰', label: 'Loved' },
   { emoji: '🌱', label: 'Growing' },
+];
+
+// Supplement time of day labels
+export const supplementTimeLabels: Record<SupplementTimeOfDay, string> = {
+  morning: 'Morning',
+  afternoon: 'Afternoon',
+  evening: 'Evening',
+  anytime: 'Anytime',
+};
+
+// Supplement time of day icons (Lucide icon names)
+export const supplementTimeIcons: Record<SupplementTimeOfDay, string> = {
+  morning: 'sunrise',
+  afternoon: 'sun',
+  evening: 'moon',
+  anytime: 'clock',
+};
+
+// Supplement completion messages
+export const SUPPLEMENT_MESSAGES = {
+  taken: [
+    "Nourishing your body, one pill at a time",
+    "Your body thanks you",
+    "Supplements taken, glow activated",
+    "Consistency is self-love",
+    "Another step toward radiance",
+  ],
+  allTaken: [
+    "All supplements taken! You're glowing",
+    "Full supplement routine complete!",
+    "Every vitamin accounted for, amazing!",
+    "Your body is getting everything it needs",
+    "Supplement queen! All done for today",
+  ],
+};
+
+// Default supplement suggestions with dosages
+export const defaultSupplementSuggestions: { name: string; dosage: string }[] = [
+  { name: 'Vitamin D', dosage: '2000 IU' },
+  { name: 'Omega-3', dosage: '1000 mg' },
+  { name: 'Magnesium', dosage: '400 mg' },
+  { name: 'Iron', dosage: '18 mg' },
+  { name: 'Vitamin B12', dosage: '1000 mcg' },
+  { name: 'Probiotics', dosage: '10B CFU' },
+  { name: 'Vitamin C', dosage: '500 mg' },
+  { name: 'Zinc', dosage: '15 mg' },
+  { name: 'Biotin', dosage: '5000 mcg' },
+  { name: 'Collagen', dosage: '10 g' },
 ];
 
 // Weekly reflection prompts

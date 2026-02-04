@@ -10,7 +10,8 @@ CREATE TYPE habit_frequency AS ENUM ('daily', 'weekly', 'custom');
 CREATE TYPE completion_type AS ENUM ('gently', 'fully');
 CREATE TYPE plant_growth_stage AS ENUM ('seed', 'sprout', 'bud', 'bloom', 'glow');
 CREATE TYPE reminder_preference AS ENUM ('gentle', 'minimal', 'none');
-CREATE TYPE point_source AS ENUM ('habit_gently', 'habit_fully', 'daily_complete', 'challenge', 'reflection');
+CREATE TYPE point_source AS ENUM ('habit_gently', 'habit_fully', 'daily_complete', 'challenge', 'reflection', 'supplement', 'supplement_all');
+CREATE TYPE supplement_time_of_day AS ENUM ('morning', 'afternoon', 'evening', 'anytime');
 
 -- Users table (extends Supabase auth.users)
 CREATE TABLE users (
@@ -136,6 +137,31 @@ CREATE TABLE points_ledger (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Supplements table
+CREATE TABLE supplements (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  dosage TEXT,
+  time_of_day supplement_time_of_day DEFAULT 'anytime',
+  icon TEXT DEFAULT 'pill',
+  color TEXT DEFAULT '#D4FFE0',
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Supplement logs table
+CREATE TABLE supplement_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  supplement_id UUID NOT NULL REFERENCES supplements(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  taken_at DATE NOT NULL DEFAULT CURRENT_DATE,
+  points_earned INTEGER NOT NULL DEFAULT 5,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(supplement_id, taken_at)
+);
+
 -- Create indexes for better query performance
 CREATE INDEX idx_habits_user_id ON habits(user_id);
 CREATE INDEX idx_habit_completions_user_id ON habit_completions(user_id);
@@ -146,6 +172,10 @@ CREATE INDEX idx_reflections_user_id ON reflections(user_id);
 CREATE INDEX idx_pod_memberships_user_id ON pod_memberships(user_id);
 CREATE INDEX idx_pod_messages_pod_id ON pod_messages(pod_id);
 CREATE INDEX idx_points_ledger_user_id ON points_ledger(user_id);
+CREATE INDEX idx_supplements_user_id ON supplements(user_id);
+CREATE INDEX idx_supplement_logs_user_id ON supplement_logs(user_id);
+CREATE INDEX idx_supplement_logs_taken_at ON supplement_logs(taken_at);
+CREATE INDEX idx_supplement_logs_supplement_id ON supplement_logs(supplement_id);
 
 -- Helper functions
 CREATE OR REPLACE FUNCTION increment_user_points(user_id UUID, points_to_add INTEGER)
@@ -187,6 +217,9 @@ FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER update_plants_updated_at BEFORE UPDATE ON plants
 FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
+CREATE TRIGGER update_supplements_updated_at BEFORE UPDATE ON supplements
+FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
 -- Row Level Security (RLS) Policies
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE habits ENABLE ROW LEVEL SECURITY;
@@ -198,6 +231,8 @@ ALTER TABLE reflections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE community_pods ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pod_memberships ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pod_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE supplements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE supplement_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE points_ledger ENABLE ROW LEVEL SECURITY;
 
 -- Users policies
@@ -249,6 +284,17 @@ CREATE POLICY "Pod members can view messages" ON pod_messages FOR SELECT
 CREATE POLICY "Pod members can send messages" ON pod_messages FOR INSERT
   WITH CHECK (EXISTS (SELECT 1 FROM pod_memberships WHERE pod_id = pod_messages.pod_id AND user_id = auth.uid()));
 CREATE POLICY "Users can update own messages" ON pod_messages FOR UPDATE USING (auth.uid() = user_id);
+
+-- Supplements policies
+CREATE POLICY "Users can view own supplements" ON supplements FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can create own supplements" ON supplements FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own supplements" ON supplements FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own supplements" ON supplements FOR DELETE USING (auth.uid() = user_id);
+
+-- Supplement logs policies
+CREATE POLICY "Users can view own supplement logs" ON supplement_logs FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can create own supplement logs" ON supplement_logs FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can delete own supplement logs" ON supplement_logs FOR DELETE USING (auth.uid() = user_id);
 
 -- Points ledger policies
 CREATE POLICY "Users can view own points" ON points_ledger FOR SELECT USING (auth.uid() = user_id);

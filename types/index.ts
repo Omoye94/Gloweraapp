@@ -134,7 +134,34 @@ export type PointSource =
   | 'habit_fully'
   | 'daily_complete'
   | 'challenge'
-  | 'reflection';
+  | 'reflection'
+  | 'supplement'
+  | 'supplement_all';
+
+// Supplement types
+export type SupplementTimeOfDay = 'morning' | 'afternoon' | 'evening' | 'anytime';
+
+export interface Supplement {
+  id: string;
+  user_id: string;
+  name: string;
+  dosage: string | null;
+  time_of_day: SupplementTimeOfDay;
+  icon: string;
+  color: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SupplementLog {
+  id: string;
+  supplement_id: string;
+  user_id: string;
+  taken_at: string;
+  points_earned: number;
+  created_at: string;
+}
 
 export interface PointsLedger {
   id: string;

@@ -12,11 +12,13 @@ import { Plus, Sparkles } from 'lucide-react-native';
 import { useAuthStore } from '../../stores/authStore';
 import { useHabitStore } from '../../stores/habitStore';
 import { useGardenStore } from '../../stores/gardenStore';
+import { useSupplementStore } from '../../stores/supplementStore';
 import { getGreeting, colors, COMPLETION_MESSAGES } from '../../lib/constants';
 import { calculateGlowMeter, getRandomItem } from '../../lib/utils';
 import HabitCard from '../../components/habits/HabitCard';
 import CreateHabitModal from '../../components/habits/CreateHabitModal';
 import GlowMeter from '../../components/ui/GlowMeter';
+import SupplementSection from '../../components/supplements/SupplementSection';
 
 export default function HomeScreen() {
   const { user } = useAuthStore();
@@ -29,6 +31,7 @@ export default function HomeScreen() {
     isLoading,
   } = useHabitStore();
   const { plant, fetchPlant } = useGardenStore();
+  const { fetchSupplements, fetchTodayLogs } = useSupplementStore();
 
   const [refreshing, setRefreshing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -43,6 +46,8 @@ export default function HomeScreen() {
       fetchHabits(user.id);
       fetchTodayCompletions(user.id);
       fetchPlant(user.id);
+      fetchSupplements(user.id);
+      fetchTodayLogs(user.id);
     }
   }, [user?.id]);
 
@@ -53,6 +58,8 @@ export default function HomeScreen() {
       fetchHabits(user.id),
       fetchTodayCompletions(user.id),
       fetchPlant(user.id),
+      fetchSupplements(user.id),
+      fetchTodayLogs(user.id),
     ]);
     setRefreshing(false);
   };
@@ -112,6 +119,9 @@ export default function HomeScreen() {
             totalCount={todayHabits.length}
           />
         </View>
+
+        {/* Supplements */}
+        <SupplementSection onMessage={handleHabitComplete} />
 
         {/* Today's Habits */}
         <View className="px-6">
