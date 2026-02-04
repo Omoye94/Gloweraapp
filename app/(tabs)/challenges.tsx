@@ -1,275 +1,478 @@
-import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Modal, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Trophy, Calendar, Sparkles, X, Check } from 'lucide-react-native';
-import { useAuthStore } from '../../stores/authStore';
-import { useChallengeStore } from '../../stores/challengeStore';
-import { Challenge, ChallengeParticipation } from '../../types';
-import { colors, categoryColors } from '../../lib/constants';
+import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useChallengeStore, usePlantStore } from '../../src/stores';
+import { ProgressBar } from '../../src/components/ui';
+import { theme, spacing, borderRadius, shadows } from '../../src/theme';
+import { DEFAULT_CHALLENGES, getChallengeById } from '../../src/constants/challenges';
 
 export default function ChallengesScreen() {
-  const { user } = useAuthStore();
   const {
-    challenges,
-    activeParticipations,
-    fetchChallenges,
-    fetchUserParticipations,
-    joinChallenge,
-    leaveChallenge,
     getActiveChallenge,
+    getCompletedChallenges,
+    startChallenge,
+    completeDay,
     getChallengeProgress,
-    isLoading,
+    getCurrentDay,
+    isDayCompleted,
   } = useChallengeStore();
+  const { addPoints } = usePlantStore();
 
-  const [refreshing, setRefreshing] = useState(false);
-  const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
+  const activeChallenge = getActiveChallenge();
+  const completedChallenges = getCompletedChallenges();
+  const activeChallengeInfo = activeChallenge ? getChallengeById(activeChallenge.challengeId) : null;
 
-  useEffect(() => {
-    fetchChallenges();
-    if (user?.id) {
-      fetchUserParticipations(user.id);
+  const handleStartChallenge = (challengeId: string) => {
+    startChallenge(challengeId);
+  };
+
+  const handleCompleteDay = () => {
+    if (activeChallenge) {
+      const currentDay = getCurrentDay(activeChallenge.id);
+      const points = completeDay(activeChallenge.id, currentDay);
+      if (points > 0) {
+        addPoints(points);
+      }
     }
-  }, [user?.id]);
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchChallenges();
-    if (user?.id) {
-      await fetchUserParticipations(user.id);
-    }
-    setRefreshing(false);
-  };
-
-  const handleJoinChallenge = async (challengeId: string) => {
-    if (!user?.id) return;
-    await joinChallenge(user.id, challengeId);
-    setSelectedChallenge(null);
-  };
-
-  const handleLeaveChallenge = async (participationId: string) => {
-    await leaveChallenge(participationId);
-    setSelectedChallenge(null);
-  };
-
-  const renderChallengeCard = (challenge: Challenge) => {
-    const participation = getActiveChallenge(challenge.id);
-    const isJoined = !!participation;
-    const progress = participation ? getChallengeProgress(participation, challenge) : 0;
-
-    return (
-      <TouchableOpacity
-        key={challenge.id}
-        className="bg-surface rounded-softer p-5 mb-4"
-        onPress={() => setSelectedChallenge(challenge)}
-      >
-        <View className="flex-row items-start justify-between">
-          <View className="flex-1">
-            <View className="flex-row items-center mb-2">
-              <View className="w-10 h-10 rounded-full bg-primary/20 items-center justify-center mr-3">
-                <Trophy size={20} color={colors.primary} />
-              </View>
-              <View className="flex-1">
-                <Text className="font-semibold text-text text-lg">
-                  {challenge.title}
-                </Text>
-                <View className="flex-row items-center mt-1">
-                  <Calendar size={14} color={colors.textLight} />
-                  <Text className="text-text-light text-sm ml-1">
-                    {challenge.duration_days} days
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            <Text className="text-text-light mb-3" numberOfLines={2}>
-              {challenge.description}
-            </Text>
-
-            {isJoined && (
-              <View>
-                <View className="flex-row justify-between items-center mb-1">
-                  <Text className="text-text-light text-sm">Progress</Text>
-                  <Text className="text-primary font-medium">
-                    {participation.days_completed}/{challenge.duration_days} days
-                  </Text>
-                </View>
-                <View className="h-2 bg-primary/10 rounded-full overflow-hidden">
-                  <View
-                    className="h-full bg-primary rounded-full"
-                    style={{ width: `${progress}%` }}
-                  />
-                </View>
-              </View>
-            )}
-          </View>
-
-          {isJoined && (
-            <View className="bg-success/20 px-3 py-1 rounded-full ml-2">
-              <Text className="text-success text-xs font-medium">Joined</Text>
-            </View>
-          )}
-        </View>
-      </TouchableOpacity>
-    );
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+    <View style={styles.container}>
+      <LinearGradient
+        colors={['#FFF9F5', '#FFEDE5', '#FFF5F7']}
+        style={styles.gradientBackground}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
+
       <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingBottom: 100 }}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.primary}
-          />
-        }
+        bounces={true}
       >
         {/* Header */}
-        <View className="px-6 pt-4 pb-6">
-          <Text className="text-2xl font-bold text-text">Challenges</Text>
-          <Text className="text-text-light mt-1">
-            Gentle journeys to build consistent habits
-          </Text>
+        <View style={styles.header}>
+          <Text style={styles.title}>Goals</Text>
+          <Text style={styles.subtitle}>Optional wellness journeys</Text>
         </View>
 
-        {/* Active Challenges */}
-        {activeParticipations.length > 0 && (
-          <View className="px-6 mb-6">
-            <Text className="text-lg font-semibold text-text mb-3">
-              Your Active Challenges
-            </Text>
-            {challenges
-              .filter(c => getActiveChallenge(c.id))
-              .map(renderChallengeCard)}
-          </View>
-        )}
-
-        {/* Available Challenges */}
-        <View className="px-6">
-          <Text className="text-lg font-semibold text-text mb-3">
-            {activeParticipations.length > 0 ? 'Explore More' : 'Available Challenges'}
-          </Text>
-          {challenges
-            .filter(c => !getActiveChallenge(c.id))
-            .map(renderChallengeCard)}
-
-          {challenges.length === 0 && (
-            <View className="bg-surface rounded-softer p-8 items-center">
-              <View className="w-16 h-16 rounded-full bg-primary/10 items-center justify-center mb-4">
-                <Trophy size={28} color={colors.primary} />
-              </View>
-              <Text className="text-text font-semibold text-lg mb-2">
-                No challenges yet
-              </Text>
-              <Text className="text-text-light text-center">
-                New challenges will appear here soon
-              </Text>
-            </View>
-          )}
-        </View>
-      </ScrollView>
-
-      {/* Challenge Detail Modal */}
-      <Modal
-        visible={!!selectedChallenge}
-        animationType="slide"
-        presentationStyle="pageSheet"
-      >
-        {selectedChallenge && (
-          <View className="flex-1 bg-background">
-            {/* Header */}
-            <View className="flex-row justify-between items-center px-6 pt-6 pb-4">
-              <TouchableOpacity onPress={() => setSelectedChallenge(null)}>
-                <X size={24} color={colors.text} />
-              </TouchableOpacity>
-              <Text className="text-lg font-semibold text-text">Challenge Details</Text>
-              <View className="w-6" />
-            </View>
-
-            <ScrollView className="flex-1 px-6">
-              {/* Challenge Info */}
-              <View className="items-center mb-6">
-                <View className="w-20 h-20 rounded-full bg-primary/20 items-center justify-center mb-4">
-                  <Trophy size={40} color={colors.primary} />
+        {/* Active Challenge */}
+        {activeChallenge && activeChallengeInfo && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Active Goal</Text>
+            <View style={styles.activeCard}>
+              <LinearGradient
+                colors={['rgba(255,255,255,0.95)', 'rgba(255,249,245,0.98)']}
+                style={styles.activeCardGradient}
+              />
+              <View style={styles.activeHeader}>
+                <View style={styles.activeIconContainer}>
+                  <Text style={styles.activeIcon}>{activeChallengeInfo.icon}</Text>
                 </View>
-                <Text className="text-2xl font-bold text-text text-center mb-2">
-                  {selectedChallenge.title}
-                </Text>
-                <View className="flex-row items-center">
-                  <Calendar size={16} color={colors.textLight} />
-                  <Text className="text-text-light ml-1">
-                    {selectedChallenge.duration_days} day challenge
+                <View style={styles.activeInfo}>
+                  <Text style={styles.activeName}>{activeChallengeInfo.name}</Text>
+                  <Text style={styles.activeDay}>
+                    Day {getCurrentDay(activeChallenge.id)} of {activeChallengeInfo.duration}
                   </Text>
                 </View>
               </View>
 
-              <Text className="text-text leading-relaxed mb-6">
-                {selectedChallenge.description}
-              </Text>
+              <View style={styles.progressContainer}>
+                <ProgressBar
+                  progress={getChallengeProgress(activeChallenge.id).percentage}
+                  height={8}
+                  color={theme.primary}
+                />
+              </View>
 
-              {/* Daily Prompts */}
-              <Text className="text-lg font-semibold text-text mb-4">
-                Daily Prompts
-              </Text>
-              {selectedChallenge.habit_prompts.map((prompt: any, index: number) => (
-                <View
-                  key={index}
-                  className="flex-row items-start mb-3 bg-surface rounded-soft p-4"
-                  style={{
-                    borderLeftWidth: 3,
-                    borderLeftColor: prompt.category
-                      ? categoryColors[prompt.category as keyof typeof categoryColors]
-                      : colors.primary,
-                  }}
-                >
-                  <View className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center mr-3">
-                    <Text className="text-primary font-medium">{prompt.day}</Text>
-                  </View>
-                  <Text className="text-text flex-1">{prompt.prompt}</Text>
-                </View>
-              ))}
-
-              {/* Points Info */}
-              <View className="bg-accent/20 rounded-softer p-4 mt-4 mb-8">
-                <View className="flex-row items-center">
-                  <Sparkles size={20} color={colors.accent} />
-                  <Text className="text-text font-medium ml-2">Completion Reward</Text>
-                </View>
-                <Text className="text-text-light mt-2">
-                  Complete this challenge to earn 50 points for your Glow Garden!
+              {/* Today's task */}
+              <View style={styles.todayTask}>
+                <Text style={styles.todayLabel}>Today's Task</Text>
+                <Text style={styles.todayText}>
+                  {activeChallengeInfo.dailyTasks[getCurrentDay(activeChallenge.id) - 1]?.description}
                 </Text>
               </View>
-            </ScrollView>
 
-            {/* Action Button */}
-            <View className="px-6 pb-8 pt-4">
-              {getActiveChallenge(selectedChallenge.id) ? (
-                <TouchableOpacity
-                  className="bg-red-100 py-4 rounded-soft items-center"
-                  onPress={() => {
-                    const participation = getActiveChallenge(selectedChallenge.id);
-                    if (participation) {
-                      handleLeaveChallenge(participation.id);
-                    }
-                  }}
+              {!isDayCompleted(activeChallenge.id, getCurrentDay(activeChallenge.id)) ? (
+                <Pressable
+                  style={({ pressed }) => [styles.completeButton, pressed && styles.completeButtonPressed]}
+                  onPress={handleCompleteDay}
                 >
-                  <Text className="text-red-500 font-semibold">Leave Challenge</Text>
-                </TouchableOpacity>
+                  <LinearGradient
+                    colors={['#FFB199', '#FF99B5']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.completeButtonGradient}
+                  />
+                  <Text style={styles.completeButtonText}>Complete Today's Task</Text>
+                </Pressable>
               ) : (
-                <TouchableOpacity
-                  className="bg-primary py-4 rounded-soft items-center"
-                  onPress={() => handleJoinChallenge(selectedChallenge.id)}
-                >
-                  <Text className="text-white font-semibold">Join Challenge</Text>
-                </TouchableOpacity>
+                <View style={styles.completedBadge}>
+                  <Text style={styles.completedBadgeText}>Today's task completed ✨</Text>
+                </View>
               )}
             </View>
           </View>
         )}
-      </Modal>
-    </SafeAreaView>
+
+        {/* Available Challenges */}
+        {!activeChallenge && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Available Goals</Text>
+            {DEFAULT_CHALLENGES.map((challenge) => {
+              const isCompleted = completedChallenges.some(
+                c => c.challengeId === challenge.id
+              );
+
+              return (
+                <View key={challenge.id} style={styles.challengeCard}>
+                  <View style={styles.challengeHeader}>
+                    <View style={styles.challengeIconContainer}>
+                      <Text style={styles.challengeIcon}>{challenge.icon}</Text>
+                    </View>
+                    <View style={styles.challengeInfo}>
+                      <Text style={styles.challengeName}>{challenge.name}</Text>
+                      <Text style={styles.challengeDuration}>
+                        {challenge.duration} days • {challenge.pointsReward} pts
+                      </Text>
+                    </View>
+                    {isCompleted && (
+                      <View style={styles.completedTag}>
+                        <Text style={styles.completedTagText}>Done</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.challengeDescription} numberOfLines={2}>
+                    {challenge.description}
+                  </Text>
+                  {!isCompleted && (
+                    <Pressable
+                      style={({ pressed }) => [styles.startButton, pressed && { opacity: 0.8 }]}
+                      onPress={() => handleStartChallenge(challenge.id)}
+                    >
+                      <Text style={styles.startButtonText}>Start Goal</Text>
+                    </Pressable>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        )}
+
+        {/* Completed Challenges */}
+        {completedChallenges.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Completed</Text>
+            {completedChallenges.map((userChallenge) => {
+              const challenge = getChallengeById(userChallenge.challengeId);
+              if (!challenge) return null;
+
+              return (
+                <View key={userChallenge.id} style={styles.completedCard}>
+                  <View style={styles.completedIconContainer}>
+                    <Text style={styles.completedIcon}>{challenge.icon}</Text>
+                  </View>
+                  <Text style={styles.completedName}>{challenge.name}</Text>
+                  <View style={styles.completedPointsBadge}>
+                    <Text style={styles.completedPoints}>+{userChallenge.pointsEarned}</Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        )}
+
+        {/* Motivation */}
+        <View style={styles.motivationCard}>
+          <LinearGradient
+            colors={['rgba(255,153,181,0.08)', 'rgba(255,177,153,0.08)']}
+            style={styles.motivationGradient}
+          />
+          <Text style={styles.motivationEmoji}>🌟</Text>
+          <Text style={styles.motivationText}>
+            Goals are optional wellness journeys. No pressure — try one when you feel ready!
+          </Text>
+        </View>
+
+        <View style={styles.bottomSpacer} />
+      </ScrollView>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.background,
+  },
+  gradientBackground: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: 60,
+  },
+  header: {
+    marginBottom: spacing.xl,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '300',
+    color: theme.text,
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: theme.textSecondary,
+    marginTop: spacing.xs,
+  },
+  section: {
+    marginBottom: spacing.xl,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: theme.text,
+    marginBottom: spacing.md,
+    letterSpacing: -0.3,
+  },
+  activeCard: {
+    borderRadius: borderRadius.card,
+    padding: spacing.lg,
+    overflow: 'hidden',
+    ...shadows.lg,
+  },
+  activeCardGradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  activeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  activeIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 153, 181, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  activeIcon: {
+    fontSize: 28,
+  },
+  activeInfo: {
+    flex: 1,
+  },
+  activeName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: theme.text,
+    letterSpacing: -0.3,
+  },
+  activeDay: {
+    fontSize: 14,
+    color: theme.textSecondary,
+    marginTop: 2,
+  },
+  progressContainer: {
+    marginBottom: spacing.md,
+  },
+  todayTask: {
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: theme.borderLight,
+  },
+  todayLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.textSecondary,
+    marginBottom: spacing.xs,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  todayText: {
+    fontSize: 15,
+    color: theme.text,
+    lineHeight: 22,
+  },
+  completeButton: {
+    borderRadius: borderRadius.button,
+    overflow: 'hidden',
+    ...shadows.glow,
+  },
+  completeButtonGradient: {
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  },
+  completeButtonPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
+  },
+  completeButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  completedBadge: {
+    backgroundColor: 'rgba(158, 207, 176, 0.2)',
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(158, 207, 176, 0.3)',
+  },
+  completedBadgeText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: theme.accent,
+  },
+  challengeCard: {
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    borderRadius: borderRadius.card,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    ...shadows.sm,
+    borderWidth: 1,
+    borderColor: theme.borderLight,
+  },
+  challengeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  challengeIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 177, 153, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+  },
+  challengeIcon: {
+    fontSize: 22,
+  },
+  challengeInfo: {
+    flex: 1,
+  },
+  challengeName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.text,
+  },
+  challengeDuration: {
+    fontSize: 13,
+    color: theme.textSecondary,
+    marginTop: 2,
+  },
+  completedTag: {
+    backgroundColor: theme.accent,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: borderRadius.pill,
+  },
+  completedTagText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  challengeDescription: {
+    fontSize: 14,
+    color: theme.textSecondary,
+    marginBottom: spacing.sm,
+    lineHeight: 20,
+  },
+  startButton: {
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.button,
+    borderWidth: 1.5,
+    borderColor: theme.primary,
+  },
+  startButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.primary,
+  },
+  completedCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: borderRadius.card,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: theme.borderLight,
+  },
+  completedIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(158, 207, 176, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+  },
+  completedIcon: {
+    fontSize: 20,
+  },
+  completedName: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: theme.text,
+    flex: 1,
+  },
+  completedPointsBadge: {
+    backgroundColor: 'rgba(158, 207, 176, 0.15)',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: borderRadius.pill,
+  },
+  completedPoints: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.accent,
+  },
+  motivationCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    borderRadius: borderRadius.card,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 153, 181, 0.2)',
+  },
+  motivationGradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  motivationEmoji: {
+    fontSize: 24,
+    marginRight: spacing.md,
+  },
+  motivationText: {
+    fontSize: 14,
+    color: theme.textSecondary,
+    flex: 1,
+    lineHeight: 20,
+  },
+  bottomSpacer: {
+    height: 120,
+  },
+});

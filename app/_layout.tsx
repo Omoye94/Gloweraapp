@@ -1,52 +1,36 @@
-import { useEffect } from 'react';
+import 'react-native-get-random-values';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import { useAuthStore } from '../stores/authStore';
+import { View, StyleSheet, Platform } from 'react-native';
+import { theme } from '../src/theme';
 
-const colors = {
-  primary: '#E8B4CB',
-  background: '#FFF9F5',
-};
+// Conditionally import GestureHandler for native only
+let GestureHandlerRootView: any = View;
+if (Platform.OS !== 'web') {
+  GestureHandlerRootView = require('react-native-gesture-handler').GestureHandlerRootView;
+}
 
 export default function RootLayout() {
-  const { initialize, isLoading, isInitialized } = useAuthStore();
-
-  useEffect(() => {
-    initialize();
-  }, []);
-
-  if (!isInitialized || isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-
   return (
-    <>
+    <GestureHandlerRootView style={styles.container}>
       <StatusBar style="dark" />
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: colors.background },
-          animation: 'fade',
+          contentStyle: { backgroundColor: theme.background },
         }}
       >
         <Stack.Screen name="index" />
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
       </Stack>
-    </>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
-  loadingContainer: {
+  container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: theme.background,
   },
 });

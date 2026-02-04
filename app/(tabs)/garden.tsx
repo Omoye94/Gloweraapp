@@ -1,194 +1,317 @@
-import { useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Sparkles, TrendingUp } from 'lucide-react-native';
-import { useAuthStore } from '../../stores/authStore';
-import { useGardenStore } from '../../stores/gardenStore';
-import { colors, PLANT_GROWTH_THRESHOLDS, PLANT_GROWTH_MESSAGES } from '../../lib/constants';
-import { PlantGrowthStage } from '../../types';
-import Plant from '../../components/garden/Plant';
-
-const stages: PlantGrowthStage[] = ['seed', 'sprout', 'bud', 'bloom', 'glow'];
+import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { usePlantStore, useUserStore } from '../../src/stores';
+import { PlantDisplay } from '../../src/components/garden';
+import { Card, ProgressBar } from '../../src/components/ui';
+import { theme, spacing, borderRadius, shadows } from '../../src/theme';
+import { STAGE_ORDER, GROWTH_THRESHOLDS } from '../../src/types/plant';
 
 export default function GardenScreen() {
-  const { user } = useAuthStore();
-  const {
-    plant,
-    fetchPlant,
-    getProgressPercentage,
-    getCurrentStageMessage,
-    showGrowthAnimation,
-    lastGrowthMessage,
-    dismissGrowthAnimation,
-  } = useGardenStore();
-
-  useEffect(() => {
-    if (user?.id) {
-      fetchPlant(user.id);
-    }
-  }, [user?.id]);
-
-  const progressPercentage = getProgressPercentage();
-  const currentMessage = getCurrentStageMessage();
-
-  const getCurrentStageIndex = () => {
-    if (!plant) return 0;
-    return stages.indexOf(plant.growth_stage);
-  };
-
-  const getNextStagePoints = () => {
-    if (!plant) return PLANT_GROWTH_THRESHOLDS.sprout;
-    const currentIndex = getCurrentStageIndex();
-    if (currentIndex >= stages.length - 1) return plant.growth_points;
-    const nextStage = stages[currentIndex + 1];
-    return PLANT_GROWTH_THRESHOLDS[nextStage];
-  };
+  const { user } = useUserStore();
+  const { plant, getProgressToNext, getPointsToNext } = usePlantStore();
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-      {/* Growth Animation Overlay */}
-      {showGrowthAnimation && lastGrowthMessage && (
-        <TouchableOpacity
-          className="absolute inset-0 z-50 bg-black/40 items-center justify-center"
-          onPress={dismissGrowthAnimation}
-          activeOpacity={1}
-        >
-          <View className="bg-surface mx-8 p-8 rounded-softer items-center">
-            <View className="w-20 h-20 rounded-full bg-accent/30 items-center justify-center mb-4">
-              <Sparkles size={40} color={colors.accent} />
-            </View>
-            <Text className="text-2xl font-bold text-text mb-2">Level Up!</Text>
-            <Text className="text-text-light text-center text-lg">
-              {lastGrowthMessage}
-            </Text>
-            <TouchableOpacity
-              className="mt-6 bg-primary px-8 py-3 rounded-soft"
-              onPress={dismissGrowthAnimation}
-            >
-              <Text className="text-white font-medium">Continue</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      )}
+    <View style={styles.container}>
+      <LinearGradient
+        colors={['#FFF9F5', '#FFEDE5', '#FFF5F7']}
+        style={styles.gradientBackground}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
 
       <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingBottom: 100 }}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        bounces={true}
       >
         {/* Header */}
-        <View className="px-6 pt-4 pb-2">
-          <Text className="text-2xl font-bold text-text">Glow Garden</Text>
-          <Text className="text-text-light mt-1">
-            Watch your progress bloom
-          </Text>
+        <View style={styles.header}>
+          <Text style={styles.title}>{user?.gardenName || 'My Garden'}</Text>
+          <Text style={styles.subtitle}>Watch your growth bloom</Text>
         </View>
 
-        {/* Plant Display */}
-        <View className="items-center py-8">
-          <Plant stage={plant?.growth_stage || 'seed'} />
-          <Text className="text-xl font-semibold text-text mt-4 capitalize">
-            {plant?.growth_stage || 'seed'} Stage
-          </Text>
-          <Text className="text-text-light mt-1 px-8 text-center">
-            {currentMessage}
-          </Text>
+        {/* Plant Display Card */}
+        <View style={styles.plantCard}>
+          <LinearGradient
+            colors={['rgba(255,255,255,0.95)', 'rgba(255,249,245,0.98)']}
+            style={styles.plantCardGradient}
+          />
+          <PlantDisplay
+            stage={plant.currentStage}
+            progressToNext={getProgressToNext()}
+            pointsToNext={getPointsToNext()}
+            totalPoints={plant.totalLifetimePoints}
+          />
         </View>
 
-        {/* Progress Card */}
-        <View className="mx-6 bg-surface rounded-softer p-5 mb-6">
-          <View className="flex-row justify-between items-center mb-3">
-            <View className="flex-row items-center">
-              <TrendingUp size={20} color={colors.primary} />
-              <Text className="text-text font-semibold ml-2">Growth Progress</Text>
-            </View>
-            <Text className="text-primary font-bold">
-              {plant?.growth_points || 0} pts
-            </Text>
-          </View>
+        {/* Growth Journey */}
+        <View style={styles.journeySection}>
+          <Text style={styles.sectionTitle}>Growth Journey</Text>
 
-          {/* Progress to next stage */}
-          <View className="h-3 bg-primary/10 rounded-full overflow-hidden mb-3">
-            <View
-              className="h-full bg-primary rounded-full"
-              style={{ width: `${progressPercentage}%` }}
-            />
-          </View>
+          <View style={styles.stagesContainer}>
+            {STAGE_ORDER.map((stage, index) => {
+              const isReached = plant.totalLifetimePoints >= GROWTH_THRESHOLDS[stage];
+              const isCurrent = plant.currentStage === stage;
 
-          <Text className="text-text-light text-sm">
-            {plant?.growth_stage === 'glow'
-              ? "You've reached the highest stage!"
-              : `${getNextStagePoints() - (plant?.growth_points || 0)} points to next stage`}
-          </Text>
-        </View>
-
-        {/* Stages Timeline */}
-        <View className="mx-6 bg-surface rounded-softer p-5">
-          <Text className="text-text font-semibold mb-4">Growth Journey</Text>
-
-          {stages.map((stage, index) => {
-            const currentIndex = getCurrentStageIndex();
-            const isCompleted = index <= currentIndex;
-            const isCurrent = index === currentIndex;
-            const points = PLANT_GROWTH_THRESHOLDS[stage];
-
-            return (
-              <View key={stage} className="flex-row items-start mb-4 last:mb-0">
-                {/* Timeline indicator */}
-                <View className="items-center mr-4">
+              return (
+                <View key={stage} style={styles.stageItem}>
                   <View
-                    className={`w-8 h-8 rounded-full items-center justify-center ${
-                      isCompleted
-                        ? 'bg-primary'
-                        : 'bg-primary/20'
-                    }`}
+                    style={[
+                      styles.stageIndicator,
+                      isReached && styles.stageReached,
+                      isCurrent && styles.stageCurrent,
+                    ]}
                   >
-                    {isCompleted && (
-                      <Sparkles size={16} color="#FFFFFF" />
-                    )}
+                    <Text style={styles.stageEmoji}>
+                      {stage === 'seed' ? '🌰' :
+                       stage === 'sprout' ? '🌱' :
+                       stage === 'bud' ? '🌿' :
+                       stage === 'bloom' ? '🌸' : '🌺'}
+                    </Text>
                   </View>
-                  {index < stages.length - 1 && (
+                  <Text
+                    style={[
+                      styles.stageName,
+                      isReached && styles.stageNameReached,
+                    ]}
+                  >
+                    {stage.charAt(0).toUpperCase() + stage.slice(1)}
+                  </Text>
+                  <Text style={styles.stagePoints}>
+                    {GROWTH_THRESHOLDS[stage]} pts
+                  </Text>
+
+                  {index < STAGE_ORDER.length - 1 && (
                     <View
-                      className={`w-0.5 h-8 ${
-                        isCompleted ? 'bg-primary' : 'bg-primary/20'
-                      }`}
+                      style={[
+                        styles.connector,
+                        isReached && styles.connectorReached,
+                      ]}
                     />
                   )}
                 </View>
-
-                {/* Stage info */}
-                <View className="flex-1 pt-1">
-                  <View className="flex-row justify-between items-center">
-                    <Text
-                      className={`font-medium capitalize ${
-                        isCurrent ? 'text-primary' : isCompleted ? 'text-text' : 'text-text-light'
-                      }`}
-                    >
-                      {stage}
-                      {isCurrent && ' (Current)'}
-                    </Text>
-                    <Text className="text-text-light text-sm">{points} pts</Text>
-                  </View>
-                  <Text className="text-text-light text-sm mt-0.5">
-                    {PLANT_GROWTH_MESSAGES[stage]}
-                  </Text>
-                </View>
-              </View>
-            );
-          })}
+              );
+            })}
+          </View>
         </View>
 
-        {/* Tips */}
-        <View className="mx-6 mt-6 bg-accent/20 rounded-softer p-5">
-          <Text className="text-text font-semibold mb-2">Growing Tips</Text>
-          <Text className="text-text-light leading-relaxed">
-            • Complete habits gently (+5 pts) or fully (+10 pts){'\n'}
-            • Complete all daily habits for a bonus (+25 pts){'\n'}
-            • Finish challenges for extra growth (+50 pts){'\n'}
-            • Write reflections to nurture your plant (+10 pts)
+        {/* Stats */}
+        <View style={styles.statsSection}>
+          <Text style={styles.sectionTitle}>Your Stats</Text>
+
+          <View style={styles.statsGrid}>
+            <View style={styles.statCard}>
+              <LinearGradient
+                colors={['#FFFFFF', '#FFF9F5']}
+                style={styles.statCardGradient}
+              />
+              <Text style={styles.statValue}>{plant.totalLifetimePoints}</Text>
+              <Text style={styles.statLabel}>Total Points</Text>
+            </View>
+
+            <View style={styles.statCard}>
+              <LinearGradient
+                colors={['#FFFFFF', '#FFF5F7']}
+                style={styles.statCardGradient}
+              />
+              <Text style={styles.statValue}>
+                {STAGE_ORDER.indexOf(plant.currentStage) + 1}/{STAGE_ORDER.length}
+              </Text>
+              <Text style={styles.statLabel}>Growth Stage</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Motivation */}
+        <View style={styles.motivationCard}>
+          <LinearGradient
+            colors={['rgba(255,153,181,0.08)', 'rgba(255,177,153,0.08)']}
+            style={styles.motivationGradient}
+          />
+          <Text style={styles.motivationEmoji}>💜</Text>
+          <Text style={styles.motivationText}>
+            Your garden grows at your pace. Every small step counts, and progress is never lost.
           </Text>
         </View>
+
+        <View style={styles.bottomSpacer} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.background,
+  },
+  gradientBackground: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: 60,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '300',
+    color: theme.text,
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: theme.textSecondary,
+    marginTop: spacing.xs,
+  },
+  plantCard: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+    borderRadius: borderRadius.xxl,
+    marginBottom: spacing.xl,
+    overflow: 'hidden',
+    ...shadows.lg,
+  },
+  plantCardGradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  journeySection: {
+    marginBottom: spacing.xl,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: theme.text,
+    marginBottom: spacing.md,
+    letterSpacing: -0.3,
+  },
+  stagesContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingHorizontal: spacing.xs,
+  },
+  stageItem: {
+    alignItems: 'center',
+    flex: 1,
+    position: 'relative',
+  },
+  stageIndicator: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    backgroundColor: '#FFF3EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  stageReached: {
+    backgroundColor: theme.secondaryLight,
+  },
+  stageCurrent: {
+    borderColor: theme.primary,
+    backgroundColor: 'rgba(255, 153, 181, 0.15)',
+  },
+  stageEmoji: {
+    fontSize: 24,
+  },
+  stageName: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: theme.textMuted,
+    letterSpacing: 0.2,
+  },
+  stageNameReached: {
+    color: theme.text,
+  },
+  stagePoints: {
+    fontSize: 10,
+    color: theme.textMuted,
+    marginTop: 2,
+  },
+  connector: {
+    position: 'absolute',
+    top: 26,
+    right: -16,
+    width: 32,
+    height: 2,
+    backgroundColor: '#FFEDE0',
+    borderRadius: 1,
+  },
+  connectorReached: {
+    backgroundColor: theme.secondary,
+  },
+  statsSection: {
+    marginBottom: spacing.xl,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  statCard: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+    borderRadius: borderRadius.card,
+    overflow: 'hidden',
+    ...shadows.sm,
+    borderWidth: 1,
+    borderColor: theme.borderLight,
+  },
+  statCardGradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  statValue: {
+    fontSize: 28,
+    fontWeight: '300',
+    color: theme.primary,
+    letterSpacing: -0.5,
+  },
+  statLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: theme.textSecondary,
+    marginTop: spacing.xs,
+  },
+  motivationCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    borderRadius: borderRadius.card,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 153, 181, 0.2)',
+  },
+  motivationGradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  motivationEmoji: {
+    fontSize: 24,
+    marginRight: spacing.md,
+  },
+  motivationText: {
+    fontSize: 14,
+    color: theme.textSecondary,
+    flex: 1,
+    lineHeight: 20,
+  },
+  bottomSpacer: {
+    height: 120,
+  },
+});
