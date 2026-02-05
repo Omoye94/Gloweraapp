@@ -15,6 +15,7 @@ import {
   SupplementLibraryModal,
   GoalsSelectionModal,
   SupplementDetailView,
+  SupplementTrackerSection,
 } from '../../src/components/supplements';
 import { SupplementInfo } from '../../src/types/supplement';
 import { theme, spacing, borderRadius, shadows } from '../../src/theme';
@@ -88,6 +89,11 @@ export default function GlowStackScreen() {
           <Text style={styles.title}>Your Glow Stack</Text>
           <Text style={styles.subtitle}>Your supplement journey</Text>
         </View>
+
+        {/* Quick Check-off & Weekly View */}
+        <SupplementTrackerSection
+          onOpenLibrary={handleBrowseSupplements}
+        />
 
         {/* Wellness Focus */}
         <GlowStackHeader onEditGoals={handleEditGoals} />

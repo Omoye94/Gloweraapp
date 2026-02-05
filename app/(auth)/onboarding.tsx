@@ -8,8 +8,10 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useAuthStore } from '../../stores/authStore';
+import { useHabitStore } from '../../src/stores';
 import { FocusArea, ReminderPreference, OnboardingData } from '../../types';
-import { categoryLabels, focusAreaDescriptions, categoryColors } from '../../lib/constants';
+import { HabitCategory } from '../../src/types/habit';
+import { categoryLabels, focusAreaDescriptions, categoryColors, STARTER_HABITS } from '../../lib/constants';
 
 const { width } = Dimensions.get('window');
 
@@ -34,6 +36,7 @@ export default function OnboardingScreen() {
   const [habitCount, setHabitCount] = useState(3);
   const [reminderPref, setReminderPref] = useState<ReminderPreference>('gentle');
   const { completeOnboarding, isLoading } = useAuthStore();
+  const { addHabit } = useHabitStore();
 
   const toggleArea = (area: FocusArea) => {
     if (selectedAreas.includes(area)) {
@@ -49,6 +52,39 @@ export default function OnboardingScreen() {
       habitCount,
       reminderPreference: reminderPref,
     };
+
+    // Convert FocusArea (underscore) to HabitCategory (hyphen)
+    const focusToCategory = (area: FocusArea): HabitCategory => {
+      if (area === 'self_care') return 'self-care';
+      return area as HabitCategory;
+    };
+
+    // Collect habits from selected focus areas
+    const allHabits: { name: string; icon: string; category: HabitCategory }[] = [];
+    selectedAreas.forEach(area => {
+      const areaHabits = STARTER_HABITS[area] || [];
+      areaHabits.forEach(habit => {
+        allHabits.push({
+          name: habit.name,
+          icon: habit.icon,
+          category: focusToCategory(area),
+        });
+      });
+    });
+
+    // Shuffle and pick up to habitCount habits
+    const shuffled = allHabits.sort(() => Math.random() - 0.5);
+    const selectedHabits = shuffled.slice(0, habitCount);
+
+    // Add habits to the store
+    selectedHabits.forEach(habit => {
+      addHabit({
+        name: habit.name,
+        icon: habit.icon,
+        category: habit.category,
+        isCustom: false,
+      });
+    });
 
     await completeOnboarding(data);
     router.replace('/(tabs)/home');

@@ -128,7 +128,7 @@ export const focusAreaDescriptions: Record<FocusArea, string> = {
   reflection: "Journal and reflect on your journey",
 };
 
-// Default habit suggestions by category
+// Default habit suggestions by category (legacy - string only)
 export const defaultHabitSuggestions: Record<HabitCategory, string[]> = {
   nutrition: [
     "Drink 8 glasses of water",
@@ -165,6 +165,46 @@ export const defaultHabitSuggestions: Record<HabitCategory, string[]> = {
     "Evening journaling",
     "Weekly review",
     "Mood check-in",
+  ],
+};
+
+// Starter habits by focus area (with icons for onboarding)
+export const STARTER_HABITS: Record<FocusArea, { name: string; icon: string }[]> = {
+  nutrition: [
+    { name: 'Drink 8 glasses of water', icon: '💧' },
+    { name: 'Eat a colorful breakfast', icon: '🍳' },
+    { name: 'Have a serving of vegetables', icon: '🥗' },
+    { name: 'Mindful eating for one meal', icon: '🧘' },
+  ],
+  movement: [
+    { name: '10-minute morning stretch', icon: '🌅' },
+    { name: 'Take a walk outside', icon: '🚶' },
+    { name: 'Dance to your favorite song', icon: '💃' },
+    { name: 'Gentle yoga flow', icon: '🧘' },
+  ],
+  supplements: [
+    { name: 'Take daily vitamins', icon: '💊' },
+    { name: 'Morning supplements', icon: '☀️' },
+    { name: 'Evening supplements', icon: '🌙' },
+    { name: 'Drink protein shake', icon: '🥤' },
+  ],
+  hobbies: [
+    { name: 'Read for 15 minutes', icon: '📚' },
+    { name: 'Practice a creative skill', icon: '🎨' },
+    { name: 'Listen to a podcast', icon: '🎧' },
+    { name: 'Learn something new', icon: '🧠' },
+  ],
+  self_care: [
+    { name: 'Skincare routine', icon: '✨' },
+    { name: 'Get 8 hours of sleep', icon: '😴' },
+    { name: 'Take a relaxing bath', icon: '🛁' },
+    { name: 'Digital detox hour', icon: '📵' },
+  ],
+  reflection: [
+    { name: 'Morning gratitude', icon: '🙏' },
+    { name: 'Evening journaling', icon: '📓' },
+    { name: 'Weekly review', icon: '📋' },
+    { name: 'Mood check-in', icon: '💭' },
   ],
 };
 

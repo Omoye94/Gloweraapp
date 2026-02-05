@@ -19,6 +19,7 @@ import { CategoryFilterBar } from './CategoryFilterBar';
 import { SupplementCard } from './SupplementCard';
 import { SupplementDetailView } from './SupplementDetailView';
 import { HealthDisclaimer } from './HealthDisclaimer';
+import { CreateCustomSupplementModal } from './CreateCustomSupplementModal';
 import { theme, spacing, borderRadius, shadows } from '../../theme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -35,6 +36,7 @@ export const SupplementLibraryModal: React.FC<SupplementLibraryModalProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<SupplementCategory | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSupplement, setSelectedSupplement] = useState<SupplementInfo | null>(null);
+  const [showCreateCustom, setShowCreateCustom] = useState(false);
 
   const { addSupplementHabit, habits } = useHabitStore();
   const { markSupplementAdded, addedSupplementIds } = useSupplementStore();
@@ -179,6 +181,35 @@ export const SupplementLibraryModal: React.FC<SupplementLibraryModalProps> = ({
               <HealthDisclaimer compact />
             </View>
 
+            {/* Create Custom Card */}
+            <Pressable
+              onPress={() => {
+                setShowCreateCustom(true);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+              style={({ pressed }) => [
+                styles.createCustomCard,
+                pressed && { opacity: 0.9, transform: [{ scale: 0.99 }] },
+              ]}
+            >
+              <LinearGradient
+                colors={['rgba(232, 164, 200, 0.12)', 'rgba(212, 196, 232, 0.12)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFillObject}
+              />
+              <View style={styles.createCustomIcon}>
+                <Text style={styles.createCustomIconText}>+</Text>
+              </View>
+              <View style={styles.createCustomContent}>
+                <Text style={styles.createCustomTitle}>Create Custom Supplement</Text>
+                <Text style={styles.createCustomSubtitle}>
+                  Add your own supplement to track
+                </Text>
+              </View>
+              <Text style={styles.createCustomArrow}>›</Text>
+            </Pressable>
+
             {filteredSupplements.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyIcon}>🔍</Text>
@@ -202,6 +233,12 @@ export const SupplementLibraryModal: React.FC<SupplementLibraryModalProps> = ({
           </ScrollView>
         </View>
       )}
+      {/* Create Custom Supplement Modal */}
+      <CreateCustomSupplementModal
+        visible={showCreateCustom}
+        onClose={() => setShowCreateCustom(false)}
+        onAdded={handleClose}
+      />
     </Modal>
   );
 };
@@ -281,6 +318,50 @@ const styles = StyleSheet.create({
   },
   disclaimerContainer: {
     marginBottom: spacing.md,
+  },
+  createCustomCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.surface,
+    borderRadius: borderRadius.card,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1.5,
+    borderColor: theme.accent,
+    borderStyle: 'dashed',
+    overflow: 'hidden',
+  },
+  createCustomIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(232, 164, 200, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  createCustomIconText: {
+    fontSize: 24,
+    fontWeight: '300',
+    color: theme.primary,
+  },
+  createCustomContent: {
+    flex: 1,
+  },
+  createCustomTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.text,
+    marginBottom: 2,
+  },
+  createCustomSubtitle: {
+    fontSize: 13,
+    color: theme.textSecondary,
+  },
+  createCustomArrow: {
+    fontSize: 24,
+    fontWeight: '300',
+    color: theme.textMuted,
   },
   emptyState: {
     alignItems: 'center',

@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.surface,
     borderTopLeftRadius: borderRadius.xxl,
     borderTopRightRadius: borderRadius.xxl,
-    maxHeight: '85%',
+    height: '85%',
     overflow: 'hidden',
   },
   gradientBackground: {

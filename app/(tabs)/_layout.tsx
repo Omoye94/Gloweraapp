@@ -1,6 +1,5 @@
 import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { theme, spacing, borderRadius, shadows } from '../../src/theme';
 
 function TabIcon({ icon, label, focused }: { icon: string; label: string; focused: boolean }) {
@@ -42,7 +41,7 @@ export default function TabLayout() {
         options={{
           title: 'Garden',
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="🌸" label="Garden" focused={focused} />
+            <TabIcon icon="🌸" label="Glow Garden" focused={focused} />
           ),
         }}
       />
@@ -51,7 +50,7 @@ export default function TabLayout() {
         options={{
           title: 'Glow Stack',
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="💊" label="Stack" focused={focused} />
+            <TabIcon icon="💊" label="Glow Stack" focused={focused} />
           ),
         }}
       />
@@ -81,6 +80,14 @@ export default function TabLayout() {
             <TabIcon icon="🌙" label="You" focused={focused} />
           ),
         }}
+      />
+      <Tabs.Screen
+        name="home"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="community"
+        options={{ href: null }}
       />
     </Tabs>
   );

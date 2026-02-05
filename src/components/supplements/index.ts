@@ -7,3 +7,7 @@ export { GoalsSelectionModal } from './GoalsSelectionModal';
 export { SupplementSuggestionCard } from './SupplementSuggestionCard';
 export { GlowStackHeader } from './GlowStackHeader';
 export { SupplementHabitList } from './SupplementHabitList';
+export { SupplementPill } from './SupplementPill';
+export { SupplementTrackerSection } from './SupplementTrackerSection';
+export { WeeklyConsistencyView } from './WeeklyConsistencyView';
+export { CreateCustomSupplementModal } from './CreateCustomSupplementModal';
