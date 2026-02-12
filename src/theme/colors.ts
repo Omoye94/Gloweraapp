@@ -81,8 +81,8 @@ export const gradients = {
   plumGlow: ['#FAE8ED', '#E8D4DE', '#D4A8C0'],
 };
 
-// Default theme
-export const theme = {
+// Light theme
+export const lightTheme = {
   // Core colors
   primary: colors.plum500,       // Deep plum for primary actions
   primaryLight: colors.plum200,
@@ -127,6 +127,73 @@ export const theme = {
 
   // Shadows (lavender-tinted)
   shadowColor: colors.lavender300,
+
+  // Status bar
+  statusBarStyle: 'dark' as const,
 };
 
-export type ThemeColors = typeof theme;
+// Dark theme - "Midnight Bloom"
+export const darkTheme = {
+  // Core colors
+  primary: '#E8A4C8',            // Pink for primary actions (brighter in dark)
+  primaryLight: '#3D2A3D',
+  primaryDark: '#F5D6E0',
+
+  secondary: '#B09AD6',          // Lavender accent
+  secondaryLight: '#2A2435',
+
+  accent: '#E8A4C8',             // Pink accent
+  accentLight: '#3D2A35',
+
+  tertiary: '#9ECFB0',
+
+  // Backgrounds
+  background: '#1A1418',         // Dark plum-black
+  backgroundWarm: '#221C20',
+  backgroundGradientStart: '#1A1418',
+  backgroundGradientEnd: '#241E22',
+
+  // Surfaces
+  surface: '#2A2428',
+  surfaceSecondary: '#322C30',
+  surfaceTertiary: '#3A3438',
+  surfaceElevated: '#3A3438',
+
+  // Text
+  text: '#F5EBF0',               // Light lavender white
+  textSecondary: '#B8A8B0',
+  textMuted: '#8A7A82',
+  textLight: '#5C4A52',
+  textOnPrimary: '#1A1418',
+
+  // Borders
+  border: '#3D2A35',
+  borderLight: '#2A2428',
+  borderSubtle: '#322C30',
+
+  // Semantic
+  success: '#9ECFB0',
+  warning: '#F5D4A8',
+  error: '#E89090',
+
+  // Shadows
+  shadowColor: '#000000',
+
+  // Status bar
+  statusBarStyle: 'light' as const,
+};
+
+// Dark mode gradients
+export const darkGradients = {
+  lavenderBloom: ['#1A1418', '#241E22', '#2A2435'],
+  softBlush: ['#1A1418', '#221C20', '#2A2428'],
+  lavenderMist: ['#1A1418', '#241E22', '#1A1418'],
+  plumGlow: ['#1A1418', '#2A2435', '#3D2A3D'],
+};
+
+// Default theme (light)
+export const theme = lightTheme;
+
+export type ThemeColors = Omit<typeof lightTheme, 'statusBarStyle'> & {
+  statusBarStyle: 'light' | 'dark';
+};

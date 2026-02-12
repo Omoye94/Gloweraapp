@@ -9,10 +9,12 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useChallengeStore, usePlantStore } from '../../src/stores';
 import { ProgressBar } from '../../src/components/ui';
-import { theme, spacing, borderRadius, shadows } from '../../src/theme';
+import { spacing, borderRadius, shadows, lightTheme as defaultTheme } from '../../src/theme';
+import { useTheme } from '../../src/context';
 import { DEFAULT_CHALLENGES, getChallengeById } from '../../src/constants/challenges';
 
 export default function ChallengesScreen() {
+  const { theme, isDark, gradients } = useTheme();
   const {
     getActiveChallenge,
     getCompletedChallenges,
@@ -43,9 +45,9 @@ export default function ChallengesScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <LinearGradient
-        colors={['#FFF9F5', '#FFEDE5', '#FFF5F7']}
+        colors={isDark ? gradients.lavenderBloom as [string, string, ...string[]] : ['#FFF9F5', '#FFEDE5', '#FFF5F7']}
         style={styles.gradientBackground}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -59,26 +61,28 @@ export default function ChallengesScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Goals</Text>
-          <Text style={styles.subtitle}>Optional wellness journeys</Text>
+          <Text style={[styles.title, { color: theme.text }]}>Challenges</Text>
+          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>Optional wellness journeys</Text>
         </View>
 
         {/* Active Challenge */}
         {activeChallenge && activeChallengeInfo && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Active Goal</Text>
-            <View style={styles.activeCard}>
-              <LinearGradient
-                colors={['rgba(255,255,255,0.95)', 'rgba(255,249,245,0.98)']}
-                style={styles.activeCardGradient}
-              />
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Active Challenge</Text>
+            <View style={[styles.activeCard, isDark && { backgroundColor: theme.surface }]}>
+              {!isDark && (
+                <LinearGradient
+                  colors={['rgba(255,255,255,0.95)', 'rgba(255,249,245,0.98)']}
+                  style={styles.activeCardGradient}
+                />
+              )}
               <View style={styles.activeHeader}>
-                <View style={styles.activeIconContainer}>
+                <View style={[styles.activeIconContainer, isDark && { backgroundColor: 'rgba(232, 164, 200, 0.15)' }]}>
                   <Text style={styles.activeIcon}>{activeChallengeInfo.icon}</Text>
                 </View>
                 <View style={styles.activeInfo}>
-                  <Text style={styles.activeName}>{activeChallengeInfo.name}</Text>
-                  <Text style={styles.activeDay}>
+                  <Text style={[styles.activeName, { color: theme.text }]}>{activeChallengeInfo.name}</Text>
+                  <Text style={[styles.activeDay, { color: theme.textSecondary }]}>
                     Day {getCurrentDay(activeChallenge.id)} of {activeChallengeInfo.duration}
                   </Text>
                 </View>
@@ -93,9 +97,9 @@ export default function ChallengesScreen() {
               </View>
 
               {/* Today's task */}
-              <View style={styles.todayTask}>
-                <Text style={styles.todayLabel}>Today's Task</Text>
-                <Text style={styles.todayText}>
+              <View style={[styles.todayTask, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.7)', borderColor: theme.borderLight }]}>
+                <Text style={[styles.todayLabel, { color: theme.textSecondary }]}>Today's Task</Text>
+                <Text style={[styles.todayText, { color: theme.text }]}>
                   {activeChallengeInfo.dailyTasks[getCurrentDay(activeChallenge.id) - 1]?.description}
                 </Text>
               </View>
@@ -106,7 +110,7 @@ export default function ChallengesScreen() {
                   onPress={handleCompleteDay}
                 >
                   <LinearGradient
-                    colors={['#FFB199', '#FF99B5']}
+                    colors={isDark ? [theme.primary, theme.secondary] : ['#FFB199', '#FF99B5']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={styles.completeButtonGradient}
@@ -114,8 +118,8 @@ export default function ChallengesScreen() {
                   <Text style={styles.completeButtonText}>Complete Today's Task</Text>
                 </Pressable>
               ) : (
-                <View style={styles.completedBadge}>
-                  <Text style={styles.completedBadgeText}>Today's task completed ✨</Text>
+                <View style={[styles.completedBadge, isDark && { backgroundColor: 'rgba(158, 207, 176, 0.15)', borderColor: 'rgba(158, 207, 176, 0.25)' }]}>
+                  <Text style={[styles.completedBadgeText, { color: theme.accent }]}>Today's task completed ✨</Text>
                 </View>
               )}
             </View>
@@ -125,39 +129,39 @@ export default function ChallengesScreen() {
         {/* Available Challenges */}
         {!activeChallenge && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Available Goals</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Available Challenges</Text>
             {DEFAULT_CHALLENGES.map((challenge) => {
               const isCompleted = completedChallenges.some(
                 c => c.challengeId === challenge.id
               );
 
               return (
-                <View key={challenge.id} style={styles.challengeCard}>
+                <View key={challenge.id} style={[styles.challengeCard, { backgroundColor: isDark ? theme.surface : 'rgba(255,255,255,0.85)', borderColor: theme.borderLight }]}>
                   <View style={styles.challengeHeader}>
-                    <View style={styles.challengeIconContainer}>
+                    <View style={[styles.challengeIconContainer, isDark && { backgroundColor: 'rgba(232, 164, 200, 0.12)' }]}>
                       <Text style={styles.challengeIcon}>{challenge.icon}</Text>
                     </View>
                     <View style={styles.challengeInfo}>
-                      <Text style={styles.challengeName}>{challenge.name}</Text>
-                      <Text style={styles.challengeDuration}>
+                      <Text style={[styles.challengeName, { color: theme.text }]}>{challenge.name}</Text>
+                      <Text style={[styles.challengeDuration, { color: theme.textSecondary }]}>
                         {challenge.duration} days • {challenge.pointsReward} pts
                       </Text>
                     </View>
                     {isCompleted && (
-                      <View style={styles.completedTag}>
+                      <View style={[styles.completedTag, { backgroundColor: theme.accent }]}>
                         <Text style={styles.completedTagText}>Done</Text>
                       </View>
                     )}
                   </View>
-                  <Text style={styles.challengeDescription} numberOfLines={2}>
+                  <Text style={[styles.challengeDescription, { color: theme.textSecondary }]} numberOfLines={2}>
                     {challenge.description}
                   </Text>
                   {!isCompleted && (
                     <Pressable
-                      style={({ pressed }) => [styles.startButton, pressed && { opacity: 0.8 }]}
+                      style={({ pressed }) => [styles.startButton, { borderColor: theme.primary }, pressed && { opacity: 0.8 }]}
                       onPress={() => handleStartChallenge(challenge.id)}
                     >
-                      <Text style={styles.startButtonText}>Start Goal</Text>
+                      <Text style={[styles.startButtonText, { color: theme.primary }]}>Start Challenge</Text>
                     </Pressable>
                   )}
                 </View>
@@ -169,19 +173,19 @@ export default function ChallengesScreen() {
         {/* Completed Challenges */}
         {completedChallenges.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Completed</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Completed</Text>
             {completedChallenges.map((userChallenge) => {
               const challenge = getChallengeById(userChallenge.challengeId);
               if (!challenge) return null;
 
               return (
-                <View key={userChallenge.id} style={styles.completedCard}>
-                  <View style={styles.completedIconContainer}>
+                <View key={userChallenge.id} style={[styles.completedCard, { backgroundColor: isDark ? theme.surface : 'rgba(255,255,255,0.7)', borderColor: theme.borderLight }]}>
+                  <View style={[styles.completedIconContainer, isDark && { backgroundColor: 'rgba(158, 207, 176, 0.12)' }]}>
                     <Text style={styles.completedIcon}>{challenge.icon}</Text>
                   </View>
-                  <Text style={styles.completedName}>{challenge.name}</Text>
-                  <View style={styles.completedPointsBadge}>
-                    <Text style={styles.completedPoints}>+{userChallenge.pointsEarned}</Text>
+                  <Text style={[styles.completedName, { color: theme.text }]}>{challenge.name}</Text>
+                  <View style={[styles.completedPointsBadge, isDark && { backgroundColor: 'rgba(158, 207, 176, 0.12)' }]}>
+                    <Text style={[styles.completedPoints, { color: theme.accent }]}>+{userChallenge.pointsEarned}</Text>
                   </View>
                 </View>
               );
@@ -190,14 +194,14 @@ export default function ChallengesScreen() {
         )}
 
         {/* Motivation */}
-        <View style={styles.motivationCard}>
+        <View style={[styles.motivationCard, { borderColor: isDark ? 'rgba(232, 164, 200, 0.2)' : 'rgba(255, 153, 181, 0.2)' }]}>
           <LinearGradient
-            colors={['rgba(255,153,181,0.08)', 'rgba(255,177,153,0.08)']}
+            colors={isDark ? ['rgba(232, 164, 200, 0.08)', 'rgba(212, 196, 232, 0.08)'] : ['rgba(255,153,181,0.08)', 'rgba(255,177,153,0.08)']}
             style={styles.motivationGradient}
           />
           <Text style={styles.motivationEmoji}>🌟</Text>
-          <Text style={styles.motivationText}>
-            Goals are optional wellness journeys. No pressure — try one when you feel ready!
+          <Text style={[styles.motivationText, { color: theme.textSecondary }]}>
+            Challenges are optional wellness journeys. No pressure — try one when you feel ready!
           </Text>
         </View>
 
@@ -210,7 +214,6 @@ export default function ChallengesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.background,
   },
   gradientBackground: {
     ...StyleSheet.absoluteFillObject,
@@ -228,13 +231,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '300',
-    color: theme.text,
+    color: defaultTheme.text,
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 15,
     fontWeight: '500',
-    color: theme.textSecondary,
+    color: defaultTheme.textSecondary,
     marginTop: spacing.xs,
   },
   section: {
@@ -243,7 +246,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: theme.text,
+    color: defaultTheme.text,
     marginBottom: spacing.md,
     letterSpacing: -0.3,
   },
@@ -279,12 +282,12 @@ const styles = StyleSheet.create({
   activeName: {
     fontSize: 18,
     fontWeight: '600',
-    color: theme.text,
+    color: defaultTheme.text,
     letterSpacing: -0.3,
   },
   activeDay: {
     fontSize: 14,
-    color: theme.textSecondary,
+    color: defaultTheme.textSecondary,
     marginTop: 2,
   },
   progressContainer: {
@@ -296,19 +299,19 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: theme.borderLight,
+    borderColor: defaultTheme.borderLight,
   },
   todayLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: theme.textSecondary,
+    color: defaultTheme.textSecondary,
     marginBottom: spacing.xs,
     letterSpacing: 0.3,
     textTransform: 'uppercase',
   },
   todayText: {
     fontSize: 15,
-    color: theme.text,
+    color: defaultTheme.text,
     lineHeight: 22,
   },
   completeButton: {
@@ -340,7 +343,7 @@ const styles = StyleSheet.create({
   completedBadgeText: {
     fontSize: 15,
     fontWeight: '500',
-    color: theme.accent,
+    color: defaultTheme.accent,
   },
   challengeCard: {
     backgroundColor: 'rgba(255,255,255,0.85)',
@@ -349,7 +352,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     ...shadows.sm,
     borderWidth: 1,
-    borderColor: theme.borderLight,
+    borderColor: defaultTheme.borderLight,
   },
   challengeHeader: {
     flexDirection: 'row',
@@ -374,15 +377,15 @@ const styles = StyleSheet.create({
   challengeName: {
     fontSize: 15,
     fontWeight: '600',
-    color: theme.text,
+    color: defaultTheme.text,
   },
   challengeDuration: {
     fontSize: 13,
-    color: theme.textSecondary,
+    color: defaultTheme.textSecondary,
     marginTop: 2,
   },
   completedTag: {
-    backgroundColor: theme.accent,
+    backgroundColor: defaultTheme.accent,
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: borderRadius.pill,
@@ -394,7 +397,7 @@ const styles = StyleSheet.create({
   },
   challengeDescription: {
     fontSize: 14,
-    color: theme.textSecondary,
+    color: defaultTheme.textSecondary,
     marginBottom: spacing.sm,
     lineHeight: 20,
   },
@@ -404,12 +407,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: borderRadius.button,
     borderWidth: 1.5,
-    borderColor: theme.primary,
+    borderColor: defaultTheme.primary,
   },
   startButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: theme.primary,
+    color: defaultTheme.primary,
   },
   completedCard: {
     flexDirection: 'row',
@@ -419,7 +422,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: theme.borderLight,
+    borderColor: defaultTheme.borderLight,
   },
   completedIconContainer: {
     width: 40,
@@ -436,7 +439,7 @@ const styles = StyleSheet.create({
   completedName: {
     fontSize: 15,
     fontWeight: '500',
-    color: theme.text,
+    color: defaultTheme.text,
     flex: 1,
   },
   completedPointsBadge: {
@@ -448,7 +451,7 @@ const styles = StyleSheet.create({
   completedPoints: {
     fontSize: 13,
     fontWeight: '600',
-    color: theme.accent,
+    color: defaultTheme.accent,
   },
   motivationCard: {
     flexDirection: 'row',
@@ -468,7 +471,7 @@ const styles = StyleSheet.create({
   },
   motivationText: {
     fontSize: 14,
-    color: theme.textSecondary,
+    color: defaultTheme.textSecondary,
     flex: 1,
     lineHeight: 20,
   },

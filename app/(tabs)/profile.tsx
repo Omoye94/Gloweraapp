@@ -16,10 +16,14 @@ import {
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useUserStore, useHabitStore, usePlantStore, useJournalStore, useChallengeStore, useSupplementStore } from '../../src/stores';
 import { PlantDisplay } from '../../src/components/garden';
 import { GoalsSelectionModal } from '../../src/components/supplements';
-import { theme, spacing, borderRadius, shadows } from '../../src/theme';
+import { spacing, borderRadius, shadows, lightTheme as defaultTheme } from '../../src/theme';
+import { useTheme } from '../../src/context';
+
+const LOCAL_ONBOARDING_KEY = 'glowera-onboarding-complete';
 
 const THEME_OPTIONS = [
   { id: 'default', name: 'Lavender Bloom', colors: ['#FAE8ED', '#F5EBF8'] },
@@ -28,19 +32,27 @@ const THEME_OPTIONS = [
   { id: 'plum', name: 'Plum Dusk', colors: ['#F5EBF0', '#E8D4DE'] },
 ];
 
+const APPEARANCE_OPTIONS = [
+  { id: 'light', name: 'Light', icon: '☀️' },
+  { id: 'dark', name: 'Dark', icon: '🌙' },
+  { id: 'system', name: 'System', icon: '📱' },
+] as const;
+
 export default function ProfileScreen() {
   const router = useRouter();
+  const { theme, isDark, themeMode, setThemeMode } = useTheme();
   const { user, resetUser, updateGardenName, updateNotificationSettings, setTheme } = useUserStore();
   const { habits, getActiveHabits, resetHabits, toggleHabitActive } = useHabitStore();
   const { plant, getProgressToNext, getPointsToNext, resetPlant } = usePlantStore();
   const { entries, resetJournal } = useJournalStore();
-  const { challenges, getCompletedChallenges, resetChallenges } = useChallengeStore();
+  const { getCompletedChallenges, resetChallenges } = useChallengeStore();
   const { wellnessGoals, resetSupplementPreferences } = useSupplementStore();
 
   // Modal states
   const [showEditNameModal, setShowEditNameModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [showThemeModal, setShowThemeModal] = useState(false);
+  const [showAppearanceModal, setShowAppearanceModal] = useState(false);
   const [showManageHabitsModal, setShowManageHabitsModal] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
@@ -79,6 +91,25 @@ export default function ProfileScreen() {
             resetChallenges();
             resetSupplementPreferences();
             router.replace('/(auth)/welcome');
+          },
+        },
+      ]
+    );
+  };
+
+  const handleResetOnboarding = () => {
+    Alert.alert(
+      'Restart Onboarding',
+      'This will take you through the onboarding flow again. Your data will be preserved.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Restart',
+          onPress: async () => {
+            await AsyncStorage.removeItem(LOCAL_ONBOARDING_KEY);
+            // Navigate to onboarding - the route guard will check AsyncStorage
+            // and allow staying in onboarding since the flag is cleared
+            router.replace('/(onboarding)/problem');
           },
         },
       ]
@@ -164,6 +195,17 @@ export default function ProfileScreen() {
     return currentTheme?.name || 'Sunrise';
   };
 
+  const getAppearanceName = () => {
+    const option = APPEARANCE_OPTIONS.find(o => o.id === themeMode);
+    return option?.name || 'System';
+  };
+
+  const handleSelectAppearance = (mode: 'light' | 'dark' | 'system') => {
+    setThemeMode(mode);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setShowAppearanceModal(false);
+  };
+
   const openTimePicker = (type: 'morning' | 'evening') => {
     setEditingTimeType(type);
     const currentTime = type === 'morning'
@@ -245,25 +287,25 @@ export default function ProfileScreen() {
     <Pressable
       style={({ pressed }) => [
         styles.menuItem,
-        !isLast && styles.menuItemBorder,
-        pressed && onPress && styles.menuItemPressed,
+        !isLast && [styles.menuItemBorder, { borderBottomColor: theme.borderLight }],
+        pressed && onPress && [styles.menuItemPressed, { backgroundColor: isDark ? 'rgba(232, 164, 200, 0.08)' : 'rgba(212, 196, 232, 0.1)' }],
       ]}
       onPress={onPress}
       disabled={!onPress}
     >
-      <View style={styles.menuIconContainer}>
+      <View style={[styles.menuIconContainer, isDark && { backgroundColor: 'rgba(232, 164, 200, 0.12)' }]}>
         <Text style={styles.menuIcon}>{icon}</Text>
       </View>
-      <Text style={styles.menuLabel}>{label}</Text>
-      {value && <Text style={styles.menuValue}>{value}</Text>}
-      {onPress && <Text style={styles.menuArrow}>›</Text>}
+      <Text style={[styles.menuLabel, { color: theme.text }]}>{label}</Text>
+      {value && <Text style={[styles.menuValue, { color: theme.textSecondary }]}>{value}</Text>}
+      {onPress && <Text style={[styles.menuArrow, { color: theme.textMuted }]}>›</Text>}
     </Pressable>
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <LinearGradient
-        colors={['#FAE8ED', '#F5EBF8', '#E8D9F0']}
+        colors={isDark ? ['#1A1418', '#241A20', '#1E171B'] : ['#FAE8ED', '#F5EBF8', '#E8D9F0']}
         style={styles.gradientBackground}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -277,16 +319,18 @@ export default function ProfileScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>You</Text>
-          <Text style={styles.subtitle}>Your wellness journey</Text>
+          <Text style={[styles.title, { color: theme.text }]}>You</Text>
+          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>Your wellness journey</Text>
         </View>
 
         {/* Garden Card */}
-        <View style={styles.gardenCard}>
-          <LinearGradient
-            colors={['rgba(255,255,255,0.95)', 'rgba(250,232,237,0.98)']}
-            style={styles.gardenCardGradient}
-          />
+        <View style={[styles.gardenCard, isDark && { backgroundColor: theme.surface }]}>
+          {!isDark && (
+            <LinearGradient
+              colors={['rgba(255,255,255,0.95)', 'rgba(250,232,237,0.98)']}
+              style={styles.gardenCardGradient}
+            />
+          )}
           <Pressable
             onPress={() => {
               setEditedGardenName(user?.gardenName || '');
@@ -295,7 +339,7 @@ export default function ProfileScreen() {
             style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
           >
             <View style={styles.gardenNameRow}>
-              <Text style={styles.gardenName}>{user?.gardenName || 'My Garden'}</Text>
+              <Text style={[styles.gardenName, { color: theme.text }]}>{user?.gardenName || 'My Garden'}</Text>
               <Text style={styles.editIcon}>✏️</Text>
             </View>
           </Pressable>
@@ -309,68 +353,74 @@ export default function ProfileScreen() {
 
         {/* Stats */}
         <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <LinearGradient
-              colors={['#FFFFFF', '#FAF5FC']}
-              style={styles.statCardGradient}
-            />
-            <Text style={styles.statValue}>{plant.totalLifetimePoints}</Text>
-            <Text style={styles.statLabel}>Points</Text>
+          <View style={[styles.statCard, { borderColor: theme.borderLight, backgroundColor: isDark ? theme.surface : undefined }]}>
+            {!isDark && (
+              <LinearGradient
+                colors={['#FFFFFF', '#FAF5FC']}
+                style={styles.statCardGradient}
+              />
+            )}
+            <Text style={[styles.statValue, { color: theme.primary }]}>{plant.totalLifetimePoints}</Text>
+            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Points</Text>
           </View>
-          <View style={styles.statCard}>
-            <LinearGradient
-              colors={['#FFFFFF', '#FAE8ED']}
-              style={styles.statCardGradient}
-            />
-            <Text style={styles.statValue}>{entries.length}</Text>
-            <Text style={styles.statLabel}>Entries</Text>
+          <View style={[styles.statCard, { borderColor: theme.borderLight, backgroundColor: isDark ? theme.surface : undefined }]}>
+            {!isDark && (
+              <LinearGradient
+                colors={['#FFFFFF', '#FAE8ED']}
+                style={styles.statCardGradient}
+              />
+            )}
+            <Text style={[styles.statValue, { color: theme.primary }]}>{entries.length}</Text>
+            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Entries</Text>
           </View>
-          <View style={styles.statCard}>
-            <LinearGradient
-              colors={['#FFFFFF', '#F5EBF8']}
-              style={styles.statCardGradient}
-            />
-            <Text style={styles.statValue}>{completedChallenges.length}</Text>
-            <Text style={styles.statLabel}>Goals</Text>
+          <View style={[styles.statCard, { borderColor: theme.borderLight, backgroundColor: isDark ? theme.surface : undefined }]}>
+            {!isDark && (
+              <LinearGradient
+                colors={['#FFFFFF', '#F5EBF8']}
+                style={styles.statCardGradient}
+              />
+            )}
+            <Text style={[styles.statValue, { color: theme.primary }]}>{completedChallenges.length}</Text>
+            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Challenges</Text>
           </View>
         </View>
 
         {/* Your Habits - with manage option */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Your Habits</Text>
+            <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>Your Habits</Text>
             <Pressable
               onPress={() => setShowManageHabitsModal(true)}
               style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
             >
-              <Text style={styles.manageLink}>Manage</Text>
+              <Text style={[styles.manageLink, { color: theme.primary }]}>Manage</Text>
             </Pressable>
           </View>
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: isDark ? theme.surface : 'rgba(255,255,255,0.85)', borderColor: theme.borderLight }]}>
             {activeHabits.length === 0 ? (
-              <Text style={styles.emptyText}>No habits selected</Text>
+              <Text style={[styles.emptyText, { color: theme.textMuted }]}>No habits selected</Text>
             ) : (
               activeHabits.slice(0, 5).map((habit, index) => (
                 <View
                   key={habit.id}
                   style={[
                     styles.habitItem,
-                    index < Math.min(activeHabits.length, 5) - 1 && styles.habitItemBorder,
+                    index < Math.min(activeHabits.length, 5) - 1 && [styles.habitItemBorder, { borderBottomColor: theme.borderLight }],
                   ]}
                 >
-                  <View style={styles.habitIconContainer}>
+                  <View style={[styles.habitIconContainer, isDark && { backgroundColor: 'rgba(232, 164, 200, 0.15)' }]}>
                     <Text style={styles.habitIcon}>{habit.icon}</Text>
                   </View>
-                  <Text style={styles.habitName}>{habit.name}</Text>
+                  <Text style={[styles.habitName, { color: theme.text }]}>{habit.name}</Text>
                 </View>
               ))
             )}
             {activeHabits.length > 5 && (
               <Pressable
                 onPress={() => setShowManageHabitsModal(true)}
-                style={styles.seeMoreButton}
+                style={[styles.seeMoreButton, { borderTopColor: theme.borderLight }]}
               >
-                <Text style={styles.seeMoreText}>+{activeHabits.length - 5} more</Text>
+                <Text style={[styles.seeMoreText, { color: theme.primary }]}>+{activeHabits.length - 5} more</Text>
               </Pressable>
             )}
           </View>
@@ -378,8 +428,8 @@ export default function ProfileScreen() {
 
         {/* Settings Menu */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Settings</Text>
-          <View style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>Settings</Text>
+          <View style={[styles.card, { backgroundColor: isDark ? theme.surface : 'rgba(255,255,255,0.85)', borderColor: theme.borderLight }]}>
             <MenuItem
               icon="🎯"
               label="Wellness Goals"
@@ -393,8 +443,14 @@ export default function ProfileScreen() {
               onPress={() => setShowNotificationsModal(true)}
             />
             <MenuItem
+              icon="🌓"
+              label="Appearance"
+              value={getAppearanceName()}
+              onPress={() => setShowAppearanceModal(true)}
+            />
+            <MenuItem
               icon="🎨"
-              label="Theme"
+              label="Color Theme"
               value={getThemeName()}
               onPress={() => setShowThemeModal(true)}
             />
@@ -402,6 +458,11 @@ export default function ProfileScreen() {
               icon="📤"
               label="Export Data"
               onPress={handleExportData}
+            />
+            <MenuItem
+              icon="🔄"
+              label="Restart Onboarding"
+              onPress={handleResetOnboarding}
               isLast
             />
           </View>
@@ -409,8 +470,8 @@ export default function ProfileScreen() {
 
         {/* About */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About</Text>
-          <View style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>About</Text>
+          <View style={[styles.card, { backgroundColor: isDark ? theme.surface : 'rgba(255,255,255,0.85)', borderColor: theme.borderLight }]}>
             <MenuItem
               icon="💜"
               label="About Glowera"
@@ -435,11 +496,11 @@ export default function ProfileScreen() {
           style={({ pressed }) => [styles.resetButton, pressed && { opacity: 0.7 }]}
           onPress={handleResetApp}
         >
-          <Text style={styles.resetText}>Reset App Data</Text>
+          <Text style={[styles.resetText, { color: theme.error }]}>Reset App Data</Text>
         </Pressable>
 
         {/* Version */}
-        <Text style={styles.version}>Glowera v1.0.0</Text>
+        <Text style={[styles.version, { color: theme.textMuted }]}>Glowera v1.0.0</Text>
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
@@ -455,10 +516,10 @@ export default function ProfileScreen() {
           style={styles.modalOverlay}
           onPress={() => setShowEditNameModal(false)}
         >
-          <Pressable style={styles.modalContent} onPress={e => e.stopPropagation()}>
-            <Text style={styles.modalTitle}>Edit Garden Name</Text>
+          <Pressable style={[styles.modalContent, { backgroundColor: theme.surface }]} onPress={e => e.stopPropagation()}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Edit Garden Name</Text>
             <TextInput
-              style={styles.textInput}
+              style={[styles.textInput, { backgroundColor: theme.backgroundWarm, borderColor: theme.borderLight, color: theme.text }]}
               value={editedGardenName}
               onChangeText={setEditedGardenName}
               placeholder="Enter garden name"
@@ -468,16 +529,16 @@ export default function ProfileScreen() {
             />
             <View style={styles.modalButtons}>
               <Pressable
-                style={[styles.modalButton, styles.modalButtonSecondary]}
+                style={[styles.modalButton, styles.modalButtonSecondary, { backgroundColor: theme.backgroundWarm, borderColor: theme.borderLight }]}
                 onPress={() => setShowEditNameModal(false)}
               >
-                <Text style={styles.modalButtonTextSecondary}>Cancel</Text>
+                <Text style={[styles.modalButtonTextSecondary, { color: theme.text }]}>Cancel</Text>
               </Pressable>
               <Pressable
-                style={[styles.modalButton, styles.modalButtonPrimary]}
+                style={[styles.modalButton, styles.modalButtonPrimary, { backgroundColor: theme.primary }]}
                 onPress={handleSaveGardenName}
               >
-                <Text style={styles.modalButtonTextPrimary}>Save</Text>
+                <Text style={[styles.modalButtonTextPrimary, { color: theme.textOnPrimary }]}>Save</Text>
               </Pressable>
             </View>
           </Pressable>
@@ -495,13 +556,13 @@ export default function ProfileScreen() {
           style={styles.modalOverlay}
           onPress={() => setShowNotificationsModal(false)}
         >
-          <Pressable style={styles.modalContent} onPress={e => e.stopPropagation()}>
-            <Text style={styles.modalTitle}>Notifications</Text>
+          <Pressable style={[styles.modalContent, { backgroundColor: theme.surface }]} onPress={e => e.stopPropagation()}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Notifications</Text>
 
-            <View style={styles.settingRow}>
+            <View style={[styles.settingRow, { borderBottomColor: theme.borderLight }]}>
               <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>Enable Notifications</Text>
-                <Text style={styles.settingDescription}>Get gentle reminders</Text>
+                <Text style={[styles.settingLabel, { color: theme.text }]}>Enable Notifications</Text>
+                <Text style={[styles.settingDescription, { color: theme.textSecondary }]}>Get gentle reminders</Text>
               </View>
               <Switch
                 value={user?.notificationSettings.enabled}
@@ -513,15 +574,16 @@ export default function ProfileScreen() {
 
             {user?.notificationSettings.enabled && (
               <>
-                <View style={styles.settingRow}>
+                <View style={[styles.settingRow, { borderBottomColor: theme.borderLight }]}>
                   <Pressable
                     style={styles.settingInfo}
                     onPress={() => user?.notificationSettings.morningReminder && openTimePicker('morning')}
                   >
-                    <Text style={styles.settingLabel}>Morning Reminder</Text>
+                    <Text style={[styles.settingLabel, { color: theme.text }]}>Morning Reminder</Text>
                     <Text style={[
                       styles.settingDescription,
-                      user?.notificationSettings.morningReminder && styles.settingTimeTappable
+                      { color: theme.textSecondary },
+                      user?.notificationSettings.morningReminder && [styles.settingTimeTappable, { color: theme.primary }]
                     ]}>
                       {formatTime(user?.notificationSettings.morningTime)}
                       {user?.notificationSettings.morningReminder && ' ›'}
@@ -535,15 +597,16 @@ export default function ProfileScreen() {
                   />
                 </View>
 
-                <View style={styles.settingRow}>
+                <View style={[styles.settingRow, { borderBottomColor: theme.borderLight }]}>
                   <Pressable
                     style={styles.settingInfo}
                     onPress={() => user?.notificationSettings.eveningReminder && openTimePicker('evening')}
                   >
-                    <Text style={styles.settingLabel}>Evening Reminder</Text>
+                    <Text style={[styles.settingLabel, { color: theme.text }]}>Evening Reminder</Text>
                     <Text style={[
                       styles.settingDescription,
-                      user?.notificationSettings.eveningReminder && styles.settingTimeTappable
+                      { color: theme.textSecondary },
+                      user?.notificationSettings.eveningReminder && [styles.settingTimeTappable, { color: theme.primary }]
                     ]}>
                       {formatTime(user?.notificationSettings.eveningTime)}
                       {user?.notificationSettings.eveningReminder && ' ›'}
@@ -560,10 +623,10 @@ export default function ProfileScreen() {
             )}
 
             <Pressable
-              style={[styles.modalButton, styles.modalButtonPrimary, { marginTop: spacing.lg }]}
+              style={[styles.modalButton, styles.modalButtonPrimary, { marginTop: spacing.lg, backgroundColor: theme.primary }]}
               onPress={() => setShowNotificationsModal(false)}
             >
-              <Text style={styles.modalButtonTextPrimary}>Done</Text>
+              <Text style={[styles.modalButtonTextPrimary, { color: theme.textOnPrimary }]}>Done</Text>
             </Pressable>
           </Pressable>
         </Pressable>
@@ -580,28 +643,65 @@ export default function ProfileScreen() {
           style={styles.modalOverlay}
           onPress={() => setShowThemeModal(false)}
         >
-          <Pressable style={styles.modalContent} onPress={e => e.stopPropagation()}>
-            <Text style={styles.modalTitle}>Choose Theme</Text>
+          <Pressable style={[styles.modalContent, { backgroundColor: theme.surface }]} onPress={e => e.stopPropagation()}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Choose Color Theme</Text>
 
             {THEME_OPTIONS.map((themeOption) => (
               <Pressable
                 key={themeOption.id}
                 style={({ pressed }) => [
                   styles.themeOption,
-                  user?.selectedTheme === themeOption.id && styles.themeOptionSelected,
+                  user?.selectedTheme === themeOption.id && [styles.themeOptionSelected, { backgroundColor: isDark ? 'rgba(232, 164, 200, 0.15)' : 'rgba(212, 196, 232, 0.2)' }],
                   pressed && { opacity: 0.8 },
                 ]}
                 onPress={() => handleSelectTheme(themeOption.id)}
               >
                 <LinearGradient
-                  colors={themeOption.colors}
-                  style={styles.themePreview}
+                  colors={themeOption.colors as [string, string, ...string[]]}
+                  style={[styles.themePreview, { borderColor: theme.borderLight }]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                 />
-                <Text style={styles.themeName}>{themeOption.name}</Text>
+                <Text style={[styles.themeName, { color: theme.text }]}>{themeOption.name}</Text>
                 {user?.selectedTheme === themeOption.id && (
-                  <Text style={styles.themeCheck}>✓</Text>
+                  <Text style={[styles.themeCheck, { color: theme.primary }]}>✓</Text>
+                )}
+              </Pressable>
+            ))}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Appearance Modal (Light/Dark/System) */}
+      <Modal
+        visible={showAppearanceModal}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setShowAppearanceModal(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setShowAppearanceModal(false)}
+        >
+          <Pressable style={[styles.modalContent, { backgroundColor: theme.surface }]} onPress={e => e.stopPropagation()}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Appearance</Text>
+
+            {APPEARANCE_OPTIONS.map((option) => (
+              <Pressable
+                key={option.id}
+                style={({ pressed }) => [
+                  styles.themeOption,
+                  themeMode === option.id && [styles.themeOptionSelected, { backgroundColor: isDark ? 'rgba(232, 164, 200, 0.15)' : 'rgba(212, 196, 232, 0.2)' }],
+                  pressed && { opacity: 0.8 },
+                ]}
+                onPress={() => handleSelectAppearance(option.id)}
+              >
+                <View style={[styles.appearanceIconContainer, { backgroundColor: isDark ? 'rgba(232, 164, 200, 0.12)' : 'rgba(212, 196, 232, 0.2)' }]}>
+                  <Text style={styles.appearanceIcon}>{option.icon}</Text>
+                </View>
+                <Text style={[styles.themeName, { color: theme.text }]}>{option.name}</Text>
+                {themeMode === option.id && (
+                  <Text style={[styles.themeCheck, { color: theme.primary }]}>✓</Text>
                 )}
               </Pressable>
             ))}
@@ -1109,7 +1209,6 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.background,
   },
   gradientBackground: {
     ...StyleSheet.absoluteFillObject,
@@ -1127,13 +1226,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '300',
-    color: theme.text,
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 15,
     fontWeight: '500',
-    color: theme.textSecondary,
     marginTop: spacing.xs,
   },
   gardenCard: {
@@ -1150,7 +1247,7 @@ const styles = StyleSheet.create({
   gardenName: {
     fontSize: 22,
     fontWeight: '300',
-    color: theme.text,
+    color: defaultTheme.text,
     marginBottom: spacing.md,
     letterSpacing: -0.3,
   },
@@ -1167,7 +1264,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...shadows.sm,
     borderWidth: 1,
-    borderColor: theme.borderLight,
+    borderColor: defaultTheme.borderLight,
   },
   statCardGradient: {
     ...StyleSheet.absoluteFillObject,
@@ -1175,13 +1272,13 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 24,
     fontWeight: '300',
-    color: theme.primary,
+    color: defaultTheme.primary,
     letterSpacing: -0.5,
   },
   statLabel: {
     fontSize: 12,
     fontWeight: '500',
-    color: theme.textSecondary,
+    color: defaultTheme.textSecondary,
     marginTop: 4,
   },
   section: {
@@ -1190,7 +1287,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: theme.textSecondary,
+    color: defaultTheme.textSecondary,
     marginBottom: spacing.sm,
     marginLeft: spacing.xs,
     letterSpacing: 0.3,
@@ -1202,7 +1299,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...shadows.sm,
     borderWidth: 1,
-    borderColor: theme.borderLight,
+    borderColor: defaultTheme.borderLight,
   },
   habitItem: {
     flexDirection: 'row',
@@ -1212,7 +1309,7 @@ const styles = StyleSheet.create({
   },
   habitItemBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: theme.borderLight,
+    borderBottomColor: defaultTheme.borderLight,
   },
   habitIconContainer: {
     width: 36,
@@ -1229,11 +1326,11 @@ const styles = StyleSheet.create({
   habitName: {
     fontSize: 15,
     fontWeight: '500',
-    color: theme.text,
+    color: defaultTheme.text,
   },
   emptyText: {
     fontSize: 15,
-    color: theme.textMuted,
+    color: defaultTheme.textMuted,
     textAlign: 'center',
     paddingVertical: spacing.lg,
   },
@@ -1245,7 +1342,7 @@ const styles = StyleSheet.create({
   },
   menuItemBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: theme.borderLight,
+    borderBottomColor: defaultTheme.borderLight,
   },
   menuItemPressed: {
     backgroundColor: 'rgba(212, 196, 232, 0.1)',
@@ -1265,18 +1362,18 @@ const styles = StyleSheet.create({
   menuLabel: {
     fontSize: 15,
     fontWeight: '500',
-    color: theme.text,
+    color: defaultTheme.text,
     flex: 1,
   },
   menuValue: {
     fontSize: 14,
-    color: theme.textSecondary,
+    color: defaultTheme.textSecondary,
     marginRight: spacing.sm,
   },
   menuArrow: {
     fontSize: 20,
     fontWeight: '300',
-    color: theme.textMuted,
+    color: defaultTheme.textMuted,
   },
   resetButton: {
     alignItems: 'center',
@@ -1286,11 +1383,11 @@ const styles = StyleSheet.create({
   resetText: {
     fontSize: 15,
     fontWeight: '500',
-    color: theme.error,
+    color: defaultTheme.error,
   },
   version: {
     fontSize: 12,
-    color: theme.textMuted,
+    color: defaultTheme.textMuted,
     textAlign: 'center',
     marginTop: spacing.lg,
   },
@@ -1318,19 +1415,19 @@ const styles = StyleSheet.create({
   manageLink: {
     fontSize: 13,
     fontWeight: '500',
-    color: theme.primary,
+    color: defaultTheme.primary,
     marginRight: spacing.xs,
   },
   seeMoreButton: {
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: theme.borderLight,
+    borderTopColor: defaultTheme.borderLight,
   },
   seeMoreText: {
     fontSize: 14,
     fontWeight: '500',
-    color: theme.primary,
+    color: defaultTheme.primary,
     textAlign: 'center',
   },
   // Modal styles
@@ -1342,7 +1439,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   modalContent: {
-    backgroundColor: theme.surface,
+    backgroundColor: defaultTheme.surface,
     borderRadius: borderRadius.xl,
     padding: spacing.xl,
     width: '100%',
@@ -1352,25 +1449,25 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: '500',
-    color: theme.text,
+    color: defaultTheme.text,
     marginBottom: spacing.lg,
     textAlign: 'center',
   },
   modalSubtitle: {
     fontSize: 14,
-    color: theme.textSecondary,
+    color: defaultTheme.textSecondary,
     marginBottom: spacing.md,
     textAlign: 'center',
   },
   textInput: {
-    backgroundColor: theme.backgroundWarm,
+    backgroundColor: defaultTheme.backgroundWarm,
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     fontSize: 16,
-    color: theme.text,
+    color: defaultTheme.text,
     borderWidth: 1,
-    borderColor: theme.borderLight,
+    borderColor: defaultTheme.borderLight,
     marginBottom: spacing.lg,
   },
   modalButtons: {
@@ -1384,22 +1481,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalButtonPrimary: {
-    backgroundColor: theme.primary,
+    backgroundColor: defaultTheme.primary,
   },
   modalButtonSecondary: {
-    backgroundColor: theme.backgroundWarm,
+    backgroundColor: defaultTheme.backgroundWarm,
     borderWidth: 1,
-    borderColor: theme.borderLight,
+    borderColor: defaultTheme.borderLight,
   },
   modalButtonTextPrimary: {
     fontSize: 15,
     fontWeight: '600',
-    color: theme.textOnPrimary,
+    color: defaultTheme.textOnPrimary,
   },
   modalButtonTextSecondary: {
     fontSize: 15,
     fontWeight: '500',
-    color: theme.text,
+    color: defaultTheme.text,
   },
   // Settings rows
   settingRow: {
@@ -1408,7 +1505,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: theme.borderLight,
+    borderBottomColor: defaultTheme.borderLight,
   },
   settingInfo: {
     flex: 1,
@@ -1416,11 +1513,11 @@ const styles = StyleSheet.create({
   settingLabel: {
     fontSize: 15,
     fontWeight: '500',
-    color: theme.text,
+    color: defaultTheme.text,
   },
   settingDescription: {
     fontSize: 13,
-    color: theme.textSecondary,
+    color: defaultTheme.textSecondary,
     marginTop: 2,
   },
   // Theme options
@@ -1441,18 +1538,28 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.sm,
     marginRight: spacing.md,
     borderWidth: 1,
-    borderColor: theme.borderLight,
+    borderColor: defaultTheme.borderLight,
   },
   themeName: {
     fontSize: 15,
     fontWeight: '500',
-    color: theme.text,
+    color: defaultTheme.text,
     flex: 1,
   },
   themeCheck: {
     fontSize: 18,
-    color: theme.primary,
     fontWeight: '600',
+  },
+  appearanceIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  appearanceIcon: {
+    fontSize: 22,
   },
   // Full modal for manage habits
   fullModalContainer: {
@@ -1461,7 +1568,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   fullModalContent: {
-    backgroundColor: theme.surface,
+    backgroundColor: defaultTheme.surface,
     borderTopLeftRadius: borderRadius.xxl,
     borderTopRightRadius: borderRadius.xxl,
     paddingTop: spacing.lg,
@@ -1477,7 +1584,7 @@ const styles = StyleSheet.create({
   closeButton: {
     fontSize: 16,
     fontWeight: '600',
-    color: theme.primary,
+    color: defaultTheme.primary,
   },
   habitsScrollView: {
     marginTop: spacing.md,
@@ -1491,17 +1598,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   habitNameInactive: {
-    color: theme.textMuted,
+    color: defaultTheme.textMuted,
   },
   habitCategory: {
     fontSize: 12,
-    color: theme.textSecondary,
+    color: defaultTheme.textSecondary,
     textTransform: 'capitalize',
     marginTop: 2,
   },
   // Tappable time in notifications
   settingTimeTappable: {
-    color: theme.primary,
+    color: defaultTheme.primary,
   },
   // Add habit button in manage habits modal
   addHabitButton: {
@@ -1513,19 +1620,19 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: theme.secondary,
+    borderColor: defaultTheme.secondary,
     borderStyle: 'dashed',
   },
   addHabitIcon: {
     fontSize: 20,
-    color: theme.primary,
+    color: defaultTheme.primary,
     marginRight: spacing.sm,
     fontWeight: '300',
   },
   addHabitText: {
     fontSize: 15,
     fontWeight: '500',
-    color: theme.primary,
+    color: defaultTheme.primary,
   },
   // Time picker styles
   timePickerContainer: {
@@ -1556,21 +1663,21 @@ const styles = StyleSheet.create({
     marginVertical: spacing.xs,
   },
   timePickerItemSelected: {
-    backgroundColor: theme.primary,
+    backgroundColor: defaultTheme.primary,
   },
   timePickerItemText: {
     fontSize: 18,
     fontWeight: '400',
-    color: theme.text,
+    color: defaultTheme.text,
   },
   timePickerItemTextSelected: {
-    color: theme.textOnPrimary,
+    color: defaultTheme.textOnPrimary,
     fontWeight: '600',
   },
   timePickerSeparator: {
     fontSize: 24,
     fontWeight: '300',
-    color: theme.text,
+    color: defaultTheme.text,
     marginHorizontal: spacing.xs,
   },
   // About modal styles
@@ -1588,12 +1695,12 @@ const styles = StyleSheet.create({
   aboutAppName: {
     fontSize: 28,
     fontWeight: '300',
-    color: theme.text,
+    color: defaultTheme.text,
     letterSpacing: -0.5,
   },
   aboutTagline: {
     fontSize: 15,
-    color: theme.textSecondary,
+    color: defaultTheme.textSecondary,
     marginTop: spacing.xs,
   },
   aboutSection: {
@@ -1603,12 +1710,12 @@ const styles = StyleSheet.create({
   aboutSectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: theme.text,
+    color: defaultTheme.text,
     marginBottom: spacing.sm,
   },
   aboutText: {
     fontSize: 14,
-    color: theme.textSecondary,
+    color: defaultTheme.textSecondary,
     lineHeight: 22,
   },
   aboutFeature: {
@@ -1625,12 +1732,12 @@ const styles = StyleSheet.create({
   aboutFeatureTitle: {
     fontSize: 15,
     fontWeight: '500',
-    color: theme.text,
+    color: defaultTheme.text,
     marginBottom: 2,
   },
   aboutFeatureDesc: {
     fontSize: 13,
-    color: theme.textSecondary,
+    color: defaultTheme.textSecondary,
     lineHeight: 18,
   },
   // Add habit modal styles
@@ -1640,7 +1747,7 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: theme.textSecondary,
+    color: defaultTheme.textSecondary,
     marginBottom: spacing.sm,
     textTransform: 'uppercase',
     letterSpacing: 0.3,
@@ -1655,15 +1762,15 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: borderRadius.md,
-    backgroundColor: theme.backgroundWarm,
+    backgroundColor: defaultTheme.backgroundWarm,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: theme.borderLight,
+    borderColor: defaultTheme.borderLight,
   },
   iconOptionSelected: {
-    backgroundColor: theme.primaryLight,
-    borderColor: theme.primary,
+    backgroundColor: defaultTheme.primaryLight,
+    borderColor: defaultTheme.primary,
   },
   iconOptionText: {
     fontSize: 22,
@@ -1680,13 +1787,13 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: borderRadius.md,
-    backgroundColor: theme.backgroundWarm,
+    backgroundColor: defaultTheme.backgroundWarm,
     borderWidth: 1,
-    borderColor: theme.borderLight,
+    borderColor: defaultTheme.borderLight,
   },
   categoryOptionSelected: {
-    backgroundColor: theme.primaryLight,
-    borderColor: theme.primary,
+    backgroundColor: defaultTheme.primaryLight,
+    borderColor: defaultTheme.primary,
   },
   categoryOptionIcon: {
     fontSize: 16,
@@ -1695,10 +1802,10 @@ const styles = StyleSheet.create({
   categoryOptionText: {
     fontSize: 13,
     fontWeight: '500',
-    color: theme.text,
+    color: defaultTheme.text,
   },
   categoryOptionTextSelected: {
-    color: theme.primary,
+    color: defaultTheme.primary,
   },
   modalButtonDisabled: {
     opacity: 0.5,

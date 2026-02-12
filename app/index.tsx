@@ -1,20 +1,21 @@
-import { useEffect } from 'react';
-import { Redirect } from 'expo-router';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import { useUserStore } from '../src/stores';
 import { theme } from '../src/theme';
 
+/**
+ * Entry point - shows a loading screen while the root layout
+ * determines which route group to display based on auth state.
+ *
+ * The actual routing logic is in _layout.tsx via useBootstrap hook:
+ * - Unauthenticated → /(auth)/welcome
+ * - Needs onboarding → /(onboarding)/problem
+ * - Ready → /(tabs)
+ */
 export default function Index() {
-  const { isOnboardingComplete } = useUserStore();
-
-  // Show loading briefly while checking onboarding status
-  // In a real app, you might check this from persistent storage
-
-  if (isOnboardingComplete) {
-    return <Redirect href="/(tabs)" />;
-  }
-
-  return <Redirect href="/(auth)/welcome" />;
+  return (
+    <View style={styles.container}>
+      <ActivityIndicator size="large" color={theme.primary} />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
