@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Garden</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@100;200;300;400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100;200;300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Raleway:wght@100;200;300;400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://code.iconify.design/iconify-icon/3.0.0/iconify-icon.min.js"></script>
+    <style type="text/tailwindcss">
+      @theme inline {
+        --color-background: var(--background);
+        --color-foreground: var(--foreground);
+        --color-primary: var(--primary);
+        --color-primary-foreground: var(--primary-foreground);
+        --color-secondary: var(--secondary);
+        --color-secondary-foreground: var(--secondary-foreground);
+        --color-muted: var(--muted);
+        --color-muted-foreground: var(--muted-foreground);
+        --color-accent: var(--accent);
+        --color-accent-foreground: var(--accent-foreground);
+        --color-destructive: var(--destructive);
+        --color-card: var(--card);
+        --color-card-foreground: var(--card-foreground);
+        --color-popover: var(--popover);
+        --color-popover-foreground: var(--popover-foreground);
+        --color-border: var(--border);
+        --color-input: var(--input);
+        --color-ring: var(--ring);
+        --color-chart-1: var(--chart-1);
+        --color-chart-2: var(--chart-2);
+        --color-chart-3: var(--chart-3);
+        --color-chart-4: var(--chart-4);
+        --color-chart-5: var(--chart-5);
+
+        --font-font-sans: var(--font-sans);
+        --font-font-heading: var(--font-heading);
+        --font-font-serif: var(--font-serif);
+        --font-font-mono: var(--font-mono);
+
+        --radius-sm: calc(var(--radius) - 4px);
+        --radius-md: calc(var(--radius) - 2px);
+        --radius-lg: var(--radius);
+        --radius-xl: calc(var(--radius) + 4px);
+      }
+
+      :root {
+        --background: #dec4bf;
+        --foreground: #2a1c1e;
+        --primary: #d4909a;
+        --primary-foreground: #fefaf9;
+        --secondary: #f4c6cc;
+        --secondary-foreground: #2a1c1e;
+        --muted: #e5cfcb;
+        --muted-foreground: #7a6668;
+        --accent: #d4c9f8;
+        --accent-foreground: #2a1c1e;
+        --destructive: #c96a6e;
+        --card: #fefaf9;
+        --card-foreground: #2a1c1e;
+        --popover: #fefaf9;
+        --popover-foreground: #2a1c1e;
+        --border: #d6c5c2;
+        --input: #f7f0ef;
+        --ring: #d4909a;
+        --chart-1: #b8ceac;
+        --chart-2: #d4909a;
+        --chart-3: #d4c9f8;
+        --chart-4: #f4c6cc;
+        --chart-5: #2a1c1e;
+
+        --font-sans: "DM Sans";
+        --font-heading: "Raleway";
+        --font-serif: "Playfair Display";
+        --font-mono: "JetBrains Mono";
+
+        --radius: 1.5rem;
+      }
+
+      /* Prevent layout shift for icons without explicit dimensions */
+      iconify-icon:not([width]):not([height]) {
+        display: inline-block;
+        width: 1em;
+        height: 1em;
+      }
+
+      /* Hide scrollbars */
+      *,
+      *::before,
+      *::after {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+      *::-webkit-scrollbar {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      class="min-h-screen bg-background text-foreground pb-24 font-sans selection:bg-primary/20 flex flex-col"
+    >
+      <header class="pt-12 px-6 flex items-center justify-between">
+        <div>
+          <h1 class="font-heading text-2xl font-bold">Inner Garden</h1>
+          <p class="text-sm text-muted-foreground">Flourishing with your habits</p>
+        </div>
+        <div
+          class="bg-card px-4 py-2 rounded-2xl shadow-sm border border-border/30 flex items-center gap-2"
+        >
+          <iconify-icon
+            icon="solar:star-bold"
+            class="text-chart-2"
+            width="20"
+            height="20"
+          ></iconify-icon
+          ><span class="font-bold">Level 12</span>
+        </div>
+      </header>
+      <main class="flex-1 flex flex-col items-center justify-center p-6 relative">
+        <div class="w-full max-w-xs space-y-2 mb-12">
+          <div class="flex justify-between items-end mb-1 px-1">
+            <span class="text-xs font-semibold uppercase tracking-widest text-muted-foreground"
+              >Glow Meter</span
+            ><span class="text-sm font-bold text-primary">840 / 1000 XP</span>
+          </div>
+          <div
+            class="h-3 w-full bg-card/50 rounded-full overflow-hidden border border-border/20 p-0.5"
+          >
+            <div
+              class="h-full bg-gradient-to-r from-secondary via-primary to-accent rounded-full w-[84%] shadow-[0_0_15px_rgba(212,144,154,0.4)]"
+            ></div>
+          </div>
+        </div>
+        <div class="relative w-full aspect-[4/5] flex items-center justify-center group">
+          <div class="absolute inset-0 flex items-center justify-center opacity-30">
+            <div class="w-64 h-64 bg-primary rounded-full blur-[80px]"></div>
+            <div class="w-48 h-48 bg-accent rounded-full blur-[60px] ml-12 -mt-12"></div>
+          </div>
+          <img
+            alt="Growth Plant"
+            src="https://ggrhecslgdflloszjkwl.supabase.co/storage/v1/object/public/user-assets/9Pxmm0glFzt/components/zSSvNASkypr.png"
+            class="relative z-10 w-full max-w-sm drop-shadow-2xl animate-float"
+          />
+          <div class="absolute bottom-10 left-10 opacity-60">
+            <iconify-icon
+              icon="solar:star-bold"
+              class="text-chart-3 text-lg animate-pulse"
+            ></iconify-icon>
+          </div>
+          <div class="absolute top-20 right-10 opacity-60">
+            <iconify-icon
+              icon="solar:star-bold"
+              class="text-chart-2 text-sm animate-pulse delay-75"
+            ></iconify-icon>
+          </div>
+        </div>
+        <p class="text-center text-muted-foreground/80 mt-8 max-w-[240px] italic">
+          "Your consistency is blooming. Today's care has added 45 growth points."
+        </p>
+      </main>
+      <nav
+        class="fixed bottom-0 left-0 right-0 bg-card/90 backdrop-blur-xl border-t border-border/50 pb-safe z-50 rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.05)]"
+      >
+        <div class="flex items-center justify-around p-2 px-4">
+          <button class="flex flex-col items-center justify-center p-2 text-muted-foreground w-16">
+            <iconify-icon
+              icon="solar:home-2-linear"
+              class="mb-1"
+              width="24"
+              height="24"
+            ></iconify-icon
+            ><span class="text-[10px] font-medium mt-1">Home</span></button
+          ><button class="flex flex-col items-center justify-center p-2 text-primary w-16">
+            <div class="relative">
+              <iconify-icon
+                icon="solar:leaf-bold"
+                class="mb-1"
+                width="24"
+                height="24"
+              ></iconify-icon>
+              <div
+                class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full"
+              ></div>
+            </div>
+            <span class="text-[10px] font-medium mt-1">Garden</span></button
+          ><button class="flex flex-col items-center justify-center p-2 text-muted-foreground w-16">
+            <iconify-icon
+              icon="solar:pill-linear"
+              class="mb-1"
+              width="24"
+              height="24"
+            ></iconify-icon
+            ><span class="text-[10px] font-medium mt-1">Stack</span></button
+          ><button class="flex flex-col items-center justify-center p-2 text-muted-foreground w-16">
+            <iconify-icon
+              icon="solar:cup-star-linear"
+              class="mb-1"
+              width="24"
+              height="24"
+            ></iconify-icon
+            ><span class="text-[10px] font-medium mt-1">Quests</span></button
+          ><button class="flex flex-col items-center justify-center p-2 text-muted-foreground w-16">
+            <iconify-icon
+              icon="solar:pen-new-square-linear"
+              class="mb-1"
+              width="24"
+              height="24"
+            ></iconify-icon
+            ><span class="text-[10px] font-medium mt-1">Journal</span></button
+          ><button class="flex flex-col items-center justify-center p-2 text-muted-foreground w-16">
+            <iconify-icon
+              icon="solar:user-circle-linear"
+              class="mb-1"
+              width="24"
+              height="24"
+            ></iconify-icon
+            ><span class="text-[10px] font-medium mt-1">Profile</span>
+          </button>
+        </div>
+      </nav>
+    </div>
+  </body>
+</html>

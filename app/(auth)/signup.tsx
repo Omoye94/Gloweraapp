@@ -1,28 +1,33 @@
 import { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
-  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
 import { Link, router } from 'expo-router';
-import { useAuthStore } from '../../stores/authStore';
 import { isValidEmail } from '../../lib/utils';
+import { supabase } from '../../lib/supabase';
+import { gloweraScreen } from '../../src/theme';
+
+const { colors, fonts, radii, copy } = gloweraScreen;
 
 export default function SignupScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{
     email?: string;
     password?: string;
     confirmPassword?: string;
   }>({});
-  const { signUp, isLoading } = useAuthStore();
 
   const validate = () => {
     const newErrors: {
@@ -56,124 +61,267 @@ export default function SignupScreen() {
   const handleSignup = async () => {
     if (!validate()) return;
 
-    const { error } = await signUp(email, password);
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+      });
 
-    if (error) {
-      Alert.alert('Oops!', error.message || 'Something went wrong. Please try again.');
-    } else {
-      router.replace('/(auth)/onboarding');
+      if (error) throw error;
+
+      if (data.user) {
+        await supabase.from('users').upsert({
+          id: data.user.id,
+          email: data.user.email,
+          display_name: null,
+          avatar_url: null,
+          focus_areas: [],
+          reminder_preference: 'gentle',
+          onboarding_completed: false,
+          total_points: 0,
+        }, { onConflict: 'id' });
+
+        await supabase.from('plants').upsert({
+          user_id: data.user.id,
+          name: 'My Glow Plant',
+          plant_type: 'default',
+          growth_stage: 'seed',
+          growth_points: 0,
+        }, { onConflict: 'user_id' });
+      }
+
+      router.replace('/(onboarding)/welcome');
+    } catch (error) {
+      Alert.alert('Oops', (error as Error).message || 'Something went wrong. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1"
+      style={styles.container}
     >
       <ScrollView
-        className="flex-1 bg-background"
-        contentContainerStyle={{ flexGrow: 1 }}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <View className="flex-1 px-6 pt-20 pb-8">
-          {/* Header */}
-          <View className="items-center mb-12">
-            <Text className="text-4xl font-bold text-primary mb-2">Glowera</Text>
-            <Text className="text-text-light text-base">Glow With Every Habit</Text>
+        <View style={styles.content}>
+          <View style={styles.header}>
+            <Text style={styles.brand}>Glowera</Text>
+            <Text style={styles.tagline}>{copy.appTagline}</Text>
           </View>
 
-          {/* Welcome Text */}
-          <View className="mb-8">
-            <Text className="text-2xl font-semibold text-text mb-2">Create your account</Text>
-            <Text className="text-text-light">
-              Start your journey to a more radiant you
-            </Text>
+          <View style={styles.intro}>
+            <Text style={styles.title}>Create your ritual space</Text>
+            <Text style={styles.subtitle}>{copy.accountSubtitle}</Text>
           </View>
 
-          {/* Form */}
-          <View className="space-y-4">
-            <View>
-              <Text className="text-text mb-2 font-medium">Email</Text>
+          <View style={styles.form}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Email</Text>
               <TextInput
-                className={`bg-surface border ${
-                  errors.email ? 'border-red-300' : 'border-primary/20'
-                } rounded-soft px-4 py-4 text-text`}
+                style={[styles.input, errors.email && styles.inputError]}
                 placeholder="your@email.com"
-                placeholderTextColor="#8A8A8A"
+                placeholderTextColor={colors.textFaint}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoCorrect={false}
                 value={email}
                 onChangeText={setEmail}
               />
-              {errors.email && (
-                <Text className="text-red-400 text-sm mt-1">{errors.email}</Text>
-              )}
+              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
             </View>
 
-            <View className="mt-4">
-              <Text className="text-text mb-2 font-medium">Password</Text>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Password</Text>
               <TextInput
-                className={`bg-surface border ${
-                  errors.password ? 'border-red-300' : 'border-primary/20'
-                } rounded-soft px-4 py-4 text-text`}
+                style={[styles.input, errors.password && styles.inputError]}
                 placeholder="Create a password"
-                placeholderTextColor="#8A8A8A"
+                placeholderTextColor={colors.textFaint}
                 secureTextEntry
                 value={password}
                 onChangeText={setPassword}
               />
-              {errors.password && (
-                <Text className="text-red-400 text-sm mt-1">{errors.password}</Text>
-              )}
+              {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
             </View>
 
-            <View className="mt-4">
-              <Text className="text-text mb-2 font-medium">Confirm Password</Text>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Confirm password</Text>
               <TextInput
-                className={`bg-surface border ${
-                  errors.confirmPassword ? 'border-red-300' : 'border-primary/20'
-                } rounded-soft px-4 py-4 text-text`}
+                style={[styles.input, errors.confirmPassword && styles.inputError]}
                 placeholder="Confirm your password"
-                placeholderTextColor="#8A8A8A"
+                placeholderTextColor={colors.textFaint}
                 secureTextEntry
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
               />
               {errors.confirmPassword && (
-                <Text className="text-red-400 text-sm mt-1">{errors.confirmPassword}</Text>
+                <Text style={styles.errorText}>{errors.confirmPassword}</Text>
               )}
             </View>
           </View>
 
-          {/* Signup Button */}
-          <TouchableOpacity
-            className={`mt-8 bg-primary rounded-soft py-4 items-center ${
-              isLoading ? 'opacity-70' : ''
-            }`}
+          <Pressable
+            style={({ pressed }) => [
+              styles.button,
+              pressed && styles.buttonPressed,
+              isLoading && styles.buttonDisabled,
+            ]}
             onPress={handleSignup}
             disabled={isLoading}
           >
-            <Text className="text-white font-semibold text-lg">
-              {isLoading ? 'Creating account...' : 'Create Account'}
-            </Text>
-          </TouchableOpacity>
+            {isLoading ? (
+              <ActivityIndicator size="small" color={colors.textOnPrimary} />
+            ) : (
+              <Text style={styles.buttonText}>Begin gently</Text>
+            )}
+          </Pressable>
 
-          {/* Login Link */}
-          <View className="flex-row justify-center mt-6">
-            <Text className="text-text-light">Already have an account? </Text>
+          <View style={styles.loginRow}>
+            <Text style={styles.loginText}>Already have an account? </Text>
             <Link href="/(auth)/login" asChild>
-              <TouchableOpacity>
-                <Text className="text-primary font-semibold">Sign In</Text>
-              </TouchableOpacity>
+              <Pressable>
+                <Text style={styles.loginLink}>Sign in</Text>
+              </Pressable>
             </Link>
           </View>
 
-          {/* Terms */}
-          <Text className="text-text-light text-center text-sm mt-8 px-4">
-            By creating an account, you agree to our Terms of Service and Privacy Policy
+          <Text style={styles.terms}>
+            By creating an account, you agree to our Terms of Service and Privacy Policy.
           </Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  scrollView: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 72,
+    paddingBottom: 32,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 48,
+  },
+  brand: {
+    fontFamily: fonts.display,
+    fontSize: 38,
+    color: colors.primaryPressed,
+    lineHeight: 46,
+  },
+  tagline: {
+    marginTop: 6,
+    fontFamily: fonts.displayItalic,
+    fontSize: 16,
+    color: colors.textMuted,
+  },
+  intro: {
+    marginBottom: 32,
+  },
+  title: {
+    fontFamily: fonts.display,
+    fontSize: 26,
+    lineHeight: 34,
+    color: colors.text,
+    marginBottom: 10,
+  },
+  subtitle: {
+    fontFamily: fonts.body,
+    fontSize: 15,
+    lineHeight: 23,
+    color: colors.textSoft,
+  },
+  form: {
+    gap: 16,
+  },
+  inputGroup: {
+    gap: 8,
+  },
+  label: {
+    fontFamily: fonts.body,
+    fontSize: 14,
+    color: colors.textSoft,
+  },
+  input: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.input,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    fontFamily: fonts.body,
+    fontSize: 16,
+    color: colors.text,
+  },
+  inputError: {
+    borderColor: colors.error,
+  },
+  errorText: {
+    color: colors.error,
+    fontFamily: fonts.body,
+    fontSize: 12,
+  },
+  button: {
+    backgroundColor: colors.primary,
+    borderRadius: radii.control,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 32,
+  },
+  buttonPressed: {
+    opacity: 0.88,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+  buttonText: {
+    color: colors.textOnPrimary,
+    fontFamily: fonts.button,
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  loginRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 24,
+  },
+  loginText: {
+    color: colors.textMuted,
+    fontFamily: fonts.body,
+    fontSize: 14,
+  },
+  loginLink: {
+    color: colors.primaryPressed,
+    fontFamily: fonts.body,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  terms: {
+    marginTop: 34,
+    paddingHorizontal: 8,
+    color: colors.textMuted,
+    fontFamily: fonts.body,
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
+  },
+});

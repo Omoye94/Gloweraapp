@@ -9,118 +9,146 @@ export const fontWeights = {
   black: '900' as const,
 };
 
-// Font families - using system fonts with fallbacks
+// Font families - Brand typography system
+// Satoshi: Headings/Display | DM Sans: Body | Space Mono: Labels (ALL CAPS)
 export const fontFamilies = {
-  // Sans-serif for main UI
-  sans: Platform.select({
-    ios: 'System',
-    android: 'Roboto',
-    default: 'System',
-  }),
-  // Monospace for labels (like in Figma design)
-  mono: Platform.select({
-    ios: 'Menlo',
-    android: 'monospace',
-    default: 'monospace',
-  }),
-  // Serif for display headlines
-  serif: Platform.select({
-    ios: 'Georgia',
-    android: 'serif',
-    default: 'serif',
-  }),
+  // Primary heading font
+  sans: 'Satoshi-Medium',
+  sansBold: 'Satoshi-Medium',
+  sansMedium: 'Satoshi-Medium',
+  sansItalic: 'Satoshi-Medium',
+  // Monospace labels - Space Mono (ALL CAPS)
+  mono: 'SpaceMono-Bold',
+  // Body text - DM Sans
+  body: 'DMSans',
+  // Luxury display - Optima (humanist serif feel)
+  display: 'Optima-Bold',
+  displayMedium: 'Optima-Medium',
+  displayItalic: 'Optima-Italic',
+  displayRegular: 'Optima-Regular',
+  // Serif fallback
+  serif: 'Optima-Regular',
 };
 
+// Helper to get the right fontFamily for a given weight
+export function getFontFamily(weight?: string): string {
+  switch (weight) {
+    case '700':
+    case '800':
+    case '900':
+      return 'Satoshi-Medium';
+    case '500':
+    case '600':
+      return 'Satoshi-Medium';
+    default:
+      return 'DMSans';
+  }
+}
+
 export const typography: Record<string, TextStyle> = {
-  // Display - Bold condensed italic (for hero text like "GLOW WITH US")
+  // Optima display styles — luxury/editorial moments
   display: {
-    fontSize: 42,
-    fontWeight: fontWeights.black,
-    lineHeight: 46,
-    letterSpacing: -1,
-    fontStyle: 'italic',
-    fontFamily: fontFamilies.serif,
-  },
-  displaySmall: {
-    fontSize: 32,
-    fontWeight: fontWeights.bold,
-    lineHeight: 36,
+    fontSize: 36,
+    fontFamily: 'Optima-Bold',
+    lineHeight: 42,
     letterSpacing: -0.5,
-    fontStyle: 'italic',
-    fontFamily: fontFamilies.serif,
+  },
+  heroTitle: {
+    fontSize: 28,
+    fontFamily: 'Optima-Medium',
+    lineHeight: 34,
+    letterSpacing: -0.3,
+  },
+  heroSubtitle: {
+    fontSize: 18,
+    fontFamily: 'Optima-Italic',
+    lineHeight: 26,
+  },
+  quote: {
+    fontSize: 16,
+    fontFamily: 'Optima-Italic',
+    lineHeight: 24,
   },
 
-  // Headings - Clean geometric sans
-  h1: {
-    fontSize: 32,
-    fontWeight: fontWeights.light,
-    lineHeight: 40,
-    letterSpacing: -0.5,
-  },
-  h2: {
+  // Display - Satoshi (for section/card headings)
+  displaySmall: {
     fontSize: 28,
-    fontWeight: fontWeights.light,
+    fontFamily: 'Satoshi-Medium',
+    lineHeight: 34,
+    letterSpacing: -0.3,
+  },
+
+  // Headings - Satoshi
+  h1: {
+    fontSize: 28,
+    fontFamily: 'Satoshi-Medium',
     lineHeight: 36,
     letterSpacing: -0.3,
   },
-  h3: {
+  h2: {
     fontSize: 24,
-    fontWeight: fontWeights.regular,
+    fontFamily: 'Satoshi-Medium',
     lineHeight: 32,
+    letterSpacing: -0.2,
+  },
+  h3: {
+    fontSize: 22,
+    fontFamily: 'Satoshi-Medium',
+    lineHeight: 28,
   },
   h4: {
     fontSize: 20,
-    fontWeight: fontWeights.medium,
-    lineHeight: 28,
+    fontFamily: 'Satoshi-Medium',
+    lineHeight: 26,
   },
 
-  // Body text
+  // Body text - DM Sans
   bodyLarge: {
-    fontSize: 18,
-    fontWeight: fontWeights.regular,
-    lineHeight: 28,
+    fontSize: 17,
+    fontFamily: 'DMSans',
+    lineHeight: 26,
   },
   body: {
-    fontSize: 16,
-    fontWeight: fontWeights.regular,
-    lineHeight: 24,
+    fontSize: 15,
+    fontFamily: 'DMSans',
+    lineHeight: 22,
   },
   bodySmall: {
     fontSize: 14,
-    fontWeight: fontWeights.regular,
+    fontFamily: 'DMSans',
     lineHeight: 20,
   },
 
-  // Labels - Monospace (like "Daily Rituals" in Figma)
+  // Labels - Space Mono ALL CAPS
   label: {
-    fontSize: 14,
-    fontWeight: fontWeights.regular,
-    lineHeight: 20,
-    fontFamily: fontFamilies.mono,
-    letterSpacing: 0.5,
+    fontSize: 13,
+    fontFamily: 'SpaceMono-Bold',
+    lineHeight: 18,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
   labelSmall: {
     fontSize: 12,
-    fontWeight: fontWeights.regular,
+    fontFamily: 'SpaceMono-Bold',
     lineHeight: 16,
-    fontFamily: fontFamilies.mono,
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
   caption: {
-    fontSize: 12,
-    fontWeight: fontWeights.regular,
-    lineHeight: 16,
+    fontSize: 13,
+    fontFamily: 'DMSans',
+    lineHeight: 18,
   },
 
-  // Buttons
+  // Buttons - DM Sans
   button: {
-    fontSize: 16,
-    fontWeight: fontWeights.semibold,
-    lineHeight: 24,
+    fontSize: 15,
+    fontFamily: 'DMSans',
+    lineHeight: 22,
   },
   buttonSmall: {
     fontSize: 14,
-    fontWeight: fontWeights.semibold,
+    fontFamily: 'DMSans',
     lineHeight: 20,
   },
 };

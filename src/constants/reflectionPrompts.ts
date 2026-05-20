@@ -1,4 +1,5 @@
 import { ReflectionPrompt } from '../types/journal';
+import type { Mood } from '../types/journal';
 
 export const REFLECTION_PROMPTS: ReflectionPrompt[] = [
   // Weekly prompts
@@ -40,3 +41,42 @@ export const getRandomPrompt = (category: 'weekly' | 'daily' | 'challenge'): Ref
 export const getWeeklyPrompt = (): ReflectionPrompt => getRandomPrompt('weekly');
 export const getDailyPrompt = (): ReflectionPrompt => getRandomPrompt('daily');
 export const getChallengePrompt = (): ReflectionPrompt => getRandomPrompt('challenge');
+
+export const MOOD_PROMPTS: Record<Mood, ReflectionPrompt[]> = {
+  radiant: [
+    { id: 'mood-radiant-1', text: 'What\'s making you feel so alive right now?', category: 'daily' },
+    { id: 'mood-radiant-2', text: 'What contributed to this glow today?', category: 'daily' },
+    { id: 'mood-radiant-3', text: 'Who or what helped you reach this moment?', category: 'daily' },
+    { id: 'mood-radiant-4', text: 'How can you carry a little of this energy into tomorrow?', category: 'daily' },
+    { id: 'mood-radiant-5', text: 'What would you want to remember about today six months from now?', category: 'daily' },
+  ],
+  calm: [
+    { id: 'mood-calm-1', text: 'What\'s contributing to this ease today?', category: 'daily' },
+    { id: 'mood-calm-2', text: 'What small thing are you grateful for right now?', category: 'daily' },
+    { id: 'mood-calm-3', text: 'How did you make space for yourself today?', category: 'daily' },
+    { id: 'mood-calm-4', text: 'What does "enough" look like for you today?', category: 'daily' },
+  ],
+  neutral: [
+    { id: 'mood-neutral-1', text: 'What would make today feel a little brighter?', category: 'daily' },
+    { id: 'mood-neutral-2', text: 'What\'s one thing you\'d love more of today?', category: 'daily' },
+    { id: 'mood-neutral-3', text: 'If today had a soundtrack, what would you want it to sound like?', category: 'daily' },
+    { id: 'mood-neutral-4', text: 'What\'s quietly going well that you haven\'t stopped to notice?', category: 'daily' },
+  ],
+  struggling: [
+    { id: 'mood-struggling-1', text: 'What\'s weighing on you today?', category: 'daily' },
+    { id: 'mood-struggling-2', text: 'What do you need more of right now — rest, space, support?', category: 'daily' },
+    { id: 'mood-struggling-3', text: 'What would you say to a friend feeling exactly like you do?', category: 'daily' },
+    { id: 'mood-struggling-4', text: 'What\'s one small thing that could soften today?', category: 'daily' },
+  ],
+  low: [
+    { id: 'mood-low-1', text: 'What would feel nourishing right now?', category: 'daily' },
+    { id: 'mood-low-2', text: 'What drained your energy today?', category: 'daily' },
+    { id: 'mood-low-3', text: 'If today could just be "enough," what would that look like?', category: 'daily' },
+    { id: 'mood-low-4', text: 'What is your body asking for tonight?', category: 'daily' },
+  ],
+};
+
+export const getMoodPrompt = (mood: Mood): ReflectionPrompt => {
+  const bucket = MOOD_PROMPTS[mood];
+  return bucket[Math.floor(Math.random() * bucket.length)];
+};

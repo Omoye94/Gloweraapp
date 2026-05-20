@@ -12,31 +12,50 @@ import {
   Switch,
   Share,
   Platform,
+  Linking,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useUserStore, useHabitStore, usePlantStore, useJournalStore, useChallengeStore, useSupplementStore } from '../../src/stores';
-import { PlantDisplay } from '../../src/components/garden';
+import { Sun, Moon, Smartphone, Check, Plus, Sprout, Heart, PenLine } from 'lucide-react-native';
+import { useUserStore, useHabitStore, usePlantStore, useJournalStore, useSupplementStore } from '../../src/stores';
+import { supabase } from '../../lib/supabase';
 import { GoalsSelectionModal } from '../../src/components/supplements';
 import { spacing, borderRadius, shadows, lightTheme as defaultTheme } from '../../src/theme';
 import { useTheme } from '../../src/context';
+import { SolarIcon } from '../../src/components/ui/SolarIcon';
 
 const LOCAL_ONBOARDING_KEY = 'glowera-onboarding-complete';
+const PREVIEW_ONBOARDING_KEY = 'glowera-onboarding-preview';
 
 const THEME_OPTIONS = [
-  { id: 'default', name: 'Lavender Bloom', colors: ['#FAE8ED', '#F5EBF8'] },
-  { id: 'lavender', name: 'Misty Lavender', colors: ['#FAF5FC', '#E8D9F0'] },
-  { id: 'sage', name: 'Garden Sage', colors: ['#F5FAF7', '#E8F4ED'] },
-  { id: 'plum', name: 'Plum Dusk', colors: ['#F5EBF0', '#E8D4DE'] },
+  { id: 'default', name: 'Porcelain', colors: ['#FBF7F7', '#EDE4DC'] },
+  { id: 'lavender', name: 'Lilac', colors: ['#FBF7F7', '#F1E1E1'] },
+  { id: 'sage', name: 'Mint', colors: ['#F5FAF7', '#E8F4ED'] },
+  { id: 'plum', name: 'Linen', colors: ['#EDE4DC', '#E2CBB2'] },
 ];
 
 const APPEARANCE_OPTIONS = [
-  { id: 'light', name: 'Light', icon: '☀️' },
-  { id: 'dark', name: 'Dark', icon: '🌙' },
-  { id: 'system', name: 'System', icon: '📱' },
+  { id: 'light', name: 'Light', Icon: Sun },
+  { id: 'dark', name: 'Dark', Icon: Moon },
+  { id: 'system', name: 'System', Icon: Smartphone },
 ] as const;
+
+const STAGE_TO_LEVEL: Record<string, number> = {
+  seed: 1,
+  sprout: 2,
+  bud: 3,
+  bloom: 4,
+  glow: 5,
+};
+
+function getInitials(name?: string): string {
+  if (!name) return 'G';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0][0]?.toUpperCase() ?? 'G';
+  return ((parts[0][0] ?? '') + (parts[parts.length - 1][0] ?? '')).toUpperCase();
+}
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -45,7 +64,6 @@ export default function ProfileScreen() {
   const { habits, getActiveHabits, resetHabits, toggleHabitActive } = useHabitStore();
   const { plant, getProgressToNext, getPointsToNext, resetPlant } = usePlantStore();
   const { entries, resetJournal } = useJournalStore();
-  const { getCompletedChallenges, resetChallenges } = useChallengeStore();
   const { wellnessGoals, resetSupplementPreferences } = useSupplementStore();
 
   // Modal states
@@ -72,48 +90,98 @@ export default function ProfileScreen() {
   const [newHabitCategory, setNewHabitCategory] = useState<string>('self-care');
 
   const activeHabits = getActiveHabits();
-  const completedChallenges = getCompletedChallenges();
+  const completedChallenges: unknown[] = [];
 
-  const handleResetApp = () => {
+  // Derived stats
+  const level = STAGE_TO_LEVEL[plant.currentStage] ?? 1;
+  const currentStreak = plant.streak?.currentStreak ?? 0;
+  const totalPoints = plant.totalLifetimePoints ?? 0;
+  const badgeCount = plant.unlockedCosmetics?.length ?? 0;
+  const displayName = user?.gardenName || 'Glowera';
+  const initials = getInitials(displayName);
+
+  const handleLogout = () => {
     Alert.alert(
-      'Reset App',
-      'Are you sure you want to reset all your data? This cannot be undone.',
+      'Log out',
+      'You can sign back in anytime to return to your Glowera account.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Reset',
-          style: 'destructive',
-          onPress: () => {
-            resetUser();
-            resetHabits();
-            resetPlant();
-            resetJournal();
-            resetChallenges();
-            resetSupplementPreferences();
-            router.replace('/(auth)/welcome');
+          text: 'Log out',
+          onPress: async () => {
+            try {
+              await supabase.auth.signOut();
+            } catch (error) {
+              console.warn('[Profile] Sign out failed:', error);
+            } finally {
+              resetUser();
+              resetHabits();
+              resetPlant();
+              resetJournal();
+              resetSupplementPreferences();
+              router.replace('/(auth)/login');
+            }
           },
         },
       ]
     );
   };
 
-  const handleResetOnboarding = () => {
+  const handleDeleteAccount = () => {
     Alert.alert(
-      'Restart Onboarding',
-      'This will take you through the onboarding flow again. Your data will be preserved.',
+      'Delete Account',
+      'This will permanently delete your account and all your data. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Restart',
-          onPress: async () => {
-            await AsyncStorage.removeItem(LOCAL_ONBOARDING_KEY);
-            // Navigate to onboarding - the route guard will check AsyncStorage
-            // and allow staying in onboarding since the flag is cleared
-            router.replace('/(onboarding)/problem');
+          text: 'Continue',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Are you absolutely sure?',
+              'Your garden, habits, journal entries, and all data will be permanently erased.',
+              [
+                { text: 'Go Back', style: 'cancel' },
+                {
+                  text: 'Delete My Account',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      // Try to delete from Supabase (best-effort — works if authenticated)
+                      const { data: { user } } = await supabase.auth.getUser();
+                      if (user) {
+                        await supabase.rpc('delete_user');
+                        await supabase.auth.signOut();
+                      }
+                    } catch (e) {
+                      // Ignore Supabase errors — still clear local data
+                      console.warn('[Profile] Supabase delete failed (may be local user):', e);
+                    }
+
+                    // Clear all AsyncStorage
+                    await AsyncStorage.clear();
+
+                    // Reset all stores
+                    resetUser();
+                    resetHabits();
+                    resetPlant();
+                    resetJournal();
+                    resetSupplementPreferences();
+
+                    router.replace('/(auth)/login');
+                  },
+                },
+              ]
+            );
           },
         },
       ]
     );
+  };
+
+  const handleResetOnboarding = async () => {
+    await AsyncStorage.setItem(PREVIEW_ONBOARDING_KEY, 'true');
+    router.push('/(onboarding)/problem' as any);
   };
 
   const handleSaveGardenName = () => {
@@ -277,235 +345,191 @@ export default function ProfileScreen() {
     { id: 'reflection', name: 'Reflection', icon: '📝' },
   ];
 
-  const MenuItem = ({ icon, label, value, onPress, isLast }: {
-    icon: string;
+  // Settings row component
+  const SettingsRow = ({
+    iconName,
+    iconColor,
+    iconBg,
+    label,
+    onPress,
+    isLast = false,
+  }: {
+    iconName: string;
+    iconColor: string;
+    iconBg: string;
     label: string;
-    value?: string;
     onPress?: () => void;
     isLast?: boolean;
   }) => (
-    <Pressable
-      style={({ pressed }) => [
-        styles.menuItem,
-        !isLast && [styles.menuItemBorder, { borderBottomColor: theme.borderLight }],
-        pressed && onPress && [styles.menuItemPressed, { backgroundColor: isDark ? 'rgba(232, 164, 200, 0.08)' : 'rgba(212, 196, 232, 0.1)' }],
-      ]}
-      onPress={onPress}
-      disabled={!onPress}
-    >
-      <View style={[styles.menuIconContainer, isDark && { backgroundColor: 'rgba(232, 164, 200, 0.12)' }]}>
-        <Text style={styles.menuIcon}>{icon}</Text>
-      </View>
-      <Text style={[styles.menuLabel, { color: theme.text }]}>{label}</Text>
-      {value && <Text style={[styles.menuValue, { color: theme.textSecondary }]}>{value}</Text>}
-      {onPress && <Text style={[styles.menuArrow, { color: theme.textMuted }]}>›</Text>}
-    </Pressable>
+    <>
+      <Pressable
+        style={({ pressed }) => [
+          styles.settingsRow,
+          pressed && onPress ? { backgroundColor: 'rgba(212,144,154,0.06)' } : null,
+        ]}
+        onPress={onPress}
+        disabled={!onPress}
+      >
+        <View style={[styles.settingsIconBox, { backgroundColor: iconBg }]}>
+          <SolarIcon name={iconName} size={20} color={iconColor} />
+        </View>
+        <Text style={styles.settingsLabel}>{label}</Text>
+        <SolarIcon name="alt-arrow-right-linear" size={20} color="#7A6668" />
+      </Pressable>
+      {!isLast && <View style={styles.rowDivider} />}
+    </>
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <LinearGradient
-        colors={isDark ? ['#1A1418', '#241A20', '#1E171B'] : ['#FAE8ED', '#F5EBF8', '#E8D9F0']}
-        style={styles.gradientBackground}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      />
-
+    <View style={styles.container}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         bounces={true}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.text }]}>You</Text>
-          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>Your wellness journey</Text>
-        </View>
-
-        {/* Garden Card */}
-        <View style={[styles.gardenCard, isDark && { backgroundColor: theme.surface }]}>
-          {!isDark && (
-            <LinearGradient
-              colors={['rgba(255,255,255,0.95)', 'rgba(250,232,237,0.98)']}
-              style={styles.gardenCardGradient}
-            />
-          )}
-          <Pressable
-            onPress={() => {
-              setEditedGardenName(user?.gardenName || '');
-              setShowEditNameModal(true);
-            }}
-            style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
-          >
-            <View style={styles.gardenNameRow}>
-              <Text style={[styles.gardenName, { color: theme.text }]}>{user?.gardenName || 'My Garden'}</Text>
-              <Text style={styles.editIcon}>✏️</Text>
+        {/* ── Header ── */}
+        <LinearGradient
+          colors={['#9B86D4', '#E87FA6', '#F4A888']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.headerGradient}
+        >
+          {/* Avatar */}
+          <View style={styles.avatarRing}>
+            <View style={styles.avatarCircle}>
+              <Text style={styles.avatarInitials}>{initials}</Text>
             </View>
-          </Pressable>
-          <PlantDisplay
-            stage={plant.currentStage}
-            progressToNext={getProgressToNext()}
-            pointsToNext={getPointsToNext()}
-            totalPoints={plant.totalLifetimePoints}
-          />
-        </View>
-
-        {/* Stats */}
-        <View style={styles.statsRow}>
-          <View style={[styles.statCard, { borderColor: theme.borderLight, backgroundColor: isDark ? theme.surface : undefined }]}>
-            {!isDark && (
-              <LinearGradient
-                colors={['#FFFFFF', '#FAF5FC']}
-                style={styles.statCardGradient}
-              />
-            )}
-            <Text style={[styles.statValue, { color: theme.primary }]}>{plant.totalLifetimePoints}</Text>
-            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Points</Text>
-          </View>
-          <View style={[styles.statCard, { borderColor: theme.borderLight, backgroundColor: isDark ? theme.surface : undefined }]}>
-            {!isDark && (
-              <LinearGradient
-                colors={['#FFFFFF', '#FAE8ED']}
-                style={styles.statCardGradient}
-              />
-            )}
-            <Text style={[styles.statValue, { color: theme.primary }]}>{entries.length}</Text>
-            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Entries</Text>
-          </View>
-          <View style={[styles.statCard, { borderColor: theme.borderLight, backgroundColor: isDark ? theme.surface : undefined }]}>
-            {!isDark && (
-              <LinearGradient
-                colors={['#FFFFFF', '#F5EBF8']}
-                style={styles.statCardGradient}
-              />
-            )}
-            <Text style={[styles.statValue, { color: theme.primary }]}>{completedChallenges.length}</Text>
-            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Challenges</Text>
-          </View>
-        </View>
-
-        {/* Your Habits - with manage option */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>Your Habits</Text>
+            {/* Camera edit button */}
             <Pressable
-              onPress={() => setShowManageHabitsModal(true)}
-              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+              style={styles.cameraButton}
+              onPress={() => {
+                setEditedGardenName(user?.gardenName || '');
+                setShowEditNameModal(true);
+              }}
             >
-              <Text style={[styles.manageLink, { color: theme.primary }]}>Manage</Text>
+              <SolarIcon name="camera-bold" size={16} color="#FEFAF9" />
             </Pressable>
           </View>
-          <View style={[styles.card, { backgroundColor: isDark ? theme.surface : 'rgba(255,255,255,0.85)', borderColor: theme.borderLight }]}>
-            {activeHabits.length === 0 ? (
-              <Text style={[styles.emptyText, { color: theme.textMuted }]}>No habits selected</Text>
-            ) : (
-              activeHabits.slice(0, 5).map((habit, index) => (
-                <View
-                  key={habit.id}
-                  style={[
-                    styles.habitItem,
-                    index < Math.min(activeHabits.length, 5) - 1 && [styles.habitItemBorder, { borderBottomColor: theme.borderLight }],
-                  ]}
-                >
-                  <View style={[styles.habitIconContainer, isDark && { backgroundColor: 'rgba(232, 164, 200, 0.15)' }]}>
-                    <Text style={styles.habitIcon}>{habit.icon}</Text>
-                  </View>
-                  <Text style={[styles.habitName, { color: theme.text }]}>{habit.name}</Text>
-                </View>
-              ))
-            )}
-            {activeHabits.length > 5 && (
-              <Pressable
-                onPress={() => setShowManageHabitsModal(true)}
-                style={[styles.seeMoreButton, { borderTopColor: theme.borderLight }]}
-              >
-                <Text style={[styles.seeMoreText, { color: theme.primary }]}>+{activeHabits.length - 5} more</Text>
-              </Pressable>
-            )}
-          </View>
-        </View>
 
-        {/* Settings Menu */}
+          {/* Name */}
+          <Text style={styles.headerName}>{displayName}</Text>
+          <Text style={styles.headerSubtitle}>Level {level} • Glowera Platinum</Text>
+
+          {/* Stats grid */}
+          <View style={styles.statsGrid}>
+            {/* Streak */}
+            <View style={styles.statCell}>
+              <SolarIcon name="fire-bold" size={22} color="#C45A82" />
+              <Text style={styles.statValue}>{currentStreak}</Text>
+              <Text style={styles.statLabel}>STREAK</Text>
+            </View>
+            {/* Points */}
+            <View style={styles.statCell}>
+              <SolarIcon name="star-bold" size={22} color="#9B86D4" />
+              <Text style={styles.statValue}>{totalPoints}</Text>
+              <Text style={styles.statLabel}>POINTS</Text>
+            </View>
+            {/* Badges */}
+            <View style={styles.statCell}>
+              <SolarIcon name="medal-ribbon-bold" size={22} color="#8FA886" />
+              <Text style={styles.statValue}>{badgeCount}</Text>
+              <Text style={styles.statLabel}>BADGES</Text>
+            </View>
+          </View>
+        </LinearGradient>
+
+        {/* ── Settings & Preferences ── */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>Settings</Text>
-          <View style={[styles.card, { backgroundColor: isDark ? theme.surface : 'rgba(255,255,255,0.85)', borderColor: theme.borderLight }]}>
-            <MenuItem
-              icon="🎯"
-              label="Wellness Goals"
-              value={wellnessGoals.length > 0 ? `${wellnessGoals.length} selected` : 'None'}
-              onPress={() => setShowWellnessGoalsModal(true)}
+          <Text style={styles.sectionLabel}>SETTINGS & PREFERENCES</Text>
+          <View style={styles.card}>
+            <SettingsRow
+              iconName="pen-new-square-bold"
+              iconColor="#C45A82"
+              iconBg="rgba(244,198,204,0.2)"
+              label="Garden Name"
+              onPress={() => {
+                setEditedGardenName(user?.gardenName || '');
+                setShowEditNameModal(true);
+              }}
             />
-            <MenuItem
-              icon="🔔"
+            <SettingsRow
+              iconName="bell-bold"
+              iconColor="#C45A82"
+              iconBg="rgba(244,198,204,0.2)"
               label="Notifications"
-              value={user?.notificationSettings.enabled ? 'On' : 'Off'}
               onPress={() => setShowNotificationsModal(true)}
             />
-            <MenuItem
-              icon="🌓"
-              label="Appearance"
-              value={getAppearanceName()}
-              onPress={() => setShowAppearanceModal(true)}
-            />
-            <MenuItem
-              icon="🎨"
-              label="Color Theme"
-              value={getThemeName()}
-              onPress={() => setShowThemeModal(true)}
-            />
-            <MenuItem
-              icon="📤"
-              label="Export Data"
-              onPress={handleExportData}
-            />
-            <MenuItem
-              icon="🔄"
-              label="Restart Onboarding"
-              onPress={handleResetOnboarding}
-              isLast
-            />
-          </View>
-        </View>
-
-        {/* About */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>About</Text>
-          <View style={[styles.card, { backgroundColor: isDark ? theme.surface : 'rgba(255,255,255,0.85)', borderColor: theme.borderLight }]}>
-            <MenuItem
-              icon="💜"
-              label="About Glowera"
-              onPress={() => setShowAboutModal(true)}
-            />
-            <MenuItem
-              icon="📖"
-              label="Privacy Policy"
+            <SettingsRow
+              iconName="shield-check-bold"
+              iconColor="#C45A82"
+              iconBg="rgba(212,201,248,0.2)"
+              label="Privacy"
               onPress={() => setShowPrivacyModal(true)}
             />
-            <MenuItem
-              icon="📝"
-              label="Terms of Service"
-              onPress={() => setShowTermsModal(true)}
+            <SettingsRow
+              iconName="palette-bold"
+              iconColor="#8FA886"
+              iconBg="rgba(184,206,172,0.2)"
+              label="Appearance"
+              onPress={() => setShowAppearanceModal(true)}
               isLast
             />
           </View>
         </View>
 
-        {/* Reset */}
+        {/* ── Glowera Community ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>GLOWERA COMMUNITY</Text>
+          <View style={styles.card}>
+            <SettingsRow
+              iconName="users-group-rounded-bold"
+              iconColor="#C45A82"
+              iconBg="rgba(244,198,204,0.2)"
+              label="Invite Friends"
+              onPress={handleExportData}
+            />
+            <SettingsRow
+              iconName="question-square-bold"
+              iconColor="#7A6668"
+              iconBg="#F4E8E0"
+              label="Help & Support"
+              onPress={() => setShowAboutModal(true)}
+              isLast
+            />
+          </View>
+        </View>
+
+        {/* ── Preview Onboarding ── */}
         <Pressable
-          style={({ pressed }) => [styles.resetButton, pressed && { opacity: 0.7 }]}
-          onPress={handleResetApp}
+          style={({ pressed }) => [styles.previewOnboardingButton, pressed && { opacity: 0.7 }]}
+          onPress={handleResetOnboarding}
         >
-          <Text style={[styles.resetText, { color: theme.error }]}>Reset App Data</Text>
+          <SolarIcon name="walking-bold" size={18} color="#7A6668" />
+          <Text style={styles.previewOnboardingText}>Preview Onboarding</Text>
         </Pressable>
 
-        {/* Version */}
-        <Text style={[styles.version, { color: theme.textMuted }]}>Glowera v1.0.0</Text>
+        {/* ── Logout ── */}
+        <Pressable
+          style={({ pressed }) => [styles.logoutButton, pressed && { opacity: 0.7 }]}
+          onPress={handleLogout}
+        >
+          <SolarIcon name="logout-bold" size={18} color="#C96A6E" />
+          <Text style={styles.logoutText}>Logout</Text>
+        </Pressable>
+
+        {/* ── Delete Account ── */}
+        <Pressable
+          style={({ pressed }) => [styles.deleteAccountButton, pressed && { opacity: 0.7 }]}
+          onPress={handleDeleteAccount}
+        >
+          <Text style={styles.deleteAccountText}>Delete Account</Text>
+        </Pressable>
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
 
-      {/* Edit Garden Name Modal */}
+      {/* ── Edit Garden Name Modal ── */}
       <Modal
         visible={showEditNameModal}
         animationType="fade"
@@ -517,12 +541,12 @@ export default function ProfileScreen() {
           onPress={() => setShowEditNameModal(false)}
         >
           <Pressable style={[styles.modalContent, { backgroundColor: theme.surface }]} onPress={e => e.stopPropagation()}>
-            <Text style={[styles.modalTitle, { color: theme.text }]}>Edit Garden Name</Text>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Edit Name</Text>
             <TextInput
               style={[styles.textInput, { backgroundColor: theme.backgroundWarm, borderColor: theme.borderLight, color: theme.text }]}
               value={editedGardenName}
               onChangeText={setEditedGardenName}
-              placeholder="Enter garden name"
+              placeholder="Enter your name"
               placeholderTextColor={theme.textMuted}
               autoFocus
               maxLength={30}
@@ -545,7 +569,7 @@ export default function ProfileScreen() {
         </Pressable>
       </Modal>
 
-      {/* Notifications Modal */}
+      {/* ── Notifications Modal ── */}
       <Modal
         visible={showNotificationsModal}
         animationType="fade"
@@ -583,7 +607,7 @@ export default function ProfileScreen() {
                     <Text style={[
                       styles.settingDescription,
                       { color: theme.textSecondary },
-                      user?.notificationSettings.morningReminder && [styles.settingTimeTappable, { color: theme.primary }]
+                      user?.notificationSettings.morningReminder && { color: theme.primary },
                     ]}>
                       {formatTime(user?.notificationSettings.morningTime)}
                       {user?.notificationSettings.morningReminder && ' ›'}
@@ -606,7 +630,7 @@ export default function ProfileScreen() {
                     <Text style={[
                       styles.settingDescription,
                       { color: theme.textSecondary },
-                      user?.notificationSettings.eveningReminder && [styles.settingTimeTappable, { color: theme.primary }]
+                      user?.notificationSettings.eveningReminder && { color: theme.primary },
                     ]}>
                       {formatTime(user?.notificationSettings.eveningTime)}
                       {user?.notificationSettings.eveningReminder && ' ›'}
@@ -632,47 +656,7 @@ export default function ProfileScreen() {
         </Pressable>
       </Modal>
 
-      {/* Theme Selection Modal */}
-      <Modal
-        visible={showThemeModal}
-        animationType="fade"
-        transparent
-        onRequestClose={() => setShowThemeModal(false)}
-      >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setShowThemeModal(false)}
-        >
-          <Pressable style={[styles.modalContent, { backgroundColor: theme.surface }]} onPress={e => e.stopPropagation()}>
-            <Text style={[styles.modalTitle, { color: theme.text }]}>Choose Color Theme</Text>
-
-            {THEME_OPTIONS.map((themeOption) => (
-              <Pressable
-                key={themeOption.id}
-                style={({ pressed }) => [
-                  styles.themeOption,
-                  user?.selectedTheme === themeOption.id && [styles.themeOptionSelected, { backgroundColor: isDark ? 'rgba(232, 164, 200, 0.15)' : 'rgba(212, 196, 232, 0.2)' }],
-                  pressed && { opacity: 0.8 },
-                ]}
-                onPress={() => handleSelectTheme(themeOption.id)}
-              >
-                <LinearGradient
-                  colors={themeOption.colors as [string, string, ...string[]]}
-                  style={[styles.themePreview, { borderColor: theme.borderLight }]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                />
-                <Text style={[styles.themeName, { color: theme.text }]}>{themeOption.name}</Text>
-                {user?.selectedTheme === themeOption.id && (
-                  <Text style={[styles.themeCheck, { color: theme.primary }]}>✓</Text>
-                )}
-              </Pressable>
-            ))}
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* Appearance Modal (Light/Dark/System) */}
+      {/* ── Appearance Modal ── */}
       <Modal
         visible={showAppearanceModal}
         animationType="fade"
@@ -691,17 +675,17 @@ export default function ProfileScreen() {
                 key={option.id}
                 style={({ pressed }) => [
                   styles.themeOption,
-                  themeMode === option.id && [styles.themeOptionSelected, { backgroundColor: isDark ? 'rgba(232, 164, 200, 0.15)' : 'rgba(212, 196, 232, 0.2)' }],
+                  themeMode === option.id && [styles.themeOptionSelected, { backgroundColor: isDark ? 'rgba(244, 198, 204, 0.15)' : 'rgba(244, 198, 204, 0.12)' }],
                   pressed && { opacity: 0.8 },
                 ]}
                 onPress={() => handleSelectAppearance(option.id)}
               >
-                <View style={[styles.appearanceIconContainer, { backgroundColor: isDark ? 'rgba(232, 164, 200, 0.12)' : 'rgba(212, 196, 232, 0.2)' }]}>
-                  <Text style={styles.appearanceIcon}>{option.icon}</Text>
+                <View style={[styles.appearanceIconContainer, { backgroundColor: isDark ? 'rgba(244, 198, 204, 0.15)' : 'rgba(244, 198, 204, 0.12)' }]}>
+                  <option.Icon size={22} strokeWidth={1.5} color={theme.primary} />
                 </View>
                 <Text style={[styles.themeName, { color: theme.text }]}>{option.name}</Text>
                 {themeMode === option.id && (
-                  <Text style={[styles.themeCheck, { color: theme.primary }]}>✓</Text>
+                  <Check size={18} color={theme.primary} strokeWidth={2.5} />
                 )}
               </Pressable>
             ))}
@@ -709,70 +693,128 @@ export default function ProfileScreen() {
         </Pressable>
       </Modal>
 
-      {/* Manage Habits Modal */}
+      {/* ── Privacy Modal ── */}
       <Modal
-        visible={showManageHabitsModal}
+        visible={showPrivacyModal}
         animationType="slide"
         transparent
-        onRequestClose={() => setShowManageHabitsModal(false)}
+        onRequestClose={() => setShowPrivacyModal(false)}
       >
         <View style={styles.fullModalContainer}>
-          <View style={styles.fullModalContent}>
+          <View style={[styles.fullModalContent, { backgroundColor: theme.surface }]}>
             <View style={styles.fullModalHeader}>
-              <Text style={styles.modalTitle}>Manage Habits</Text>
+              <Text style={[styles.modalTitle, { color: theme.text }]}>Privacy Policy</Text>
               <Pressable
-                onPress={() => setShowManageHabitsModal(false)}
+                onPress={() => setShowPrivacyModal(false)}
                 style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
               >
-                <Text style={styles.closeButton}>Done</Text>
+                <Text style={[styles.closeButton, { color: theme.primary }]}>Close</Text>
               </Pressable>
             </View>
-            <Text style={styles.modalSubtitle}>Toggle habits on or off</Text>
 
-            <Pressable
-              style={({ pressed }) => [styles.addHabitButton, pressed && { opacity: 0.8 }]}
-              onPress={() => setShowAddHabitModal(true)}
-            >
-              <Text style={styles.addHabitIcon}>+</Text>
-              <Text style={styles.addHabitText}>Create Custom Habit</Text>
-            </Pressable>
+            <ScrollView style={styles.aboutScrollView} showsVerticalScrollIndicator={false}>
+              <View style={styles.aboutSection}>
+                <Text style={[styles.aboutSectionTitle, { color: theme.text }]}>Your space, your data</Text>
+                <Text style={[styles.aboutText, { color: theme.textSecondary }]}>
+                  Glowera is built to be a calm, private space. Your journal entries and voice reflections never leave your device. We only collect what's needed to run the app.
+                </Text>
+              </View>
+              <View style={styles.aboutSection}>
+                <Text style={[styles.aboutSectionTitle, { color: theme.text }]}>What stays on your device</Text>
+                <Text style={[styles.aboutText, { color: theme.textSecondary }]}>
+                  • Journal entries and voice memos{'\n'}
+                  • Habits and completion logs{'\n'}
+                  • Mood check-ins and reflections{'\n'}
+                  • Garden progress and plant stage
+                </Text>
+              </View>
+              <View style={styles.aboutSection}>
+                <Text style={[styles.aboutSectionTitle, { color: theme.text }]}>What we collect</Text>
+                <Text style={[styles.aboutText, { color: theme.textSecondary }]}>
+                  Your email address (for your account), subscription status via RevenueCat, and basic usage data to power the garden and streaks. No location, no contacts, no health data.
+                </Text>
+              </View>
 
-            <ScrollView style={styles.habitsScrollView}>
-              {habits.map((habit, index) => (
-                <Pressable
-                  key={habit.id}
-                  style={[
-                    styles.habitManageItem,
-                    index < habits.length - 1 && styles.habitItemBorder,
-                  ]}
-                  onPress={() => handleToggleHabit(habit.id)}
-                >
-                  <View style={styles.habitIconContainer}>
-                    <Text style={styles.habitIcon}>{habit.icon}</Text>
-                  </View>
-                  <View style={styles.habitManageInfo}>
-                    <Text style={[
-                      styles.habitName,
-                      !habit.isActive && styles.habitNameInactive,
-                    ]}>
-                      {habit.name}
-                    </Text>
-                    <Text style={styles.habitCategory}>{habit.category}</Text>
-                  </View>
-                  <Switch
-                    value={habit.isActive}
-                    onValueChange={() => handleToggleHabit(habit.id)}
-                    trackColor={{ false: theme.borderLight, true: theme.primaryLight }}
-                    thumbColor={habit.isActive ? theme.primary : theme.textMuted}
-                  />
-                </Pressable>
-              ))}
+              <Pressable
+                style={({ pressed }) => [styles.privacyLinkButton, pressed && { opacity: 0.7 }]}
+                onPress={() => Linking.openURL('https://keen-cheshire-158.notion.site/Glowera-App-Privacy-Policy-34324bc53c8c80f0bda8f2f0d0527ed6')}
+              >
+                <SolarIcon name="document-text-bold" size={18} color="#C45A82" />
+                <Text style={styles.privacyLinkText}>Read Full Privacy Policy</Text>
+                <SolarIcon name="arrow-right-up-linear" size={16} color="#C45A82" />
+              </Pressable>
+
+              <Text style={[styles.aboutText, { color: theme.textMuted, textAlign: 'center', marginTop: 8 }]}>
+                Last updated: April 15, 2026
+              </Text>
+              <View style={{ height: 40 }} />
             </ScrollView>
           </View>
         </View>
       </Modal>
 
-      {/* Time Picker Modal */}
+      {/* ── About / Help Modal ── */}
+      <Modal
+        visible={showAboutModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowAboutModal(false)}
+      >
+        <View style={styles.fullModalContainer}>
+          <View style={[styles.fullModalContent, { backgroundColor: theme.surface }]}>
+            <View style={styles.fullModalHeader}>
+              <Text style={[styles.modalTitle, { color: theme.text }]}>Help & Support</Text>
+              <Pressable
+                onPress={() => setShowAboutModal(false)}
+                style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+              >
+                <Text style={[styles.closeButton, { color: theme.primary }]}>Close</Text>
+              </Pressable>
+            </View>
+
+            <ScrollView style={styles.aboutScrollView} showsVerticalScrollIndicator={false}>
+              <View style={styles.aboutLogoContainer}>
+                <Sprout size={56} strokeWidth={1.5} color={defaultTheme.primary} />
+                <Text style={[styles.aboutAppName, { color: theme.text }]}>Glowera</Text>
+                <Text style={[styles.aboutTagline, { color: theme.textSecondary }]}>Grow at your own pace</Text>
+              </View>
+              <View style={styles.aboutSection}>
+                <Text style={[styles.aboutSectionTitle, { color: theme.text }]}>Our Philosophy</Text>
+                <Text style={[styles.aboutText, { color: theme.textSecondary }]}>
+                  Glowera is a gentle wellness companion designed for those who want to nurture their well-being without the pressure of perfect streaks or harsh penalties.
+                </Text>
+              </View>
+              <View style={styles.aboutSection}>
+                <Text style={[styles.aboutSectionTitle, { color: theme.text }]}>What Makes Us Different</Text>
+                <View style={styles.aboutFeature}>
+                  <View style={styles.aboutFeatureIconContainer}>
+                    <Sprout size={22} strokeWidth={1.5} color={defaultTheme.primary} />
+                  </View>
+                  <View style={styles.aboutFeatureText}>
+                    <Text style={[styles.aboutFeatureTitle, { color: theme.text }]}>No Streaks</Text>
+                    <Text style={[styles.aboutFeatureDesc, { color: theme.textSecondary }]}>Your progress never resets. Every small step counts forever.</Text>
+                  </View>
+                </View>
+                <View style={styles.aboutFeature}>
+                  <View style={styles.aboutFeatureIconContainer}>
+                    <Heart size={22} strokeWidth={1.5} color={defaultTheme.primary} />
+                  </View>
+                  <View style={styles.aboutFeatureText}>
+                    <Text style={[styles.aboutFeatureTitle, { color: theme.text }]}>No Penalties</Text>
+                    <Text style={[styles.aboutFeatureDesc, { color: theme.textSecondary }]}>Miss a day? That's okay. Your garden keeps growing when you return.</Text>
+                  </View>
+                </View>
+              </View>
+              <View style={styles.aboutSection}>
+                <Text style={[styles.aboutText, { color: theme.textSecondary }]}>Glowera v1.0.0 — Made with care for your wellness journey</Text>
+              </View>
+              <View style={{ height: 40 }} />
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Time Picker Modal ── */}
       <Modal
         visible={showTimePickerModal}
         animationType="fade"
@@ -783,13 +825,12 @@ export default function ProfileScreen() {
           style={styles.modalOverlay}
           onPress={() => setShowTimePickerModal(false)}
         >
-          <Pressable style={styles.modalContent} onPress={e => e.stopPropagation()}>
-            <Text style={styles.modalTitle}>
+          <Pressable style={[styles.modalContent, { backgroundColor: theme.surface }]} onPress={e => e.stopPropagation()}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>
               {editingTimeType === 'morning' ? 'Morning' : 'Evening'} Reminder
             </Text>
 
             <View style={styles.timePickerContainer}>
-              {/* Hour */}
               <View style={styles.timePickerColumn}>
                 <ScrollView
                   style={styles.timePickerScroll}
@@ -801,12 +842,13 @@ export default function ProfileScreen() {
                       key={hour}
                       style={[
                         styles.timePickerItem,
-                        selectedHour === hour && styles.timePickerItemSelected,
+                        selectedHour === hour && [styles.timePickerItemSelected, { backgroundColor: theme.primary }],
                       ]}
                       onPress={() => setSelectedHour(hour)}
                     >
                       <Text style={[
                         styles.timePickerItemText,
+                        { color: theme.text },
                         selectedHour === hour && styles.timePickerItemTextSelected,
                       ]}>
                         {hour}
@@ -816,9 +858,8 @@ export default function ProfileScreen() {
                 </ScrollView>
               </View>
 
-              <Text style={styles.timePickerSeparator}>:</Text>
+              <Text style={[styles.timePickerSeparator, { color: theme.text }]}>:</Text>
 
-              {/* Minute */}
               <View style={styles.timePickerColumn}>
                 <ScrollView
                   style={styles.timePickerScroll}
@@ -830,12 +871,13 @@ export default function ProfileScreen() {
                       key={minute}
                       style={[
                         styles.timePickerItem,
-                        selectedMinute === minute && styles.timePickerItemSelected,
+                        selectedMinute === minute && [styles.timePickerItemSelected, { backgroundColor: theme.primary }],
                       ]}
                       onPress={() => setSelectedMinute(minute)}
                     >
                       <Text style={[
                         styles.timePickerItemText,
+                        { color: theme.text },
                         selectedMinute === minute && styles.timePickerItemTextSelected,
                       ]}>
                         {minute.toString().padStart(2, '0')}
@@ -845,7 +887,6 @@ export default function ProfileScreen() {
                 </ScrollView>
               </View>
 
-              {/* AM/PM */}
               <View style={styles.timePickerColumn}>
                 {(['AM', 'PM'] as const).map((period) => (
                   <Pressable
@@ -853,12 +894,13 @@ export default function ProfileScreen() {
                     style={[
                       styles.timePickerItem,
                       styles.timePickerPeriodItem,
-                      selectedPeriod === period && styles.timePickerItemSelected,
+                      selectedPeriod === period && [styles.timePickerItemSelected, { backgroundColor: theme.primary }],
                     ]}
                     onPress={() => setSelectedPeriod(period)}
                   >
                     <Text style={[
                       styles.timePickerItemText,
+                      { color: theme.text },
                       selectedPeriod === period && styles.timePickerItemTextSelected,
                     ]}>
                       {period}
@@ -870,334 +912,23 @@ export default function ProfileScreen() {
 
             <View style={styles.modalButtons}>
               <Pressable
-                style={[styles.modalButton, styles.modalButtonSecondary]}
+                style={[styles.modalButton, styles.modalButtonSecondary, { backgroundColor: theme.backgroundWarm, borderColor: theme.borderLight }]}
                 onPress={() => setShowTimePickerModal(false)}
               >
-                <Text style={styles.modalButtonTextSecondary}>Cancel</Text>
+                <Text style={[styles.modalButtonTextSecondary, { color: theme.text }]}>Cancel</Text>
               </Pressable>
               <Pressable
-                style={[styles.modalButton, styles.modalButtonPrimary]}
+                style={[styles.modalButton, styles.modalButtonPrimary, { backgroundColor: theme.primary }]}
                 onPress={handleSaveTime}
               >
-                <Text style={styles.modalButtonTextPrimary}>Save</Text>
+                <Text style={[styles.modalButtonTextPrimary, { color: theme.textOnPrimary }]}>Save</Text>
               </Pressable>
             </View>
           </Pressable>
         </Pressable>
       </Modal>
 
-      {/* About Glowera Modal */}
-      <Modal
-        visible={showAboutModal}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setShowAboutModal(false)}
-      >
-        <View style={styles.fullModalContainer}>
-          <View style={styles.fullModalContent}>
-            <View style={styles.fullModalHeader}>
-              <Text style={styles.modalTitle}>About Glowera</Text>
-              <Pressable
-                onPress={() => setShowAboutModal(false)}
-                style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
-              >
-                <Text style={styles.closeButton}>Close</Text>
-              </Pressable>
-            </View>
-
-            <ScrollView style={styles.aboutScrollView} showsVerticalScrollIndicator={false}>
-              <View style={styles.aboutLogoContainer}>
-                <Text style={styles.aboutLogo}>🌸</Text>
-                <Text style={styles.aboutAppName}>Glowera</Text>
-                <Text style={styles.aboutTagline}>Grow at your own pace</Text>
-              </View>
-
-              <View style={styles.aboutSection}>
-                <Text style={styles.aboutSectionTitle}>Our Philosophy</Text>
-                <Text style={styles.aboutText}>
-                  Glowera is a gentle wellness companion designed for those who want to nurture their well-being without the pressure of perfect streaks or harsh penalties.
-                </Text>
-              </View>
-
-              <View style={styles.aboutSection}>
-                <Text style={styles.aboutSectionTitle}>What Makes Us Different</Text>
-                <View style={styles.aboutFeature}>
-                  <Text style={styles.aboutFeatureIcon}>🌱</Text>
-                  <View style={styles.aboutFeatureText}>
-                    <Text style={styles.aboutFeatureTitle}>No Streaks</Text>
-                    <Text style={styles.aboutFeatureDesc}>Your progress never resets. Every small step counts forever.</Text>
-                  </View>
-                </View>
-                <View style={styles.aboutFeature}>
-                  <Text style={styles.aboutFeatureIcon}>💜</Text>
-                  <View style={styles.aboutFeatureText}>
-                    <Text style={styles.aboutFeatureTitle}>No Penalties</Text>
-                    <Text style={styles.aboutFeatureDesc}>Miss a day? That's okay. Your garden keeps growing when you return.</Text>
-                  </View>
-                </View>
-                <View style={styles.aboutFeature}>
-                  <Text style={styles.aboutFeatureIcon}>🌸</Text>
-                  <View style={styles.aboutFeatureText}>
-                    <Text style={styles.aboutFeatureTitle}>Gentle Progress</Text>
-                    <Text style={styles.aboutFeatureDesc}>Celebrate doing things "gently" as much as doing them fully.</Text>
-                  </View>
-                </View>
-              </View>
-
-              <View style={styles.aboutSection}>
-                <Text style={styles.aboutSectionTitle}>Version</Text>
-                <Text style={styles.aboutText}>Glowera v1.0.0</Text>
-              </View>
-
-              <View style={styles.aboutSection}>
-                <Text style={styles.aboutText}>Made with 💜 for your wellness journey</Text>
-              </View>
-
-              <View style={{ height: 40 }} />
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Privacy Policy Modal */}
-      <Modal
-        visible={showPrivacyModal}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setShowPrivacyModal(false)}
-      >
-        <View style={styles.fullModalContainer}>
-          <View style={styles.fullModalContent}>
-            <View style={styles.fullModalHeader}>
-              <Text style={styles.modalTitle}>Privacy Policy</Text>
-              <Pressable
-                onPress={() => setShowPrivacyModal(false)}
-                style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
-              >
-                <Text style={styles.closeButton}>Close</Text>
-              </Pressable>
-            </View>
-
-            <ScrollView style={styles.aboutScrollView} showsVerticalScrollIndicator={false}>
-              <View style={styles.aboutSection}>
-                <Text style={styles.aboutSectionTitle}>Your Privacy Matters</Text>
-                <Text style={styles.aboutText}>
-                  At Glowera, we believe your wellness journey is personal. Here's how we protect your privacy:
-                </Text>
-              </View>
-
-              <View style={styles.aboutSection}>
-                <Text style={styles.aboutSectionTitle}>Data Storage</Text>
-                <Text style={styles.aboutText}>
-                  All your data is stored locally on your device. We do not collect, store, or transmit your personal information to any servers.
-                </Text>
-              </View>
-
-              <View style={styles.aboutSection}>
-                <Text style={styles.aboutSectionTitle}>What We Store Locally</Text>
-                <Text style={styles.aboutText}>
-                  • Your garden name and preferences{'\n'}
-                  • Your selected habits and completion history{'\n'}
-                  • Your journal entries and moods{'\n'}
-                  • Your plant growth progress
-                </Text>
-              </View>
-
-              <View style={styles.aboutSection}>
-                <Text style={styles.aboutSectionTitle}>No Tracking</Text>
-                <Text style={styles.aboutText}>
-                  We do not use analytics, tracking pixels, or any third-party services that monitor your behavior.
-                </Text>
-              </View>
-
-              <View style={styles.aboutSection}>
-                <Text style={styles.aboutSectionTitle}>Data Export</Text>
-                <Text style={styles.aboutText}>
-                  You can export all your data at any time from the Settings menu. Your data belongs to you.
-                </Text>
-              </View>
-
-              <View style={styles.aboutSection}>
-                <Text style={styles.aboutSectionTitle}>Data Deletion</Text>
-                <Text style={styles.aboutText}>
-                  You can delete all your data at any time using the "Reset App Data" option. This permanently removes all information from your device.
-                </Text>
-              </View>
-
-              <View style={styles.aboutSection}>
-                <Text style={styles.aboutText}>
-                  Last updated: January 2026
-                </Text>
-              </View>
-
-              <View style={{ height: 40 }} />
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Terms of Service Modal */}
-      <Modal
-        visible={showTermsModal}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setShowTermsModal(false)}
-      >
-        <View style={styles.fullModalContainer}>
-          <View style={styles.fullModalContent}>
-            <View style={styles.fullModalHeader}>
-              <Text style={styles.modalTitle}>Terms of Service</Text>
-              <Pressable
-                onPress={() => setShowTermsModal(false)}
-                style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
-              >
-                <Text style={styles.closeButton}>Close</Text>
-              </Pressable>
-            </View>
-
-            <ScrollView style={styles.aboutScrollView} showsVerticalScrollIndicator={false}>
-              <View style={styles.aboutSection}>
-                <Text style={styles.aboutSectionTitle}>Welcome to Glowera</Text>
-                <Text style={styles.aboutText}>
-                  By using Glowera, you agree to these terms. Please read them carefully.
-                </Text>
-              </View>
-
-              <View style={styles.aboutSection}>
-                <Text style={styles.aboutSectionTitle}>Use of the App</Text>
-                <Text style={styles.aboutText}>
-                  Glowera is designed to support your personal wellness journey. The app is provided "as is" for personal, non-commercial use.
-                </Text>
-              </View>
-
-              <View style={styles.aboutSection}>
-                <Text style={styles.aboutSectionTitle}>Not Medical Advice</Text>
-                <Text style={styles.aboutText}>
-                  Glowera is a habit tracking and wellness companion app. It is not intended to provide medical advice, diagnosis, or treatment. Always consult with qualified healthcare providers for medical concerns.
-                </Text>
-              </View>
-
-              <View style={styles.aboutSection}>
-                <Text style={styles.aboutSectionTitle}>Your Responsibilities</Text>
-                <Text style={styles.aboutText}>
-                  • Use the app in a way that supports your well-being{'\n'}
-                  • Keep your device secure to protect your data{'\n'}
-                  • Respect that progress is personal and non-competitive
-                </Text>
-              </View>
-
-              <View style={styles.aboutSection}>
-                <Text style={styles.aboutSectionTitle}>Intellectual Property</Text>
-                <Text style={styles.aboutText}>
-                  The Glowera name, design, and content are protected by intellectual property laws. You may not copy, modify, or distribute the app without permission.
-                </Text>
-              </View>
-
-              <View style={styles.aboutSection}>
-                <Text style={styles.aboutSectionTitle}>Changes to Terms</Text>
-                <Text style={styles.aboutText}>
-                  We may update these terms from time to time. Continued use of the app constitutes acceptance of any changes.
-                </Text>
-              </View>
-
-              <View style={styles.aboutSection}>
-                <Text style={styles.aboutText}>
-                  Last updated: January 2026
-                </Text>
-              </View>
-
-              <View style={{ height: 40 }} />
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Add Custom Habit Modal */}
-      <Modal
-        visible={showAddHabitModal}
-        animationType="fade"
-        transparent
-        onRequestClose={() => setShowAddHabitModal(false)}
-      >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setShowAddHabitModal(false)}
-        >
-          <Pressable style={[styles.modalContent, styles.addHabitModalContent]} onPress={e => e.stopPropagation()}>
-            <Text style={styles.modalTitle}>Create Custom Habit</Text>
-
-            <Text style={styles.inputLabel}>Habit Name</Text>
-            <TextInput
-              style={styles.textInput}
-              value={newHabitName}
-              onChangeText={setNewHabitName}
-              placeholder="e.g., Read for 10 minutes"
-              placeholderTextColor={theme.textMuted}
-              maxLength={40}
-            />
-
-            <Text style={styles.inputLabel}>Choose an Icon</Text>
-            <View style={styles.iconGrid}>
-              {HABIT_ICONS.map((icon) => (
-                <Pressable
-                  key={icon}
-                  style={[
-                    styles.iconOption,
-                    newHabitIcon === icon && styles.iconOptionSelected,
-                  ]}
-                  onPress={() => setNewHabitIcon(icon)}
-                >
-                  <Text style={styles.iconOptionText}>{icon}</Text>
-                </Pressable>
-              ))}
-            </View>
-
-            <Text style={styles.inputLabel}>Category</Text>
-            <View style={styles.categoryGrid}>
-              {HABIT_CATEGORIES.map((cat) => (
-                <Pressable
-                  key={cat.id}
-                  style={[
-                    styles.categoryOption,
-                    newHabitCategory === cat.id && styles.categoryOptionSelected,
-                  ]}
-                  onPress={() => setNewHabitCategory(cat.id)}
-                >
-                  <Text style={styles.categoryOptionIcon}>{cat.icon}</Text>
-                  <Text style={[
-                    styles.categoryOptionText,
-                    newHabitCategory === cat.id && styles.categoryOptionTextSelected,
-                  ]}>
-                    {cat.name}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-
-            <View style={styles.modalButtons}>
-              <Pressable
-                style={[styles.modalButton, styles.modalButtonSecondary]}
-                onPress={() => setShowAddHabitModal(false)}
-              >
-                <Text style={styles.modalButtonTextSecondary}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                style={[
-                  styles.modalButton,
-                  styles.modalButtonPrimary,
-                  !newHabitName.trim() && styles.modalButtonDisabled,
-                ]}
-                onPress={handleAddCustomHabit}
-                disabled={!newHabitName.trim()}
-              >
-                <Text style={styles.modalButtonTextPrimary}>Create</Text>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* Wellness Goals Modal */}
+      {/* ── Wellness Goals Modal ── */}
       <GoalsSelectionModal
         visible={showWellnessGoalsModal}
         onClose={() => setShowWellnessGoalsModal(false)}
@@ -1209,228 +940,224 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  gradientBackground: {
-    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#EDD5CB',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: 60,
+    paddingTop: 0,
   },
-  header: {
-    marginBottom: spacing.xl,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '300',
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: 15,
-    fontWeight: '500',
-    marginTop: spacing.xs,
-  },
-  gardenCard: {
+
+  // ── Header ──
+  headerGradient: {
+    paddingTop: 64,
+    paddingBottom: 32,
+    paddingHorizontal: 24,
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
     alignItems: 'center',
-    paddingVertical: spacing.xl,
-    borderRadius: borderRadius.xxl,
-    marginBottom: spacing.lg,
-    overflow: 'hidden',
-    ...shadows.lg,
+    shadowColor: '#C4A99A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 6,
   },
-  gardenCardGradient: {
-    ...StyleSheet.absoluteFillObject,
+  avatarRing: {
+    width: 136,
+    height: 136,
+    borderRadius: 68,
+    borderWidth: 4,
+    borderColor: 'rgba(212,144,154,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
   },
-  gardenName: {
+  avatarCircle: {
+    width: 128,
+    height: 128,
+    borderRadius: 64,
+    backgroundColor: '#F2B4CC',
+    borderWidth: 4,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#C4A99A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  avatarInitials: {
+    fontSize: 40,
+    fontFamily: 'Raleway-SemiBold',
+    fontWeight: '600',
+    color: '#C45A82',
+  },
+  cameraButton: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#C45A82',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#C4A99A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  headerName: {
     fontSize: 22,
-    fontWeight: '300',
-    color: defaultTheme.text,
-    marginBottom: spacing.md,
+    fontFamily: 'Raleway-SemiBold',
+    fontWeight: '600',
+    color: '#FEFAF9',
     letterSpacing: -0.3,
+    marginBottom: 4,
   },
-  statsRow: {
+  headerSubtitle: {
+    fontSize: 13,
+    fontFamily: 'DMSans',
+    color: 'rgba(255,251,245,0.9)',
+    marginBottom: 0,
+  },
+
+  // Stats grid
+  statsGrid: {
     flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.xl,
+    gap: 12,
+    marginTop: 20,
+    width: '100%',
   },
-  statCard: {
+  statCell: {
     flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 16,
+    padding: 12,
     alignItems: 'center',
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.card,
-    overflow: 'hidden',
-    ...shadows.sm,
     borderWidth: 1,
-    borderColor: defaultTheme.borderLight,
-  },
-  statCardGradient: {
-    ...StyleSheet.absoluteFillObject,
+    borderColor: 'rgba(255,255,255,0.2)',
+    gap: 4,
   },
   statValue: {
-    fontSize: 24,
-    fontWeight: '300',
-    color: defaultTheme.primary,
-    letterSpacing: -0.5,
-  },
-  statLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: defaultTheme.textSecondary,
+    fontSize: 18,
+    fontFamily: 'Raleway-SemiBold',
+    fontWeight: '600',
+    color: '#FEFAF9',
+    lineHeight: 22,
     marginTop: 4,
   },
-  section: {
-    marginBottom: spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: defaultTheme.textSecondary,
-    marginBottom: spacing.sm,
-    marginLeft: spacing.xs,
-    letterSpacing: 0.3,
+  statLabel: {
+    fontSize: 8,
+    fontFamily: 'SpaceMono-Bold',
+    color: 'rgba(255,251,245,0.6)',
+    letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
+
+  // ── Sections ──
+  section: {
+    marginTop: 28,
+    paddingHorizontal: 24,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontFamily: 'SpaceMono-Bold',
+    color: '#5C3D2E',
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    paddingHorizontal: 4,
+    marginBottom: 12,
+  },
   card: {
-    backgroundColor: 'rgba(255,255,255,0.85)',
-    borderRadius: borderRadius.card,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
     overflow: 'hidden',
-    ...shadows.sm,
     borderWidth: 1,
-    borderColor: defaultTheme.borderLight,
+    borderColor: '#E0CCBF',
   },
-  habitItem: {
+  settingsRow: {
     flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
     alignItems: 'center',
-    paddingVertical: spacing.sm + 4,
-    paddingHorizontal: spacing.md,
   },
-  habitItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: defaultTheme.borderLight,
-  },
-  habitIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: 'rgba(212, 196, 232, 0.2)',
+  settingsIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.sm,
+    marginRight: 14,
   },
-  habitIcon: {
-    fontSize: 18,
-  },
-  habitName: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: defaultTheme.text,
-  },
-  emptyText: {
-    fontSize: 15,
-    color: defaultTheme.textMuted,
-    textAlign: 'center',
-    paddingVertical: spacing.lg,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-  },
-  menuItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: defaultTheme.borderLight,
-  },
-  menuItemPressed: {
-    backgroundColor: 'rgba(212, 196, 232, 0.1)',
-  },
-  menuIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: 'rgba(212, 196, 232, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.sm,
-  },
-  menuIcon: {
-    fontSize: 18,
-  },
-  menuLabel: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: defaultTheme.text,
+  settingsLabel: {
     flex: 1,
-  },
-  menuValue: {
-    fontSize: 14,
-    color: defaultTheme.textSecondary,
-    marginRight: spacing.sm,
-  },
-  menuArrow: {
-    fontSize: 20,
-    fontWeight: '300',
-    color: defaultTheme.textMuted,
-  },
-  resetButton: {
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    marginTop: spacing.md,
-  },
-  resetText: {
     fontSize: 15,
-    fontWeight: '500',
-    color: defaultTheme.error,
+    fontFamily: 'DMSans',
+    color: '#1A0A06',
   },
-  version: {
-    fontSize: 12,
-    color: defaultTheme.textMuted,
-    textAlign: 'center',
-    marginTop: spacing.lg,
+  rowDivider: {
+    height: 1,
+    backgroundColor: '#D6C5C2',
+    opacity: 0.3,
+    marginHorizontal: 16,
   },
+
+  // ── Logout ──
+  previewOnboardingButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    marginTop: 28,
+    marginHorizontal: 24,
+    gap: 8,
+  },
+  previewOnboardingText: {
+    fontSize: 14,
+    fontFamily: 'DMSans',
+    color: '#5C3D2E',
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    marginTop: 8,
+    marginHorizontal: 24,
+    gap: 8,
+  },
+  logoutText: {
+    fontSize: 15,
+    fontFamily: 'DMSans',
+    fontWeight: '600',
+    color: '#C96A6E',
+  },
+
+  deleteAccountButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    marginTop: 4,
+    marginHorizontal: 24,
+  },
+  deleteAccountText: {
+    fontSize: 13,
+    fontFamily: 'DMSans',
+    color: '#B0878A',
+    textDecorationLine: 'underline',
+  },
+
   bottomSpacer: {
     height: 120,
   },
-  // Garden name edit
-  gardenNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  editIcon: {
-    fontSize: 14,
-    opacity: 0.6,
-  },
-  // Section header with manage link
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-    marginLeft: spacing.xs,
-  },
-  manageLink: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: defaultTheme.primary,
-    marginRight: spacing.xs,
-  },
-  seeMoreButton: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: defaultTheme.borderLight,
-  },
-  seeMoreText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: defaultTheme.primary,
-    textAlign: 'center',
-  },
-  // Modal styles
+
+  // ── Modals ──
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
@@ -1448,15 +1175,10 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: '500',
+    fontFamily: 'Raleway-SemiBold',
+    fontWeight: '600',
     color: defaultTheme.text,
     marginBottom: spacing.lg,
-    textAlign: 'center',
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    color: defaultTheme.textSecondary,
-    marginBottom: spacing.md,
     textAlign: 'center',
   },
   textInput: {
@@ -1465,6 +1187,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     fontSize: 16,
+    fontFamily: 'DMSans',
     color: defaultTheme.text,
     borderWidth: 1,
     borderColor: defaultTheme.borderLight,
@@ -1490,15 +1213,17 @@ const styles = StyleSheet.create({
   },
   modalButtonTextPrimary: {
     fontSize: 15,
+    fontFamily: 'DMSans',
     fontWeight: '600',
     color: defaultTheme.textOnPrimary,
   },
   modalButtonTextSecondary: {
     fontSize: 15,
-    fontWeight: '500',
+    fontFamily: 'DMSans',
     color: defaultTheme.text,
   },
-  // Settings rows
+
+  // Settings rows in modals
   settingRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1512,15 +1237,17 @@ const styles = StyleSheet.create({
   },
   settingLabel: {
     fontSize: 15,
-    fontWeight: '500',
+    fontFamily: 'DMSans',
     color: defaultTheme.text,
   },
   settingDescription: {
     fontSize: 13,
+    fontFamily: 'DMSans',
     color: defaultTheme.textSecondary,
     marginTop: 2,
   },
-  // Theme options
+
+  // Appearance options
   themeOption: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1530,25 +1257,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   themeOptionSelected: {
-    backgroundColor: 'rgba(212, 196, 232, 0.2)',
-  },
-  themePreview: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.sm,
-    marginRight: spacing.md,
-    borderWidth: 1,
-    borderColor: defaultTheme.borderLight,
-  },
-  themeName: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: defaultTheme.text,
-    flex: 1,
-  },
-  themeCheck: {
-    fontSize: 18,
-    fontWeight: '600',
+    backgroundColor: 'rgba(244, 198, 204, 0.12)',
   },
   appearanceIconContainer: {
     width: 40,
@@ -1558,10 +1267,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: spacing.md,
   },
-  appearanceIcon: {
-    fontSize: 22,
+  themeName: {
+    fontSize: 15,
+    fontFamily: 'DMSans',
+    color: defaultTheme.text,
+    flex: 1,
   },
-  // Full modal for manage habits
+
+  // Full-screen slide-up modals
   fullModalContainer: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
@@ -1583,58 +1296,100 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     fontSize: 16,
+    fontFamily: 'DMSans',
     fontWeight: '600',
     color: defaultTheme.primary,
   },
-  habitsScrollView: {
-    marginTop: spacing.md,
-  },
-  habitManageItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-  },
-  habitManageInfo: {
+  aboutScrollView: {
     flex: 1,
   },
-  habitNameInactive: {
-    color: defaultTheme.textMuted,
+  aboutLogoContainer: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
   },
-  habitCategory: {
-    fontSize: 12,
+  aboutAppName: {
+    fontSize: 28,
+    fontFamily: 'Raleway-SemiBold',
+    fontWeight: '600',
+    color: defaultTheme.text,
+    letterSpacing: -0.5,
+    marginTop: spacing.sm,
+  },
+  aboutTagline: {
+    fontSize: 15,
+    fontFamily: 'DMSans',
     color: defaultTheme.textSecondary,
-    textTransform: 'capitalize',
-    marginTop: 2,
+    marginTop: spacing.xs,
   },
-  // Tappable time in notifications
-  settingTimeTappable: {
-    color: defaultTheme.primary,
+  aboutSection: {
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.xs,
   },
-  // Add habit button in manage habits modal
-  addHabitButton: {
+  aboutSectionTitle: {
+    fontSize: 16,
+    fontFamily: 'Raleway-SemiBold',
+    fontWeight: '600',
+    color: defaultTheme.text,
+    marginBottom: spacing.sm,
+  },
+  aboutText: {
+    fontSize: 14,
+    fontFamily: 'DMSans',
+    color: defaultTheme.textSecondary,
+    lineHeight: 22,
+  },
+  aboutFeature: {
+    flexDirection: 'row',
+    marginBottom: spacing.md,
+  },
+  aboutFeatureIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: 'rgba(244, 198, 204, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  aboutFeatureText: {
+    flex: 1,
+  },
+  aboutFeatureTitle: {
+    fontSize: 15,
+    fontFamily: 'DMSans',
+    fontWeight: '600',
+    color: defaultTheme.text,
+    marginBottom: 2,
+  },
+  aboutFeatureDesc: {
+    fontSize: 13,
+    fontFamily: 'DMSans',
+    color: defaultTheme.textSecondary,
+    lineHeight: 18,
+  },
+
+  // Privacy link
+  privacyLinkButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(212, 196, 232, 0.15)',
-    borderRadius: borderRadius.md,
-    paddingVertical: spacing.md,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: defaultTheme.secondary,
-    borderStyle: 'dashed',
+    gap: 8,
+    backgroundColor: 'rgba(212,144,154,0.1)',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    marginHorizontal: 4,
+    marginBottom: 16,
   },
-  addHabitIcon: {
-    fontSize: 20,
-    color: defaultTheme.primary,
-    marginRight: spacing.sm,
-    fontWeight: '300',
-  },
-  addHabitText: {
+  privacyLinkText: {
+    flex: 1,
     fontSize: 15,
-    fontWeight: '500',
-    color: defaultTheme.primary,
+    fontFamily: 'DMSans',
+    color: '#C45A82',
+    fontWeight: '600',
   },
-  // Time picker styles
+
+  // Time picker
   timePickerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1667,147 +1422,18 @@ const styles = StyleSheet.create({
   },
   timePickerItemText: {
     fontSize: 18,
-    fontWeight: '400',
+    fontFamily: 'DMSans',
     color: defaultTheme.text,
   },
   timePickerItemTextSelected: {
     color: defaultTheme.textOnPrimary,
+    fontFamily: 'DMSans',
     fontWeight: '600',
   },
   timePickerSeparator: {
     fontSize: 24,
-    fontWeight: '300',
+    fontFamily: 'DMSans',
     color: defaultTheme.text,
     marginHorizontal: spacing.xs,
-  },
-  // About modal styles
-  aboutScrollView: {
-    flex: 1,
-  },
-  aboutLogoContainer: {
-    alignItems: 'center',
-    paddingVertical: spacing.xl,
-  },
-  aboutLogo: {
-    fontSize: 64,
-    marginBottom: spacing.sm,
-  },
-  aboutAppName: {
-    fontSize: 28,
-    fontWeight: '300',
-    color: defaultTheme.text,
-    letterSpacing: -0.5,
-  },
-  aboutTagline: {
-    fontSize: 15,
-    color: defaultTheme.textSecondary,
-    marginTop: spacing.xs,
-  },
-  aboutSection: {
-    marginBottom: spacing.lg,
-    paddingHorizontal: spacing.xs,
-  },
-  aboutSectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: defaultTheme.text,
-    marginBottom: spacing.sm,
-  },
-  aboutText: {
-    fontSize: 14,
-    color: defaultTheme.textSecondary,
-    lineHeight: 22,
-  },
-  aboutFeature: {
-    flexDirection: 'row',
-    marginBottom: spacing.md,
-  },
-  aboutFeatureIcon: {
-    fontSize: 24,
-    marginRight: spacing.md,
-  },
-  aboutFeatureText: {
-    flex: 1,
-  },
-  aboutFeatureTitle: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: defaultTheme.text,
-    marginBottom: 2,
-  },
-  aboutFeatureDesc: {
-    fontSize: 13,
-    color: defaultTheme.textSecondary,
-    lineHeight: 18,
-  },
-  // Add habit modal styles
-  addHabitModalContent: {
-    maxWidth: 360,
-  },
-  inputLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: defaultTheme.textSecondary,
-    marginBottom: spacing.sm,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  iconGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  iconOption: {
-    width: 44,
-    height: 44,
-    borderRadius: borderRadius.md,
-    backgroundColor: defaultTheme.backgroundWarm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: defaultTheme.borderLight,
-  },
-  iconOptionSelected: {
-    backgroundColor: defaultTheme.primaryLight,
-    borderColor: defaultTheme.primary,
-  },
-  iconOptionText: {
-    fontSize: 22,
-  },
-  categoryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  categoryOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.md,
-    backgroundColor: defaultTheme.backgroundWarm,
-    borderWidth: 1,
-    borderColor: defaultTheme.borderLight,
-  },
-  categoryOptionSelected: {
-    backgroundColor: defaultTheme.primaryLight,
-    borderColor: defaultTheme.primary,
-  },
-  categoryOptionIcon: {
-    fontSize: 16,
-    marginRight: spacing.xs,
-  },
-  categoryOptionText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: defaultTheme.text,
-  },
-  categoryOptionTextSelected: {
-    color: defaultTheme.primary,
-  },
-  modalButtonDisabled: {
-    opacity: 0.5,
   },
 });

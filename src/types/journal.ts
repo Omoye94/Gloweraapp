@@ -9,6 +9,7 @@ export interface JournalEntry {
   mood?: Mood;
   promptUsed?: string;
   tags?: string[];
+  audioUri?: string; // local file URI for voice memo
 }
 
 export interface ReflectionPrompt {

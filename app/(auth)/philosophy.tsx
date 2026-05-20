@@ -44,7 +44,7 @@ export default function PhilosophyScreen() {
       <View style={styles.content}>
         <Text style={styles.header}>Our Philosophy</Text>
 
-        <Card variant="elevated" padding="large" style={styles.card}>
+        <Card variant="hero" padding="large" style={styles.card}>
           <Text style={styles.cardEmoji}>{currentCard.emoji}</Text>
           <Text style={styles.cardTitle}>{currentCard.title}</Text>
           <Text style={styles.cardDescription}>{currentCard.description}</Text>

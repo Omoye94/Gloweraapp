@@ -1,32 +1,34 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
+  Pressable,
   TextInput,
   Modal,
-  Pressable,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams } from 'expo-router';
+import { Sparkles } from 'lucide-react-native';
 import { useJournalStore, usePlantStore } from '../../src/stores';
-import { Card, Button } from '../../src/components/ui';
-import { theme, spacing, borderRadius, shadows } from '../../src/theme';
-import { formatShortDate, formatDisplayDate } from '../../src/utils/dateUtils';
-import { getWeeklyPrompt, getDailyPrompt } from '../../src/constants/reflectionPrompts';
+import { spacing, shadows } from '../../src/theme';
+import { gradients } from '../../src/theme/colors';
+import { formatShortDate } from '../../src/utils/dateUtils';
+import { getDailyPrompt, getMoodPrompt } from '../../src/constants/reflectionPrompts';
 import { MOOD_INFO, Mood } from '../../src/types/journal';
 import { POINT_VALUES } from '../../src/utils/pointsCalculator';
+import { useVoiceRecorder } from '../../src/hooks/useVoiceRecorder';
+import { AudioMemoPlayer } from '../../src/components/journal/AudioMemoPlayer';
 
 export default function JournalScreen() {
   const {
-    entries,
     addEntry,
     getRecentEntries,
     shouldShowWeeklyPrompt,
     markWeeklyPromptShown,
   } = useJournalStore();
-  const { addPoints } = usePlantStore();
+  const { addPoints, recordDailyActivity } = usePlantStore();
 
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [entryContent, setEntryContent] = useState('');
@@ -34,26 +36,33 @@ export default function JournalScreen() {
   const [currentPrompt, setCurrentPrompt] = useState(getDailyPrompt());
   const [todayMood, setTodayMood] = useState<Mood | undefined>();
 
+  const { recordingState, audioUri, durationMs, startRecording, stopRecording, clearRecording } = useVoiceRecorder();
+
+  const params = useLocalSearchParams<{ mood?: Mood; compose?: string }>();
+
+  useEffect(() => {
+    if (params.compose && params.mood) {
+      setSelectedMood(params.mood);
+      setCurrentPrompt(getMoodPrompt(params.mood));
+      setIsModalVisible(true);
+    }
+  }, [params.compose]);
+
   const recentEntries = getRecentEntries(10);
-  const showWeeklyPrompt = shouldShowWeeklyPrompt();
 
   const handleNewEntry = () => {
     setCurrentPrompt(getDailyPrompt());
     setIsModalVisible(true);
   };
 
-  const handleWeeklyReflection = () => {
-    setCurrentPrompt(getWeeklyPrompt());
-    markWeeklyPromptShown();
-    setIsModalVisible(true);
-  };
-
   const handleSaveEntry = () => {
-    if (entryContent.trim()) {
-      addEntry(entryContent.trim(), selectedMood, currentPrompt.id);
-      addPoints(POINT_VALUES.journalEntry);
+    if (entryContent.trim() || audioUri) {
+      addEntry(entryContent.trim(), selectedMood, currentPrompt.id, audioUri ?? undefined);
+      recordDailyActivity();
+      addPoints(POINT_VALUES.journalEntry, true);
       setEntryContent('');
       setSelectedMood(undefined);
+      clearRecording();
       setIsModalVisible(false);
     }
   };
@@ -61,120 +70,183 @@ export default function JournalScreen() {
   const closeModal = () => {
     setEntryContent('');
     setSelectedMood(undefined);
+    clearRecording();
     setIsModalVisible(false);
+  };
+
+  const handleMicPress = async () => {
+    if (recordingState === 'recording') {
+      await stopRecording();
+    } else {
+      await startRecording();
+    }
+  };
+
+  const formatRecordingTime = (ms: number) => {
+    const s = Math.floor(ms / 1000);
+    return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
   };
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={['#FFF9F5', '#FFEDE5', '#FFF5F7']}
-        style={styles.gradientBackground}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      />
-
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        bounces={true}
+        bounces
       >
         {/* Header */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>Reflections</Text>
-            <Text style={styles.subtitle}>Your thoughts, your space</Text>
-          </View>
-          <Pressable
-            style={({ pressed }) => [styles.newButton, pressed && styles.newButtonPressed]}
-            onPress={handleNewEntry}
-          >
-            <Text style={styles.newButtonText}>+ New</Text>
-          </Pressable>
+          <Text style={styles.headerLabel}>REFLECTIONS</Text>
+          <Text style={styles.title}>Capture your inner glow</Text>
         </View>
 
-        {/* Mood Check-in */}
-        <View style={styles.moodCheckin}>
+        {/* Hero: Daily Prompt + action buttons */}
+        <View style={styles.promptCardWrap}>
           <LinearGradient
-            colors={['rgba(255,255,255,0.9)', 'rgba(255,249,245,0.95)']}
-            style={styles.moodCheckinGradient}
-          />
-          <Text style={styles.moodCheckinLabel}>How are you feeling today?</Text>
-          <View style={styles.moodCheckinOptions}>
+            colors={['#D8C9EC', '#F2B4CC', '#FBD4BF']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.promptCard}
+          >
+            <Text style={styles.promptLabelOnGradient}>TODAY'S PROMPT</Text>
+            <Text style={styles.promptTextOnGradient}>{currentPrompt.text}</Text>
+            <View style={styles.actionRow}>
+              <Pressable
+                style={({ pressed }) => [styles.actionButton, pressed && { opacity: 0.85 }]}
+                onPress={handleNewEntry}
+              >
+                <Text style={styles.actionButtonIcon}>✏️</Text>
+                <Text style={styles.actionButtonText}>Write</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.actionButton,
+                  styles.actionButtonRecord,
+                  recordingState === 'recording' && styles.actionButtonRecording,
+                  pressed && { opacity: 0.85 },
+                ]}
+                onPress={handleMicPress}
+              >
+                <Text style={styles.actionButtonIcon}>
+                  {recordingState === 'recording' ? '⏹' : '🎙'}
+                </Text>
+                <Text style={[styles.actionButtonText, styles.actionButtonTextRecord]}>
+                  {recordingState === 'recording'
+                    ? `Stop  ${formatRecordingTime(durationMs)}`
+                    : 'Record'}
+                </Text>
+              </Pressable>
+            </View>
+          </LinearGradient>
+        </View>
+
+        {/* Recording preview — shown on main screen after stopping */}
+        {audioUri && recordingState === 'stopped' && (
+          <View style={styles.recordingPreview}>
+            <AudioMemoPlayer uri={audioUri} />
+            <View style={styles.recordingPreviewActions}>
+              <Pressable
+                onPress={() => {
+                  addEntry('', undefined, currentPrompt.id, audioUri ?? undefined);
+                  recordDailyActivity();
+                  addPoints(POINT_VALUES.journalEntry, true);
+                  clearRecording();
+                }}
+                style={styles.saveVoiceButton}
+              >
+                <Text style={styles.saveVoiceButtonText}>Save voice note</Text>
+              </Pressable>
+              <Pressable onPress={clearRecording} style={styles.discardButton}>
+                <Text style={styles.discardButtonText}>Discard</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
+
+        {/* Mood Check-in */}
+        <View style={styles.moodCard}>
+          <Text style={styles.moodQuestion}>TODAY'S MOOD</Text>
+          <View style={styles.moodRow}>
             {(Object.keys(MOOD_INFO) as Mood[]).map((mood) => (
-              <TouchableOpacity
+              <Pressable
                 key={mood}
                 style={[
-                  styles.moodCheckinOption,
-                  todayMood === mood && styles.moodCheckinSelected,
+                  styles.moodPill,
+                  todayMood === mood && styles.moodPillSelected,
                 ]}
                 onPress={() => setTodayMood(mood)}
               >
-                <Text style={styles.moodCheckinEmoji}>{MOOD_INFO[mood].emoji}</Text>
-              </TouchableOpacity>
+                <Text style={styles.moodEmoji}>{MOOD_INFO[mood].emoji}</Text>
+                <Text style={[
+                  styles.moodLabel,
+                  todayMood === mood && styles.moodLabelSelected,
+                ]}>
+                  {MOOD_INFO[mood].label}
+                </Text>
+              </Pressable>
             ))}
           </View>
           {todayMood && (
-            <Text style={styles.moodCheckinFeedback}>
-              Feeling {MOOD_INFO[todayMood].label.toLowerCase()} today ✨
+            <Text style={styles.moodFeedback}>
+              Feeling {MOOD_INFO[todayMood].label.toLowerCase()} today
             </Text>
           )}
         </View>
 
-        {/* Weekly Prompt */}
-        {showWeeklyPrompt && (
-          <View style={styles.weeklyPromptCard}>
-            <LinearGradient
-              colors={['rgba(255,153,181,0.12)', 'rgba(255,177,153,0.12)']}
-              style={styles.weeklyPromptGradient}
-            />
-            <Text style={styles.weeklyPromptLabel}>Weekly Reflection</Text>
-            <Text style={styles.weeklyPromptText}>{getWeeklyPrompt().text}</Text>
-            <Pressable
-              style={({ pressed }) => [styles.reflectButton, pressed && { opacity: 0.8 }]}
-              onPress={handleWeeklyReflection}
-            >
-              <Text style={styles.reflectButtonText}>Reflect Now</Text>
-            </Pressable>
-          </View>
-        )}
-
-        {/* Daily Prompt */}
-        <View style={styles.dailyPromptCard}>
-          <Text style={styles.dailyPromptLabel}>Today's Prompt</Text>
-          <Text style={styles.dailyPromptText}>{currentPrompt.text}</Text>
-        </View>
-
         {/* Entries List */}
         <View style={styles.entriesSection}>
-          <Text style={styles.sectionTitle}>Recent Entries</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Your Journey</Text>
+            <Text style={styles.viewAllLink}>View all</Text>
+          </View>
 
           {recentEntries.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyIcon}>✨</Text>
+              <Sparkles size={40} strokeWidth={1.5} color="#F2B4CC" />
               <Text style={styles.emptyTitle}>Your story begins here</Text>
-              <Text style={styles.emptySubtext}>
-                Start writing to capture your thoughts
-              </Text>
+              <Text style={styles.emptySubtext}>Start writing to capture your thoughts</Text>
             </View>
           ) : (
-            recentEntries.map((entry) => (
-              <View key={entry.id} style={styles.entryCard}>
-                <View style={styles.entryHeader}>
-                  <Text style={styles.entryDate}>{formatShortDate(entry.date)}</Text>
-                  {entry.mood && (
-                    <Text style={styles.entryMood}>{MOOD_INFO[entry.mood].emoji}</Text>
-                  )}
+            recentEntries.map((entry) => {
+              const d = new Date(entry.date);
+              const month = d.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+              const day = d.getDate();
+              return (
+                <View key={entry.id} style={styles.entryCard}>
+                  <View style={styles.entryHeader}>
+                    <View style={styles.dateBox}>
+                      <Text style={styles.dateBoxMonth}>{month}</Text>
+                      <Text style={styles.dateBoxDay}>{day}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.entryPrompt} numberOfLines={1}>
+                        {currentPrompt.text}
+                      </Text>
+                      {entry.content ? (
+                        <Text style={styles.entryContent} numberOfLines={2}>
+                          {entry.content}
+                        </Text>
+                      ) : null}
+                      {entry.mood && (
+                        <Text style={styles.entryMoodLine}>
+                          {MOOD_INFO[entry.mood].emoji} {MOOD_INFO[entry.mood].label}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                  {entry.audioUri ? (
+                    <View style={{ marginTop: 8 }}>
+                      <AudioMemoPlayer uri={entry.audioUri} />
+                    </View>
+                  ) : null}
                 </View>
-                <Text style={styles.entryContent} numberOfLines={3}>
-                  {entry.content}
-                </Text>
-              </View>
-            ))
+              );
+            })
           )}
         </View>
 
-        <View style={styles.bottomSpacer} />
+        <View style={{ height: 120 }} />
       </ScrollView>
 
       {/* New Entry Modal */}
@@ -185,45 +257,75 @@ export default function JournalScreen() {
         onRequestClose={closeModal}
       >
         <View style={styles.modalContainer}>
-          <LinearGradient
-            colors={['#FFF9F5', '#FFEDE5']}
-            style={styles.modalGradient}
-          />
           <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={closeModal}>
+            <Pressable onPress={closeModal}>
               <Text style={styles.modalCancel}>Cancel</Text>
-            </TouchableOpacity>
+            </Pressable>
             <Text style={styles.modalTitle}>New Entry</Text>
-            <TouchableOpacity onPress={handleSaveEntry}>
-              <Text style={[styles.modalSave, !entryContent.trim() && styles.modalSaveDisabled]}>
-                Save
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.modalHeaderRight}>
+              <Pressable
+                onPress={handleMicPress}
+                style={[styles.micHeaderButton, recordingState === 'recording' && styles.micHeaderButtonActive]}
+                hitSlop={8}
+              >
+                <Text style={styles.micHeaderIcon}>
+                  {recordingState === 'recording' ? '⏹' : '🎙'}
+                </Text>
+              </Pressable>
+              <Pressable onPress={handleSaveEntry}>
+                <Text style={[styles.modalSave, (!entryContent.trim() && !audioUri) && { color: '#5C3D2E' }]}>
+                  Save
+                </Text>
+              </Pressable>
+            </View>
           </View>
+
+          {/* Recording status bar */}
+          {recordingState === 'recording' && (
+            <View style={styles.recordingBar}>
+              <View style={styles.recordingDot} />
+              <Text style={styles.recordingBarText}>Recording {formatRecordingTime(durationMs)}</Text>
+            </View>
+          )}
+          {audioUri && recordingState === 'stopped' && (
+            <View style={styles.recordingBar}>
+              <View style={{ flex: 1 }}>
+                <AudioMemoPlayer uri={audioUri} />
+              </View>
+              <Pressable onPress={clearRecording} hitSlop={8} style={styles.clearMemo}>
+                <Text style={styles.clearMemoText}>✕</Text>
+              </Pressable>
+            </View>
+          )}
 
           <ScrollView style={styles.modalContent}>
             {/* Prompt */}
-            <View style={styles.promptBox}>
-              <Text style={styles.promptLabel}>Prompt</Text>
+            <View style={styles.modalPromptBox}>
+              <Text style={styles.promptLabel}>PROMPT</Text>
               <Text style={styles.promptText}>{currentPrompt.text}</Text>
             </View>
 
             {/* Mood Selector */}
-            <View style={styles.moodSection}>
-              <Text style={styles.moodLabel}>How are you feeling?</Text>
-              <View style={styles.moodOptions}>
+            <View style={{ marginBottom: spacing.lg }}>
+              <Text style={styles.modalLabel}>How are you feeling?</Text>
+              <View style={styles.moodRow}>
                 {(Object.keys(MOOD_INFO) as Mood[]).map((mood) => (
-                  <TouchableOpacity
+                  <Pressable
                     key={mood}
                     style={[
-                      styles.moodOption,
-                      selectedMood === mood && styles.moodOptionSelected,
+                      styles.moodPill,
+                      selectedMood === mood && styles.moodPillSelected,
                     ]}
                     onPress={() => setSelectedMood(mood)}
                   >
                     <Text style={styles.moodEmoji}>{MOOD_INFO[mood].emoji}</Text>
-                    <Text style={styles.moodName}>{MOOD_INFO[mood].label}</Text>
-                  </TouchableOpacity>
+                    <Text style={[
+                      styles.moodLabel,
+                      selectedMood === mood && styles.moodLabelSelected,
+                    ]}>
+                      {MOOD_INFO[mood].label}
+                    </Text>
+                  </Pressable>
                 ))}
               </View>
             </View>
@@ -232,13 +334,14 @@ export default function JournalScreen() {
             <TextInput
               style={styles.textInput}
               placeholder="Write your thoughts..."
-              placeholderTextColor={theme.textMuted}
+              placeholderTextColor="#B8A99E"
               value={entryContent}
               onChangeText={setEntryContent}
               multiline
               textAlignVertical="top"
               autoFocus
             />
+
           </ScrollView>
         </View>
       </Modal>
@@ -247,330 +350,149 @@ export default function JournalScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.background,
+  container: { flex: 1, backgroundColor: '#EDD5CB' },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingHorizontal: spacing.lg, paddingTop: 70 },
+
+  header: { marginBottom: spacing.md },
+  headerLabel: { fontSize: 10, fontFamily: 'SpaceMono-Bold', color: '#5C3D2E', letterSpacing: 1.2, marginBottom: 6, textTransform: 'uppercase' },
+  title: { fontSize: 28, fontFamily: 'Raleway-SemiBold', color: '#1A0A06', letterSpacing: -0.3, fontWeight: '500' },
+  subtitle: { fontSize: 18, fontFamily: 'Raleway-SemiBold', color: '#1A0A06', marginTop: 4 },
+
+  // Action buttons row (inside prompt hero card)
+  actionRow: {
+    flexDirection: 'row', gap: 10, marginTop: 16,
   },
-  gradientBackground: {
-    ...StyleSheet.absoluteFillObject,
+  actionButton: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, backgroundColor: '#C45A82', borderRadius: 14,
+    paddingVertical: 13,
+    shadowColor: '#C45A82',
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 4 },
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: 60,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: spacing.xl,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '300',
-    color: theme.text,
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: theme.textSecondary,
-    marginTop: spacing.xs,
-  },
-  newButton: {
-    backgroundColor: theme.primary,
-    paddingVertical: spacing.sm + 2,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.button,
-    ...shadows.glow,
-  },
-  newButtonPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.98 }],
-  },
-  newButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  moodCheckin: {
-    borderRadius: borderRadius.card,
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
-    alignItems: 'center',
-    overflow: 'hidden',
-    ...shadows.md,
-  },
-  moodCheckinGradient: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  moodCheckinLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.text,
-    marginBottom: spacing.md,
-  },
-  moodCheckinOptions: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing.sm,
-  },
-  moodCheckinOption: {
-    width: 52,
-    height: 52,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.8)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  moodCheckinSelected: {
-    borderColor: theme.primary,
-    backgroundColor: 'rgba(255, 153, 181, 0.15)',
-  },
-  moodCheckinEmoji: {
-    fontSize: 24,
-  },
-  moodCheckinFeedback: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: theme.primary,
-    marginTop: spacing.md,
-  },
-  weeklyPromptCard: {
-    borderRadius: borderRadius.card,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 153, 181, 0.2)',
-  },
-  weeklyPromptGradient: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  weeklyPromptLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.primary,
-    marginBottom: spacing.xs,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  weeklyPromptText: {
-    fontSize: 15,
-    color: theme.text,
-    marginBottom: spacing.md,
-    lineHeight: 22,
-  },
-  reflectButton: {
-    alignSelf: 'flex-start',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.button,
+  actionButtonRecord: {
+    backgroundColor: 'rgba(58,46,43,0.07)',
     borderWidth: 1.5,
-    borderColor: theme.primary,
+    borderColor: 'rgba(58,46,43,0.18)',
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
   },
-  reflectButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.primary,
+  actionButtonRecording: {
+    backgroundColor: 'rgba(212,144,154,0.15)', borderWidth: 1.5, borderColor: '#C45A82',
   },
-  dailyPromptCard: {
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    borderRadius: borderRadius.card,
-    padding: spacing.md,
-    marginBottom: spacing.xl,
-    borderWidth: 1,
-    borderColor: theme.borderLight,
+  actionButtonIcon: { fontSize: 16 },
+  actionButtonText: { fontSize: 15, fontFamily: 'DMSans', fontWeight: '600', color: '#FEFAF9' },
+  actionButtonTextRecord: { color: '#1A0A06' },
+
+  // Recording preview
+  recordingPreview: {
+    backgroundColor: '#FFFFFF', borderRadius: 16, padding: spacing.md,
+    marginBottom: spacing.lg, ...shadows.sm,
   },
-  dailyPromptLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.textSecondary,
-    marginBottom: spacing.xs,
-    letterSpacing: 0.3,
+  recordingPreviewActions: {
+    flexDirection: 'row', gap: 10, marginTop: spacing.sm,
   },
-  dailyPromptText: {
-    fontSize: 15,
-    color: theme.text,
-    fontStyle: 'italic',
-    lineHeight: 22,
+  saveVoiceButton: {
+    flex: 1, backgroundColor: '#1A0A06', borderRadius: 9999,
+    paddingVertical: 10, alignItems: 'center',
   },
-  entriesSection: {
-    flex: 1,
+  saveVoiceButtonText: { fontSize: 14, fontFamily: 'DMSans', fontWeight: '600', color: '#FEFAF9' },
+  discardButton: {
+    paddingHorizontal: 16, paddingVertical: 10, alignItems: 'center',
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: theme.text,
-    marginBottom: spacing.md,
-    letterSpacing: -0.3,
+  discardButtonText: { fontSize: 14, fontFamily: 'DMSans', color: '#5C3D2E' },
+
+  // Mood card
+  moodCard: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 18, marginBottom: spacing.lg, ...shadows.sm },
+  moodQuestion: { fontSize: 10, fontFamily: 'SpaceMono-Bold', color: '#5C3D2E', letterSpacing: 1.2, marginBottom: 14 },
+  moodRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  moodPill: {
+    flexDirection: 'column', alignItems: 'center', gap: 5,
+    paddingVertical: 8, paddingHorizontal: 8, borderRadius: 12,
   },
-  entryCard: {
-    backgroundColor: 'rgba(255,255,255,0.85)',
-    borderRadius: borderRadius.card,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    ...shadows.sm,
-    borderWidth: 1,
-    borderColor: theme.borderLight,
+  moodPillSelected: { backgroundColor: 'rgba(242,180,204,0.25)' },
+  moodEmoji: { fontSize: 22 },
+  moodLabel: { fontSize: 9, fontFamily: 'DMSans', fontWeight: '500', color: '#B8A9A5' },
+  moodLabelSelected: { color: '#C45A82' },
+  moodFeedback: { fontSize: 13, fontFamily: 'DMSans', color: '#F2B4CC', marginTop: 12 },
+
+  // Prompt — gradient hero
+  promptCardWrap: {
+    borderRadius: 28, marginBottom: spacing.xl,
+    shadowColor: 'rgba(155,134,212,1)', shadowOpacity: 0.2,
+    shadowRadius: 24, shadowOffset: { width: 0, height: 4 },
   },
-  entryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
+  promptCard: { borderRadius: 28, padding: 28, overflow: 'hidden' },
+  promptLabel: { fontSize: 11, fontFamily: 'SpaceMono-Bold', color: '#6B5B52', letterSpacing: 0.8, marginBottom: 8 },
+  promptText: { fontSize: 15, fontFamily: 'DMSans', color: '#1A0A06', fontStyle: 'italic', lineHeight: 22 },
+  promptLabelOnGradient: { fontSize: 10, fontFamily: 'SpaceMono-Bold', color: '#6B5752', letterSpacing: 1.2, marginBottom: 8 },
+  promptTextOnGradient: { fontSize: 19, fontFamily: 'Raleway-SemiBold', color: '#1A0A06', lineHeight: 28, marginBottom: 4 },
+
+  // Entries
+  entriesSection: { flex: 1 },
+  sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  sectionTitle: { fontSize: 20, fontFamily: 'Raleway-SemiBold', fontWeight: '600', color: '#1A0A06' },
+  viewAllLink: { fontSize: 13, fontFamily: 'DMSans', color: '#C45A82' },
+  entryCard: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: spacing.lg, marginBottom: 8, ...shadows.sm },
+  entryHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 14 },
+  dateBox: {
+    width: 52, height: 52, backgroundColor: '#EDD5CB', borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  entryDate: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.textSecondary,
-    letterSpacing: 0.3,
-  },
-  entryMood: {
-    fontSize: 18,
-  },
-  entryContent: {
-    fontSize: 14,
-    color: theme.text,
-    lineHeight: 20,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: spacing.xxl,
-    paddingHorizontal: spacing.lg,
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
-    borderRadius: borderRadius.card,
-    borderWidth: 1,
-    borderColor: theme.borderLight,
-    borderStyle: 'dashed',
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: spacing.md,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: theme.text,
-    marginBottom: spacing.xs,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: theme.textSecondary,
-    textAlign: 'center',
-  },
-  bottomSpacer: {
-    height: 120,
-  },
-  // Modal styles
-  modalContainer: {
-    flex: 1,
-    backgroundColor: theme.background,
-  },
-  modalGradient: {
-    ...StyleSheet.absoluteFillObject,
-  },
+  dateBoxMonth: { fontFamily: 'SpaceMono-Bold', fontSize: 9, color: '#5C3D2E', letterSpacing: 1 },
+  dateBoxDay: { fontFamily: 'Raleway-SemiBold', fontSize: 20, color: '#1A0A06', lineHeight: 22 },
+  entryPrompt: { fontFamily: 'DMSans', fontStyle: 'italic', fontSize: 13, color: '#5C3D2E', marginBottom: 4 },
+  entryContent: { fontSize: 14, fontFamily: 'DMSans', color: '#1A0A06', lineHeight: 20, marginBottom: 4 },
+  entryMoodLine: { fontSize: 12, fontFamily: 'DMSans', color: '#5C3D2E' },
+
+  // Empty
+  emptyState: { alignItems: 'center', paddingVertical: 40, backgroundColor: '#FFFFFF', borderRadius: 16, ...shadows.sm },
+  emptyTitle: { fontSize: 17, fontFamily: 'DMSans', fontWeight: '500', color: '#1A0A06', marginTop: 12, marginBottom: 4 },
+  emptySubtext: { fontSize: 14, fontFamily: 'DMSans', color: '#5C3D2E' },
+
+  // Modal
+  modalContainer: { flex: 1, backgroundColor: '#EDD5CB' },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    paddingTop: spacing.xl,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.borderLight,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md, paddingTop: spacing.xl,
+    borderBottomWidth: 1, borderBottomColor: '#EADBD4',
   },
-  modalCancel: {
-    fontSize: 16,
-    color: theme.textSecondary,
-  },
-  modalTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: theme.text,
-  },
-  modalSave: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.primary,
-  },
-  modalSaveDisabled: {
-    color: theme.textMuted,
-  },
-  modalContent: {
-    flex: 1,
-    padding: spacing.lg,
-  },
-  promptBox: {
-    backgroundColor: 'rgba(255,255,255,0.8)',
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.lg,
-    borderWidth: 1,
-    borderColor: theme.borderLight,
-  },
-  promptLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.textSecondary,
-    marginBottom: spacing.xs,
-    letterSpacing: 0.3,
-  },
-  promptText: {
-    fontSize: 15,
-    color: theme.text,
-    fontStyle: 'italic',
-    lineHeight: 22,
-  },
-  moodSection: {
-    marginBottom: spacing.lg,
-  },
-  moodLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: theme.text,
-    marginBottom: spacing.sm,
-  },
-  moodOptions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  moodOption: {
-    alignItems: 'center',
-    padding: spacing.sm,
-    borderRadius: borderRadius.md,
-    borderWidth: 1.5,
-    borderColor: theme.borderLight,
-    backgroundColor: 'rgba(255,255,255,0.8)',
-    minWidth: 64,
-  },
-  moodOptionSelected: {
-    backgroundColor: 'rgba(255, 153, 181, 0.15)',
-    borderColor: theme.primary,
-  },
-  moodEmoji: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
-  moodName: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: theme.textSecondary,
-  },
+  modalCancel: { fontSize: 16, fontFamily: 'DMSans', color: '#6B5B52' },
+  modalTitle: { fontSize: 17, fontFamily: 'Raleway-SemiBold', fontWeight: '600', color: '#1A0A06' },
+  modalSave: { fontSize: 16, fontFamily: 'DMSans', color: '#C45A82' },
+  modalContent: { flex: 1, padding: spacing.lg },
+  modalPromptBox: { backgroundColor: '#FFFFFF', padding: spacing.lg, borderRadius: 16, marginBottom: spacing.lg, ...shadows.sm },
+  modalLabel: { fontSize: 15, fontFamily: 'DMSans', fontWeight: '500', color: '#1A0A06', marginBottom: 8 },
   textInput: {
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    minHeight: 200,
-    fontSize: 16,
-    color: theme.text,
-    borderWidth: 1,
-    borderColor: theme.borderLight,
-    lineHeight: 24,
+    backgroundColor: '#FFFFFF', borderRadius: 16, padding: spacing.lg, minHeight: 200,
+    fontSize: 15, fontFamily: 'DMSans', color: '#1A0A06', lineHeight: 24, ...shadows.sm,
   },
+
+  // Voice memo header
+  modalHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  micHeaderButton: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: 'rgba(212,144,154,0.15)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  micHeaderButtonActive: { backgroundColor: '#C45A82' },
+  micHeaderIcon: { fontSize: 15 },
+  recordingBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: spacing.lg, paddingVertical: 8,
+    backgroundColor: 'rgba(212,144,154,0.1)',
+    borderBottomWidth: 1, borderBottomColor: 'rgba(212,144,154,0.2)',
+  },
+  recordingDot: {
+    width: 8, height: 8, borderRadius: 4, backgroundColor: '#C45A82',
+  },
+  recordingBarText: { fontSize: 13, fontFamily: 'DMSans', color: '#C45A82', flex: 1 },
+  clearMemo: {
+    width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(212,144,154,0.12)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  clearMemoText: { fontSize: 12, color: '#5C3D2E' },
 });

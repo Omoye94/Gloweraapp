@@ -3,14 +3,72 @@ import { GrowthStage, GROWTH_THRESHOLDS, STAGE_ORDER } from '../types/plant';
 
 // Point values for different actions
 export const POINT_VALUES = {
-  habitGentleCompletion: 5,
-  habitFullCompletion: 10,
-  fullDayBonus: 15,
-  journalEntry: 8,
-  weeklyReflection: 12,
-  challengeDayComplete: 10,
-  challengeFullComplete: 50,
+  showUpBonus: 3,
+  habitGentleCompletion: 3,
+  habitFullCompletion: 6,
+  fullDayBonus: 8,
+  journalEntry: 5,
+  dailyReflection: 5,
+  weeklyReflection: 7,
+  challengeDayComplete: 6,
+  challengeFullComplete: 30,
 } as const;
+
+// Daily cap on action-based points (show-up and streak bonuses are uncapped)
+export const DAILY_ACTION_CAP = 40;
+
+// Streak milestone bonuses (one-time awards when milestone is first reached)
+export const STREAK_MILESTONES = [
+  { days: 3, bonus: 10 },
+  { days: 7, bonus: 25 },
+  { days: 14, bonus: 50 },
+  { days: 21, bonus: 75 },
+  { days: 30, bonus: 120 },
+  { days: 60, bonus: 200 },
+  { days: 90, bonus: 300 },
+  { days: 180, bonus: 500 },
+  { days: 365, bonus: 1000 },
+] as const;
+
+// Show-up bonus scales with current streak length
+export const SHOW_UP_BONUS_TIERS = [
+  { minStreak: 30, bonus: 6 },
+  { minStreak: 14, bonus: 5 },
+  { minStreak: 7, bonus: 4 },
+  { minStreak: 0, bonus: 3 },
+] as const;
+
+// Get show-up bonus based on current streak
+export const getShowUpBonus = (currentStreak: number): number => {
+  for (const tier of SHOW_UP_BONUS_TIERS) {
+    if (currentStreak >= tier.minStreak) return tier.bonus;
+  }
+  return POINT_VALUES.showUpBonus;
+};
+
+// Calculate action points with daily cap enforcement
+export const calculateCappedActionPoints = (
+  pointsToAdd: number,
+  currentDayActionPoints: number
+): number => {
+  const remaining = Math.max(0, DAILY_ACTION_CAP - currentDayActionPoints);
+  return Math.min(pointsToAdd, remaining);
+};
+
+// Get newly hit streak milestones that haven't been awarded yet
+export const getNewStreakMilestones = (
+  newStreak: number,
+  alreadyHitMilestones: number[]
+): { days: number; bonus: number }[] => {
+  return STREAK_MILESTONES.filter(
+    m => newStreak >= m.days && !alreadyHitMilestones.includes(m.days)
+  );
+};
+
+// Calculate prestige points (points above glow threshold)
+export const getPrestigePoints = (totalPoints: number): number => {
+  return Math.max(0, totalPoints - GROWTH_THRESHOLDS.glow);
+};
 
 // Calculate points for habit completion
 export const calculateHabitPoints = (type: CompletionType): number => {

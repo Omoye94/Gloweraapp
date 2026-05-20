@@ -17,6 +17,8 @@ export interface Habit {
   isActive: boolean;
   createdAt: string;
   order: number;
+  targetValue?: number;
+  unit?: string;
   supplementMeta?: SupplementMetadata; // Optional supplement-specific data
 }
 
@@ -29,6 +31,7 @@ export interface HabitCompletion {
   completionType: CompletionType;
   completedAt: string; // ISO timestamp
   pointsEarned: number;
+  progressValue?: number;
 }
 
 export interface DailyHabitSummary {

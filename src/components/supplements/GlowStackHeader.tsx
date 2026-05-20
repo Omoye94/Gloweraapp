@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Target, ChevronRight } from 'lucide-react-native';
 import { useSupplementStore } from '../../stores';
 import { WELLNESS_GOALS } from '../../constants/supplements';
-import { theme, spacing, borderRadius, shadows } from '../../theme';
+import { spacing, shadows } from '../../theme';
 
 interface GlowStackHeaderProps {
   onEditGoals: () => void;
@@ -26,16 +26,9 @@ export const GlowStackHeader: React.FC<GlowStackHeaderProps> = ({
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={['rgba(212, 196, 232, 0.15)', 'rgba(232, 164, 200, 0.1)']}
-        style={styles.gradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      />
-
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={styles.sectionLabel}>WELLNESS FOCUS</Text>
+          <Text style={styles.sectionLabel}>YOUR WELLNESS GOALS</Text>
         </View>
         <Pressable
           onPress={handleEditPress}
@@ -45,7 +38,7 @@ export const GlowStackHeader: React.FC<GlowStackHeaderProps> = ({
           ]}
         >
           <Text style={styles.editText}>Edit</Text>
-          <Text style={styles.editArrow}>›</Text>
+          <ChevronRight size={14} color="#F2B4CC" strokeWidth={2} />
         </Pressable>
       </View>
 
@@ -57,8 +50,8 @@ export const GlowStackHeader: React.FC<GlowStackHeaderProps> = ({
           ]}
           onPress={handleEditPress}
         >
-          <Text style={styles.emptyIcon}>🎯</Text>
-          <Text style={styles.emptyText}>Set your wellness goals</Text>
+          <Target size={28} color="#9E8880" strokeWidth={1.5} style={{ marginBottom: spacing.sm }} />
+          <Text style={styles.emptyText}>Select your wellness goals</Text>
           <Text style={styles.emptySubtext}>
             Get personalized supplement suggestions
           </Text>
@@ -83,17 +76,12 @@ export const GlowStackHeader: React.FC<GlowStackHeaderProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: theme.surface,
-    borderRadius: borderRadius.card,
+    backgroundColor: '#FEFAF9',
+    borderRadius: 16,
     padding: spacing.md,
     marginBottom: spacing.lg,
-    borderWidth: 1,
-    borderColor: theme.borderLight,
     overflow: 'hidden',
     ...shadows.sm,
-  },
-  gradient: {
-    ...StyleSheet.absoluteFillObject,
   },
   header: {
     flexDirection: 'row',
@@ -106,29 +94,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sectionLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: theme.textSecondary,
-    letterSpacing: 0.5,
+    fontSize: 12,
+    fontFamily: 'SpaceMono-Bold',
+    color: '#6B5B52',
+    letterSpacing: 0.8,
   },
   editButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
-    borderRadius: borderRadius.pill,
-    backgroundColor: 'rgba(212, 196, 232, 0.2)',
+    borderRadius: 9999,
+    backgroundColor: 'rgba(244, 198, 204, 0.12)',
   },
   editText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: theme.primary,
-  },
-  editArrow: {
-    fontSize: 14,
-    fontWeight: '400',
-    color: theme.primary,
-    marginLeft: 2,
+    fontSize: 12,
+    fontFamily: 'SpaceMono-Bold',
+    color: '#F2B4CC',
+    letterSpacing: 0.5,
   },
   goalsContainer: {
     flexDirection: 'row',
@@ -138,12 +121,12 @@ const styles = StyleSheet.create({
   goalChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.pill,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    borderWidth: 1,
-    borderColor: 'rgba(232, 164, 200, 0.3)',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 9999,
+    backgroundColor: '#FEFAF9',
+    borderWidth: 1.5,
+    borderColor: '#EADBD4',
   },
   goalIcon: {
     fontSize: 14,
@@ -151,25 +134,22 @@ const styles = StyleSheet.create({
   },
   goalName: {
     fontSize: 13,
-    fontWeight: '500',
-    color: theme.text,
+    fontFamily: 'DMSans',
+    color: '#3A2E2B',
   },
   emptyState: {
     alignItems: 'center',
     paddingVertical: spacing.lg,
   },
-  emptyIcon: {
-    fontSize: 28,
-    marginBottom: spacing.sm,
-  },
   emptyText: {
     fontSize: 15,
-    fontWeight: '500',
-    color: theme.text,
+    fontFamily: 'Satoshi-Medium',
+    color: '#3A2E2B',
     marginBottom: spacing.xs,
   },
   emptySubtext: {
     fontSize: 13,
-    color: theme.textSecondary,
+    fontFamily: 'DMSans',
+    color: '#6B5B52',
   },
 });

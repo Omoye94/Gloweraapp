@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   Pressable,
   TextInput,
+  Animated,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { SupplementInfo } from '../../types/supplement';
@@ -36,18 +37,29 @@ export const SupplementDetailView: React.FC<SupplementDetailViewProps> = ({
   const [dosage, setDosage] = useState(supplement.typicalDosage);
   const [timing, setTiming] = useState(supplement.timing);
   const [notes, setNotes] = useState('');
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [justAdded, setJustAdded] = useState(false);
 
-  const handleAddPress = () => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const bgAnim = useRef(new Animated.Value(0)).current;
+
+  const handleAdd = () => {
     if (isAdded) return;
-    setShowAddForm(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
-
-  const handleConfirmAdd = () => {
     onAddToHabits(dosage, timing, notes);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setJustAdded(true);
+
+    Animated.sequence([
+      Animated.timing(scaleAnim, { toValue: 0.92, duration: 100, useNativeDriver: true }),
+      Animated.spring(scaleAnim, { toValue: 1, friction: 3, tension: 200, useNativeDriver: true }),
+    ]).start();
+
+    Animated.timing(bgAnim, { toValue: 1, duration: 300, useNativeDriver: false }).start();
   };
+
+  const addedBgColor = bgAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [theme.primary, 'rgba(158, 207, 176, 0.85)'],
+  });
 
   const getGoalInfo = (goalId: string) => {
     return WELLNESS_GOALS.find(g => g.id === goalId);
@@ -136,17 +148,17 @@ export const SupplementDetailView: React.FC<SupplementDetailViewProps> = ({
           <HealthDisclaimer />
         </View>
 
-        {/* Add Form (when expanded) */}
-        {showAddForm && !isAdded && (
+        {/* Customisation — always visible when not yet added */}
+        {!isAdded && !justAdded && (
           <View style={styles.addFormSection}>
-            <Text style={styles.sectionTitle}>Customize Your Habit</Text>
+            <Text style={styles.sectionTitle}>Customize Your Intake</Text>
 
             <Text style={styles.inputLabel}>Dosage</Text>
             <TextInput
               style={styles.textInput}
               value={dosage}
               onChangeText={setDosage}
-              placeholder="Enter your dosage"
+              placeholder="e.g. 500mg, 1 capsule"
               placeholderTextColor={theme.textMuted}
             />
 
@@ -179,7 +191,7 @@ export const SupplementDetailView: React.FC<SupplementDetailViewProps> = ({
               style={[styles.textInput, styles.notesInput]}
               value={notes}
               onChangeText={setNotes}
-              placeholder="Any notes for yourself..."
+              placeholder="Any reminders for yourself..."
               placeholderTextColor={theme.textMuted}
               multiline
               numberOfLines={3}
@@ -192,30 +204,30 @@ export const SupplementDetailView: React.FC<SupplementDetailViewProps> = ({
 
       {/* Bottom Action Button */}
       <View style={styles.bottomBar}>
-        {isAdded ? (
-          <View style={styles.addedState}>
-            <Text style={styles.addedIcon}>✓</Text>
-            <Text style={styles.addedStateText}>Added to Your Habits</Text>
-          </View>
-        ) : showAddForm ? (
-          <Pressable
-            style={({ pressed }) => [
-              styles.addButton,
-              pressed && styles.addButtonPressed,
+        {isAdded || justAdded ? (
+          <Animated.View
+            style={[
+              styles.addedState,
+              justAdded && {
+                backgroundColor: addedBgColor,
+                transform: [{ scale: scaleAnim }],
+              },
             ]}
-            onPress={handleConfirmAdd}
           >
-            <Text style={styles.addButtonText}>Add to Habits</Text>
-          </Pressable>
+            <Text style={[styles.addedIcon, justAdded && styles.addedIconBright]}>✓</Text>
+            <Text style={[styles.addedStateText, justAdded && styles.addedTextBright]}>
+              Added to Your Stack ✨
+            </Text>
+          </Animated.View>
         ) : (
           <Pressable
             style={({ pressed }) => [
               styles.addButton,
               pressed && styles.addButtonPressed,
             ]}
-            onPress={handleAddPress}
+            onPress={handleAdd}
           >
-            <Text style={styles.addButtonText}>Add to My Habits</Text>
+            <Text style={styles.addButtonText}>Add to My Stack</Text>
           </Pressable>
         )}
       </View>
@@ -471,5 +483,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: theme.success,
+  },
+  addedIconBright: {
+    color: '#fff',
+  },
+  addedTextBright: {
+    color: '#fff',
+    fontWeight: '600',
   },
 });

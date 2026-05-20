@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Pill, MoreHorizontal } from 'lucide-react-native';
 import { Habit, CompletionType, HabitCompletion } from '../../types/habit';
 import { useHabitStore } from '../../stores';
 import { theme, spacing, borderRadius, shadows } from '../../theme';
@@ -9,10 +9,14 @@ import { categoryColors } from '../../theme/colors';
 
 interface SupplementHabitListProps {
   onBrowseSupplements: () => void;
+  onRemoveSupplement?: (habitId: string, supplementInfoId?: string) => void;
+  onEditSupplement?: (habitId: string, currentDosage?: string) => void;
 }
 
 export const SupplementHabitList: React.FC<SupplementHabitListProps> = ({
   onBrowseSupplements,
+  onRemoveSupplement,
+  onEditSupplement,
 }) => {
   const { habits, completeHabit, uncompleteHabit, getCompletionForToday } = useHabitStore();
 
@@ -41,17 +45,30 @@ export const SupplementHabitList: React.FC<SupplementHabitListProps> = ({
     uncompleteHabit(habitId);
   };
 
+  const handleSupplementMenu = (habit: Habit) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Alert.alert(
+      habit.name,
+      habit.supplementMeta?.dosage || undefined,
+      [
+        {
+          text: 'Edit Dosage',
+          onPress: () => onEditSupplement?.(habit.id, habit.supplementMeta?.dosage),
+        },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => onRemoveSupplement?.(habit.id, habit.supplementMeta?.supplementInfoId),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
   const categoryColor = categoryColors['supplements'] || theme.primary;
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={['rgba(232, 164, 200, 0.08)', 'rgba(212, 196, 232, 0.05)']}
-        style={styles.gradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      />
-
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={styles.sectionLabel}>TODAY'S SUPPLEMENTS</Text>
@@ -73,7 +90,7 @@ export const SupplementHabitList: React.FC<SupplementHabitListProps> = ({
           ]}
           onPress={onBrowseSupplements}
         >
-          <Text style={styles.emptyIcon}>💊</Text>
+          <Pill size={32} color={theme.textMuted} strokeWidth={1.5} style={{ marginBottom: spacing.sm }} />
           <Text style={styles.emptyText}>No supplements added yet</Text>
           <Text style={styles.emptySubtext}>
             Browse the library to add supplements to your stack
@@ -111,6 +128,16 @@ export const SupplementHabitList: React.FC<SupplementHabitListProps> = ({
                         </Text>
                       )}
                     </View>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.menuButton,
+                        pressed && { opacity: 0.5 },
+                      ]}
+                      onPress={() => handleSupplementMenu(habit)}
+                      hitSlop={8}
+                    >
+                      <MoreHorizontal size={18} strokeWidth={1.5} color={theme.textMuted} />
+                    </Pressable>
                   </View>
 
                   <View style={styles.buttonsContainer}>
@@ -174,17 +201,12 @@ export const SupplementHabitList: React.FC<SupplementHabitListProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: theme.surface,
+    backgroundColor: '#FEFAF9',
     borderRadius: borderRadius.card,
     padding: spacing.md,
     marginBottom: spacing.lg,
-    borderWidth: 1,
-    borderColor: theme.borderLight,
     overflow: 'hidden',
     ...shadows.sm,
-  },
-  gradient: {
-    ...StyleSheet.absoluteFillObject,
   },
   header: {
     flexDirection: 'row',
@@ -199,34 +221,31 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: theme.textSecondary,
+    color: '#6B5B52',
     letterSpacing: 0.5,
   },
   progressBadge: {
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
     borderRadius: borderRadius.pill,
-    backgroundColor: 'rgba(232, 164, 200, 0.15)',
+    backgroundColor: '#EADBD4',
   },
   progressText: {
     fontSize: 12,
     fontWeight: '600',
-    color: theme.primary,
+    color: '#F2B4CC',
   },
   habitsList: {
     gap: spacing.sm,
   },
   habitCard: {
-    backgroundColor: theme.surface,
+    backgroundColor: '#FEFAF9',
     borderRadius: borderRadius.card,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: theme.borderLight,
     ...shadows.sm,
   },
   habitCardCompleted: {
-    backgroundColor: '#FAFBFA',
-    borderColor: theme.borderLight,
+    backgroundColor: '#F4E8E0',
   },
   accentBar: {
     height: 3,
@@ -256,18 +275,22 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
+  menuButton: {
+    padding: spacing.xs,
+    marginLeft: spacing.xs,
+  },
   habitName: {
     fontSize: 15,
     fontWeight: '500',
-    color: theme.text,
+    color: '#3A2E2B',
     letterSpacing: -0.2,
   },
   habitNameCompleted: {
-    color: theme.textSecondary,
+    color: '#6B5B52',
   },
   dosageText: {
     fontSize: 12,
-    color: theme.textSecondary,
+    color: '#6B5B52',
     marginTop: 2,
   },
   buttonsContainer: {
@@ -285,9 +308,9 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   gentleInactive: {
-    backgroundColor: '#FFF9F5',
+    backgroundColor: '#FEFAF9',
     borderWidth: 1.5,
-    borderColor: '#FFEDE0',
+    borderColor: '#EADBD4',
   },
   gentleActive: {
     backgroundColor: theme.secondary,
@@ -296,14 +319,14 @@ const styles = StyleSheet.create({
     ...shadows.warmGlow,
   },
   fullyInactive: {
-    backgroundColor: '#FFF5F7',
+    backgroundColor: '#FEFAF9',
     borderWidth: 1.5,
-    borderColor: '#FFE8ED',
+    borderColor: '#EADBD4',
   },
   fullyActive: {
-    backgroundColor: theme.primary,
+    backgroundColor: '#F2B4CC',
     borderWidth: 1.5,
-    borderColor: theme.primary,
+    borderColor: '#F2B4CC',
     ...shadows.glow,
   },
   buttonPressed: {
@@ -313,34 +336,30 @@ const styles = StyleSheet.create({
   buttonLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: theme.textSecondary,
+    color: '#6B5B52',
     letterSpacing: -0.2,
   },
   buttonPoints: {
     fontSize: 11,
     fontWeight: '500',
-    color: theme.textMuted,
+    color: '#A09080',
   },
   activeLabel: {
-    color: theme.surface,
+    color: '#FFFFFF',
   },
   emptyState: {
     alignItems: 'center',
     paddingVertical: spacing.xl,
   },
-  emptyIcon: {
-    fontSize: 32,
-    marginBottom: spacing.sm,
-  },
   emptyText: {
     fontSize: 15,
     fontWeight: '500',
-    color: theme.text,
+    color: '#3A2E2B',
     marginBottom: spacing.xs,
   },
   emptySubtext: {
     fontSize: 13,
-    color: theme.textSecondary,
+    color: '#6B5B52',
     textAlign: 'center',
   },
 });

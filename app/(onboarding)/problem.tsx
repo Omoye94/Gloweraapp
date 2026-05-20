@@ -1,88 +1,185 @@
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { theme, spacing, borderRadius } from '../../src/theme';
-import { Card, PrimaryButton } from '../../src/components/onboarding';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
+import { PrimaryButton } from '../../src/components/onboarding';
+import { useOnboardingStore } from '../../src/stores/onboardingStore';
+
+const OPTIONS = [
+  {
+    emoji: '🧺',
+    text: 'My glow-up feels scattered everywhere',
+    reply: 'Glowera gathers the little beauty, wellness, and self-care pieces into one garden you can tend.',
+    glow: ['rgba(216,201,236,0.24)', 'rgba(242,180,204,0.10)'],
+  },
+  {
+    emoji: '🌀',
+    text: 'I have a hard time staying on top of my glow',
+    reply: 'Your garden will show what needs tending today without making you feel behind.',
+    glow: ['rgba(155,134,212,0.28)', 'rgba(184,207,177,0.10)'],
+  },
+  {
+    emoji: '🌙',
+    text: 'I am inconsistent on my glow-up journey',
+    reply: 'We will build a garden you can return to after messy days, not a streak you have to protect.',
+    glow: ['rgba(242,180,204,0.20)', 'rgba(216,201,236,0.12)'],
+  },
+  {
+    emoji: '🍃',
+    text: 'I forget the small things that make me feel good',
+    reply: 'Every tiny thing becomes a seed: water, supplements, skin, movement, reflection, rest.',
+    glow: ['rgba(184,207,177,0.22)', 'rgba(244,168,136,0.12)'],
+  },
+] as const;
 
 export default function ProblemScreen() {
   const router = useRouter();
+  const setValidationItems = useOnboardingStore(s => s.setValidationItems);
+  const [selected, setSelected] = useState<(typeof OPTIONS)[number] | null>(null);
+
+  const handleSelect = (option: (typeof OPTIONS)[number]) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelected(option);
+    setValidationItems([option.text]);
+  };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.content}>
-        <View style={styles.mainContent}>
-          <Card style={styles.card}>
-            <Text style={styles.headline}>
-              Taking care of yourself shouldn't feel hard.
-            </Text>
-            <Text style={styles.body}>
-              Most wellness apps push streaks, pressure, and perfection. Missing a day can feel like failure.
-            </Text>
-            <Text style={styles.highlight}>
-              Glowera is different.
-            </Text>
-          </Card>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <LinearGradient
+        pointerEvents="none"
+        colors={selected?.glow ?? ['rgba(232,127,166,0.16)', 'rgba(155,134,212,0.08)']}
+        style={styles.backdrop}
+      />
+
+      <View style={styles.main}>
+        <Text style={styles.kicker}>YOUR GLOW-UP, GROWN</Text>
+        <Text style={styles.headline}>It is hard to glow when everything feels scattered.</Text>
+        <Text style={styles.body}>What gets in the way of staying on top of you?</Text>
+
+        <View style={styles.options}>
+          {OPTIONS.map((option, index) => {
+            const isSelected = selected?.text === option.text;
+            return (
+              <Pressable
+                key={option.text}
+                onPress={() => handleSelect(option)}
+                style={({ pressed }) => [
+                  styles.option,
+                  isSelected && styles.optionSelected,
+                  pressed && styles.optionPressed,
+                ]}
+              >
+                <Text style={styles.optionNumber}>0{index + 1}</Text>
+                <Text style={styles.optionEmoji}>{option.emoji}</Text>
+                <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
+                  {option.text}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
 
-        <View style={styles.bottomSection}>
-          <PrimaryButton
-            title="Continue"
-            onPress={() => router.push('/(onboarding)/validation')}
-          />
+        <View style={[styles.response, selected && styles.responseVisible]}>
+          <Text style={styles.responseText}>{selected?.reply ?? 'Glowera turns your glow-up into a garden you can actually stay with.'}</Text>
         </View>
+      </View>
+
+      <View style={styles.bottom}>
+        <PrimaryButton
+          title={selected ? 'Plant my glow' : 'Choose one to begin'}
+          onPress={() => router.push('/(onboarding)/solution')}
+          disabled={!selected}
+        />
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  content: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 28, justifyContent: 'space-between' },
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 420,
+    opacity: 0.9,
   },
-  contentContainer: {
-    flexGrow: 1,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
-    justifyContent: 'space-between',
-    minHeight: '100%',
-  },
-  mainContent: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingVertical: spacing.xl,
-  },
-  card: {
-    alignItems: 'center',
+  main: { flex: 1, paddingTop: 8 },
+  kicker: {
+    fontSize: 10,
+    fontFamily: 'SpaceMono-Bold',
+    color: 'rgba(242,180,204,0.62)',
+    letterSpacing: 1.4,
+    marginBottom: 12,
   },
   headline: {
-    fontSize: 26,
+    fontSize: 31,
+    fontFamily: 'PlayfairDisplay',
     fontWeight: '600',
-    color: theme.text,
-    textAlign: 'center',
-    marginBottom: spacing.lg,
-    letterSpacing: -0.5,
-    lineHeight: 34,
+    color: '#FEFAF9',
+    lineHeight: 38,
+    marginBottom: 10,
   },
   body: {
     fontSize: 16,
-    color: theme.textSecondary,
-    textAlign: 'center',
+    fontFamily: 'DMSans',
+    color: 'rgba(255,255,255,0.55)',
     lineHeight: 24,
-    marginBottom: spacing.lg,
+    marginBottom: 20,
   },
-  highlight: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: theme.primary,
-    textAlign: 'center',
+  options: { gap: 8 },
+  option: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(255,255,255,0.055)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.10)',
+    borderRadius: 18,
   },
-  bottomSection: {
-    paddingTop: spacing.lg,
+  optionSelected: {
+    backgroundColor: 'rgba(232,127,166,0.18)',
+    borderColor: 'rgba(242,180,204,0.62)',
   },
+  optionPressed: { opacity: 0.86, transform: [{ scale: 0.99 }] },
+  optionNumber: {
+    fontSize: 10,
+    fontFamily: 'SpaceMono-Bold',
+    color: 'rgba(255,255,255,0.26)',
+    width: 22,
+  },
+  optionEmoji: { fontSize: 20 },
+  optionText: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: 'DMSans',
+    color: 'rgba(255,255,255,0.70)',
+    lineHeight: 22,
+  },
+  optionTextSelected: { color: '#FEFAF9', fontWeight: '600' },
+  response: {
+    marginTop: 12,
+    padding: 15,
+    borderRadius: 18,
+    backgroundColor: 'rgba(20,12,32,0.45)',
+    borderWidth: 1,
+    borderColor: 'rgba(242,180,204,0.16)',
+    opacity: 0.65,
+  },
+  responseVisible: {
+    opacity: 1,
+    borderColor: 'rgba(242,180,204,0.34)',
+  },
+  responseText: {
+    fontSize: 16,
+    fontFamily: 'PlayfairDisplay-Italic',
+    color: 'rgba(255,255,255,0.78)',
+    lineHeight: 23,
+  },
+  bottom: { paddingTop: 16 },
 });

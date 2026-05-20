@@ -1,33 +1,36 @@
 import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
-import { spacing } from '../../src/theme';
-import { useTheme } from '../../src/context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SolarIcon } from '../../src/components/ui/SolarIcon';
+import { gloweraScreen } from '../../src/theme';
 
-function TabIcon({ icon, label, focused }: { icon: string; label: string; focused: boolean }) {
-  const { theme, isDark } = useTheme();
+const { colors, fonts } = gloweraScreen;
 
+interface TabIconProps {
+  name: string;
+  label: string;
+  focused: boolean;
+}
+
+function TabIcon({ name, label, focused }: TabIconProps) {
   return (
     <View style={styles.tabIconContainer}>
-      <View style={[
-        styles.iconWrapper,
-        focused && {
-          backgroundColor: isDark ? 'rgba(232, 164, 200, 0.15)' : 'rgba(255, 153, 181, 0.12)',
-        },
-      ]}>
-        <Text style={[styles.tabIcon, focused && styles.tabIconFocused]}>{icon}</Text>
-      </View>
-      <Text style={[
-        styles.tabLabel,
-        { color: focused ? theme.primary : theme.textMuted },
-      ]}>
+      <SolarIcon
+        name={focused ? `${name}-bold` : `${name}-linear`}
+        size={24}
+        color={focused ? colors.primaryPressed : colors.textMuted}
+      />
+      <Text style={[styles.tabLabel, { color: focused ? colors.primaryPressed : colors.textMuted }]}>
         {label}
       </Text>
+      {focused && <View style={styles.activeDot} />}
     </View>
   );
 }
 
 export default function TabLayout() {
-  const { theme, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = 82 + insets.bottom;
 
   return (
     <Tabs
@@ -36,20 +39,13 @@ export default function TabLayout() {
         tabBarStyle: [
           styles.tabBar,
           {
-            backgroundColor: isDark ? 'rgba(42, 36, 40, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-            borderColor: isDark ? 'rgba(61, 42, 53, 0.5)' : 'rgba(255, 237, 224, 0.5)',
-            shadowColor: isDark ? '#000000' : '#D4A3B3',
+            height: tabBarHeight,
+            paddingBottom: insets.bottom,
           },
         ],
         tabBarShowLabel: false,
-        tabBarActiveTintColor: theme.primary,
-        tabBarInactiveTintColor: theme.textMuted,
-        tabBarBackground: () => (
-          <View style={[
-            styles.tabBarBackground,
-            { backgroundColor: isDark ? 'rgba(42, 36, 40, 0.95)' : 'rgba(255, 255, 255, 0.95)' },
-          ]} />
-        ),
+        tabBarActiveTintColor: colors.primaryPressed,
+        tabBarInactiveTintColor: colors.textMuted,
       }}
     >
       <Tabs.Screen
@@ -57,7 +53,7 @@ export default function TabLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="🏡" label="Home" focused={focused} />
+            <TabIcon name="home-2" label="Home" focused={focused} />
           ),
         }}
       />
@@ -66,101 +62,93 @@ export default function TabLayout() {
         options={{
           title: 'Garden',
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="🌸" label="Glow Garden" focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="glowstack"
-        options={{
-          title: 'Glow Stack',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon icon="💊" label="Glow Stack" focused={focused} />
+            <TabIcon name="leaf" label="Garden" focused={focused} />
           ),
         }}
       />
       <Tabs.Screen
         name="journal"
         options={{
-          title: 'Reflections',
+          title: 'Journal',
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="✨" label="Reflect" focused={focused} />
+            <TabIcon name="pen-new-square" label="Journal" focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="glowstack"
+        options={{
+          title: 'Stack',
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="pill" label="Stack" focused={focused} />
           ),
         }}
       />
       <Tabs.Screen
         name="challenges"
         options={{
-          title: 'Challenges',
+          title: 'Quests',
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="🎯" label="Challenges" focused={focused} />
+            <TabIcon name="cup-star" label="Quests" focused={focused} />
           ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: 'Me',
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="🌙" label="You" focused={focused} />
+            <TabIcon name="user-circle" label="Me" focused={focused} />
           ),
         }}
       />
-      <Tabs.Screen
-        name="home"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="community"
-        options={{ href: null }}
-      />
+
+      {/* Hidden — reachable via push navigation only */}
+      <Tabs.Screen name="habits" options={{ href: null }} />
+      <Tabs.Screen name="journey" options={{ href: null }} />
+      <Tabs.Screen name="home" options={{ href: null }} />
+      <Tabs.Screen name="community" options={{ href: null }} />
+      <Tabs.Screen name="gratitude" options={{ href: null }} />
+      <Tabs.Screen name="beauty" options={{ href: null }} />
+      <Tabs.Screen name="reflect" options={{ href: null }} />
     </Tabs>
   );
 }
 
 const styles = StyleSheet.create({
   tabBar: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderSoft,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 12,
     position: 'absolute',
-    bottom: 24,
-    left: 20,
-    right: 20,
-    height: 72,
-    borderRadius: 28,
-    borderTopWidth: 0,
-    elevation: 0,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 24,
-    paddingHorizontal: spacing.sm,
-    borderWidth: 1,
-  },
-  tabBarBackground: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 28,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   tabIconContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 8,
-  },
-  iconWrapper: {
-    width: 44,
-    height: 44,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 2,
-  },
-  tabIcon: {
-    fontSize: 22,
-    opacity: 0.5,
-  },
-  tabIconFocused: {
-    opacity: 1,
+    paddingTop: 10,
+    gap: 3,
   },
   tabLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 0.2,
+    fontSize: 8,
+    fontFamily: fonts.label,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  activeDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.primaryPressed,
+    marginTop: 2,
   },
 });

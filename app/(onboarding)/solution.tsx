@@ -1,130 +1,209 @@
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { theme, spacing, borderRadius } from '../../src/theme';
-import { Card, PrimaryButton } from '../../src/components/onboarding';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
+import { PrimaryButton } from '../../src/components/onboarding';
+import { useOnboardingStore } from '../../src/stores/onboardingStore';
 
-const PILLARS = [
+const GLOW_TYPES = [
   {
-    icon: '🌿',
-    text: 'Gentle habits (no streaks, no punishment)',
+    id: 'glow-organizer',
+    title: 'Glow Organizer',
+    line: 'Turn skincare, supplements, water, movement, and reflection into seeds in one garden.',
+    palette: ['rgba(242,180,204,0.30)', 'rgba(216,201,236,0.10)'],
   },
   {
-    icon: '🌸',
-    text: 'Care-based motivation (grow your glow garden)',
+    id: 'consistency-reset',
+    title: 'Consistency Reset',
+    line: 'Tend a small loop each day so your glow can grow back into rhythm.',
+    palette: ['rgba(184,207,177,0.30)', 'rgba(242,180,204,0.10)'],
   },
   {
-    icon: '💜',
-    text: 'Support & accountability (at your pace)',
+    id: 'soft-accountability',
+    title: 'Soft Accountability',
+    line: 'Let your garden gently show what needs care, with no guilt when life gets busy.',
+    palette: ['rgba(244,168,136,0.24)', 'rgba(155,134,212,0.12)'],
   },
-];
+] as const;
+
+const SUGGESTIONS = ['Glow Routine', 'Soft Reset', 'My Glow Garden', 'Sunday Self-Care'];
 
 export default function SolutionScreen() {
   const router = useRouter();
+  const { garden_name, setGardenName } = useOnboardingStore();
+  const [inputValue, setInputValue] = useState(garden_name || '');
+  const [glowType, setGlowType] = useState<(typeof GLOW_TYPES)[number]['id']>('consistency-reset');
+
+  const activeGlow = GLOW_TYPES.find(g => g.id === glowType) ?? GLOW_TYPES[1];
+
+  const handleGlowType = (type: (typeof GLOW_TYPES)[number]) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setGlowType(type.id);
+  };
+
+  const handleSuggestion = (name: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setInputValue(name);
+    setGardenName(name);
+  };
+
+  const handleInputChange = (text: string) => {
+    setInputValue(text);
+    if (text.trim()) setGardenName(text.trim());
+  };
+
+  const handleContinue = () => {
+    if (!inputValue.trim()) setGardenName(activeGlow.title);
+    router.push('/(onboarding)/focus');
+  };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.content}>
-        <View style={styles.mainContent}>
-          <Text style={styles.headline}>Meet Glowera ✨</Text>
-          <Text style={styles.subhead}>Your daily glow ritual</Text>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <LinearGradient pointerEvents="none" colors={activeGlow.palette} style={styles.backdrop} />
 
-          <Card style={styles.card}>
-            {PILLARS.map((pillar, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.pillarItem,
-                  index < PILLARS.length - 1 && styles.pillarItemBorder,
-                ]}
-              >
-                <View style={styles.pillarIconContainer}>
-                  <Text style={styles.pillarIcon}>{pillar.icon}</Text>
-                </View>
-                <Text style={styles.pillarText}>{pillar.text}</Text>
-              </View>
-            ))}
-          </Card>
-        </View>
+        <View style={styles.main}>
+          <Text style={styles.kicker}>CHOOSE YOUR GARDEN STYLE</Text>
+          <Text style={styles.headline}>How should your glow-up grow?</Text>
 
-        <View style={styles.bottomSection}>
-          <PrimaryButton
-            title="Let's begin"
-            onPress={() => router.push('/(onboarding)/focus')}
+          <View style={styles.reel}>
+            {GLOW_TYPES.map((type) => {
+              const active = glowType === type.id;
+              return (
+                <Pressable
+                  key={type.id}
+                  onPress={() => handleGlowType(type)}
+                  style={({ pressed }) => [
+                    styles.glowCard,
+                    active && styles.glowCardActive,
+                    pressed && styles.cardPressed,
+                  ]}
+                >
+                  <LinearGradient
+                    colors={type.palette}
+                    style={styles.glowWash}
+                  />
+                  <Text style={[styles.glowTitle, active && styles.glowTitleActive]}>{type.title}</Text>
+                  <Text style={styles.glowLine}>{type.line}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <Text style={styles.nameLabel}>NAME YOUR GLOW GARDEN</Text>
+          <TextInput
+            style={styles.input}
+            value={inputValue}
+            onChangeText={handleInputChange}
+            placeholder="e.g. My Glow Garden"
+            placeholderTextColor="rgba(255,255,255,0.35)"
+            maxLength={30}
           />
+
+          <View style={styles.suggestions}>
+            {SUGGESTIONS.map((name) => (
+              <Pressable key={name} onPress={() => handleSuggestion(name)} style={styles.suggestionChip}>
+                <Text style={styles.suggestionText}>{name}</Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
-      </View>
-    </ScrollView>
+
+        <View style={styles.bottom}>
+          <PrimaryButton title="Continue" onPress={handleContinue} />
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  contentContainer: {
-    flexGrow: 1,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
-    justifyContent: 'space-between',
-    minHeight: '100%',
-  },
-  mainContent: {
-    flex: 1,
-    paddingTop: spacing.md,
+  container: { flex: 1 },
+  content: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 40, justifyContent: 'space-between' },
+  backdrop: { position: 'absolute', top: 0, left: 0, right: 0, height: 500 },
+  main: { flex: 1, paddingTop: 8 },
+  kicker: {
+    fontSize: 10,
+    fontFamily: 'SpaceMono-Bold',
+    color: 'rgba(242,180,204,0.62)',
+    letterSpacing: 1.4,
+    marginBottom: 12,
   },
   headline: {
-    fontSize: 28,
+    fontSize: 33,
+    fontFamily: 'PlayfairDisplay',
     fontWeight: '600',
-    color: theme.text,
-    textAlign: 'center',
-    marginBottom: spacing.xs,
-    letterSpacing: -0.5,
+    color: '#FEFAF9',
+    lineHeight: 40,
+    marginBottom: 22,
   },
-  subhead: {
+  reel: { gap: 12, marginBottom: 24 },
+  glowCard: {
+    minHeight: 118,
+    borderRadius: 24,
+    overflow: 'hidden',
+    padding: 20,
+    justifyContent: 'flex-end',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: 'rgba(255,255,255,0.055)',
+  },
+  glowCardActive: {
+    borderColor: 'rgba(242,180,204,0.62)',
+    shadowColor: '#E87FA6',
+    shadowOpacity: 0.22,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 8 },
+  },
+  cardPressed: { opacity: 0.88, transform: [{ scale: 0.99 }] },
+  glowWash: { ...StyleSheet.absoluteFillObject, opacity: 0.85 },
+  glowTitle: {
+    fontSize: 25,
+    fontFamily: 'PlayfairDisplay',
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.82)',
+    marginBottom: 8,
+  },
+  glowTitleActive: { color: '#FEFAF9' },
+  glowLine: {
+    fontSize: 14,
+    fontFamily: 'DMSans',
+    color: 'rgba(255,255,255,0.58)',
+    lineHeight: 21,
+  },
+  nameLabel: {
+    fontSize: 10,
+    fontFamily: 'SpaceMono-Bold',
+    color: 'rgba(242,180,204,0.58)',
+    letterSpacing: 1.2,
+    marginBottom: 10,
+  },
+  input: {
+    backgroundColor: 'rgba(255,255,255,0.09)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(242,180,204,0.24)',
+    borderRadius: 18,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
     fontSize: 17,
-    color: theme.textSecondary,
-    textAlign: 'center',
-    marginBottom: spacing.xl,
+    fontFamily: 'DMSans',
+    color: '#FEFAF9',
+    marginBottom: 12,
   },
-  card: {
-    paddingVertical: spacing.sm,
+  suggestions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  suggestionChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
   },
-  pillarItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    gap: spacing.md,
+  suggestionText: {
+    fontSize: 13,
+    fontFamily: 'DMSans',
+    color: 'rgba(255,255,255,0.62)',
   },
-  pillarItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(232, 164, 200, 0.15)',
-  },
-  pillarIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: 'rgba(232, 164, 200, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pillarIcon: {
-    fontSize: 24,
-  },
-  pillarText: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '500',
-    color: theme.text,
-    lineHeight: 22,
-  },
-  bottomSection: {
-    paddingTop: spacing.lg,
-  },
+  bottom: { paddingTop: 24 },
 });

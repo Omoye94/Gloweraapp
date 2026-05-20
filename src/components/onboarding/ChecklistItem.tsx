@@ -1,15 +1,15 @@
 import React from 'react';
 import { Pressable, Text, View, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { theme, spacing, borderRadius } from '../../theme';
 
 interface ChecklistItemProps {
   label: string;
   checked: boolean;
   onPress: () => void;
+  sublabel?: string;
 }
 
-export function ChecklistItem({ label, checked, onPress }: ChecklistItemProps) {
+export function ChecklistItem({ label, checked, onPress, sublabel }: ChecklistItemProps) {
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onPress();
@@ -27,7 +27,12 @@ export function ChecklistItem({ label, checked, onPress }: ChecklistItemProps) {
       <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
         {checked && <Text style={styles.checkmark}>✓</Text>}
       </View>
-      <Text style={[styles.label, checked && styles.labelChecked]}>{label}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.label, checked && styles.labelChecked]}>{label}</Text>
+        {sublabel ? (
+          <Text style={styles.sublabel}>{sublabel}</Text>
+        ) : null}
+      </View>
     </Pressable>
   );
 }
@@ -36,50 +41,58 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.sm,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderRadius: 16,
+    marginBottom: 8,
     borderWidth: 1.5,
-    borderColor: 'rgba(232, 164, 200, 0.2)',
+    borderColor: 'rgba(255,255,255,0.09)',
+    gap: 14,
   },
   containerChecked: {
-    backgroundColor: 'rgba(232, 164, 200, 0.15)',
-    borderColor: theme.primary,
+    backgroundColor: 'rgba(232,127,166,0.14)',
+    borderColor: 'rgba(232,127,166,0.45)',
   },
   containerPressed: {
-    opacity: 0.9,
+    opacity: 0.85,
     transform: [{ scale: 0.99 }],
   },
   checkbox: {
-    width: 24,
-    height: 24,
+    width: 22,
+    height: 22,
     borderRadius: 6,
-    borderWidth: 2,
-    borderColor: 'rgba(232, 164, 200, 0.4)',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.25)',
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.md,
+    flexShrink: 0,
   },
   checkboxChecked: {
-    backgroundColor: theme.primary,
-    borderColor: theme.primary,
+    backgroundColor: '#E87FA6',
+    borderColor: '#E87FA6',
   },
   checkmark: {
-    color: '#FFFFFF',
-    fontSize: 14,
+    color: '#FEFAF9',
+    fontSize: 12,
     fontWeight: '700',
   },
   label: {
-    flex: 1,
     fontSize: 15,
+    fontFamily: 'DMSans',
     fontWeight: '500',
-    color: theme.text,
+    color: 'rgba(255,255,255,0.6)',
     lineHeight: 20,
   },
   labelChecked: {
-    color: theme.text,
+    color: '#FEFAF9',
+  },
+  sublabel: {
+    fontSize: 9,
+    fontFamily: 'SpaceMono-Bold',
+    color: 'rgba(255,255,255,0.3)',
+    letterSpacing: 0.8,
+    marginTop: 2,
   },
 });

@@ -1,6 +1,4 @@
 import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
-import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const MORNING_RITUAL_KEY = 'notif:morning_ritual';
@@ -33,12 +31,6 @@ export interface NotificationSettings {
  * Returns true if granted, false otherwise
  */
 export async function requestPermission(): Promise<boolean> {
-  // Must be a physical device for notifications
-  if (!Device.isDevice) {
-    console.log('[Notifications] Not a physical device, skipping permission request');
-    return false;
-  }
-
   // Check existing permissions
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
 

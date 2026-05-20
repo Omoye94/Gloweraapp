@@ -1,7 +1,6 @@
 import React from 'react';
 import { Pressable, Text, StyleSheet, ViewStyle } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { theme, spacing, borderRadius } from '../../theme';
 
 interface ChipProps {
   label: string;
@@ -40,32 +39,33 @@ export function Chip({ label, selected, onPress, disabled, style }: ChipProps) {
 
 const styles = StyleSheet.create({
   chip: {
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    paddingVertical: spacing.sm + 2,
-    paddingHorizontal: spacing.md + 4,
-    borderRadius: borderRadius.pill,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 999,
     borderWidth: 1.5,
-    borderColor: 'rgba(232, 164, 200, 0.3)',
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   chipSelected: {
-    backgroundColor: theme.primaryLight,
-    borderColor: theme.primary,
+    backgroundColor: 'rgba(232,127,166,0.18)',
+    borderColor: 'rgba(232,127,166,0.5)',
   },
   chipPressed: {
     opacity: 0.8,
     transform: [{ scale: 0.98 }],
   },
   chipDisabled: {
-    opacity: 0.5,
+    opacity: 0.4,
   },
   chipText: {
-    fontSize: 15,
+    fontSize: 14,
+    fontFamily: 'DMSans',
     fontWeight: '500',
-    color: theme.text,
+    color: 'rgba(255,255,255,0.7)',
     textAlign: 'center',
   },
   chipTextSelected: {
-    color: theme.primary,
+    color: '#F2B4CC',
     fontWeight: '600',
   },
 });

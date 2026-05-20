@@ -11,40 +11,41 @@ import {
   Platform,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Apple, Dumbbell, Pill, Palette, Heart, PenLine, Sun, Moon, Utensils, Clock } from 'lucide-react-native';
 import { HabitCategory } from '../../types/habit';
 import { useHabitStore } from '../../stores';
-import { theme, spacing, borderRadius, shadows } from '../../theme';
+import { getHabitsByCategory } from '../../constants/habits';
+import { spacing, shadows } from '../../theme';
 
 interface CreateHabitModalProps {
   visible: boolean;
   onClose: () => void;
 }
 
-const CATEGORIES: { label: string; value: HabitCategory }[] = [
-  { label: 'Nutrition', value: 'nutrition' },
-  { label: 'Movement', value: 'movement' },
-  { label: 'Supplements', value: 'supplements' },
-  { label: 'Hobbies', value: 'hobbies' },
-  { label: 'Self-Care', value: 'self-care' },
-  { label: 'Reflection', value: 'reflection' },
+const CATEGORIES: { label: string; value: HabitCategory; Icon: React.FC<any> }[] = [
+  { label: 'Nutrition', value: 'nutrition', Icon: Apple },
+  { label: 'Movement', value: 'movement', Icon: Dumbbell },
+  { label: 'Supplements', value: 'supplements', Icon: Pill },
+  { label: 'Hobbies', value: 'hobbies', Icon: Palette },
+  { label: 'Self-Care', value: 'self-care', Icon: Heart },
+  { label: 'Reflection', value: 'reflection', Icon: PenLine },
 ];
 
 const ICONS = [
-  '✨', '💫', '🌟', '⭐', '🌸', '🌺', '🌼', '💪',
-  '🧘', '📚', '🎨', '🎵', '💧', '🍎', '🥗', '🌙',
+  '\u2728', '\uD83D\uDCAB', '\uD83C\uDF1F', '\u2B50', '\uD83C\uDF38', '\uD83C\uDF3A', '\uD83C\uDF3C', '\uD83D\uDCAA',
+  '\uD83E\uDDD8', '\uD83D\uDCDA', '\uD83C\uDFA8', '\uD83C\uDFB5', '\uD83D\uDCA7', '\uD83C\uDF4E', '\uD83E\uDD57', '\uD83C\uDF19',
 ];
 
 const SUPPLEMENT_ICONS = [
-  '💊', '💧', '🧴', '🌿', '🍵', '☀️', '🌙', '✨',
-  '🫧', '🍃', '🧬', '💎',
+  '\uD83D\uDC8A', '\uD83D\uDCA7', '\uD83E\uDDF4', '\uD83C\uDF3F', '\uD83C\uDF75', '\u2600\uFE0F', '\uD83C\uDF19', '\u2728',
+  '\uD83E\uDEE7', '\uD83C\uDF43', '\uD83E\uDDEC', '\uD83D\uDC8E',
 ];
 
 const TIMING_OPTIONS = [
-  { label: 'Morning', value: 'morning', emoji: '☀️' },
-  { label: 'With Food', value: 'with-food', emoji: '🍽️' },
-  { label: 'Evening', value: 'evening', emoji: '🌙' },
-  { label: 'Any Time', value: 'any', emoji: '⏰' },
+  { label: 'Morning', value: 'morning', Icon: Sun },
+  { label: 'With Food', value: 'with-food', Icon: Utensils },
+  { label: 'Evening', value: 'evening', Icon: Moon },
+  { label: 'Any Time', value: 'any', Icon: Clock },
 ];
 
 export const CreateHabitModal: React.FC<CreateHabitModalProps> = ({
@@ -53,14 +54,18 @@ export const CreateHabitModal: React.FC<CreateHabitModalProps> = ({
 }) => {
   const [name, setName] = useState('');
   const [category, setCategory] = useState<HabitCategory>('nutrition');
-  const [selectedIcon, setSelectedIcon] = useState('✨');
+  const [selectedIcon, setSelectedIcon] = useState('\u2728');
   const [dosage, setDosage] = useState('');
   const [timing, setTiming] = useState('any');
   const [notes, setNotes] = useState('');
 
-  const { addHabit } = useHabitStore();
+  const { addHabit, habits } = useHabitStore();
 
   const isSupplements = category === 'supplements';
+
+  const suggestions = getHabitsByCategory(category).filter(
+    (s) => !habits.some((h) => h.name.toLowerCase() === s.name.toLowerCase())
+  );
   const iconGrid = isSupplements ? SUPPLEMENT_ICONS : ICONS;
 
   const handleCreate = () => {
@@ -88,7 +93,7 @@ export const CreateHabitModal: React.FC<CreateHabitModalProps> = ({
   const resetAndClose = () => {
     setName('');
     setCategory('nutrition');
-    setSelectedIcon('✨');
+    setSelectedIcon('\u2728');
     setDosage('');
     setTiming('any');
     setNotes('');
@@ -106,10 +111,6 @@ export const CreateHabitModal: React.FC<CreateHabitModalProps> = ({
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <LinearGradient
-          colors={['#FAE8ED', '#F5EBF8', '#FAF5FC']}
-          style={styles.gradientBackground}
-        />
 
         {/* Header */}
         <View style={styles.header}>
@@ -132,19 +133,6 @@ export const CreateHabitModal: React.FC<CreateHabitModalProps> = ({
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Name Input */}
-          <Text style={styles.label}>Name</Text>
-          <TextInput
-            style={styles.textInput}
-            value={name}
-            onChangeText={(text) => setName(text.slice(0, 40))}
-            placeholder="e.g. Morning stretches"
-            placeholderTextColor={theme.textMuted}
-            maxLength={40}
-            autoFocus
-          />
-          <Text style={styles.charCount}>{name.length}/40</Text>
-
           {/* Category Selector */}
           <Text style={styles.label}>Category</Text>
           <View style={styles.pillRow}>
@@ -156,9 +144,9 @@ export const CreateHabitModal: React.FC<CreateHabitModalProps> = ({
                   onPress={() => {
                     setCategory(cat.value);
                     if (cat.value === 'supplements') {
-                      setSelectedIcon('💊');
+                      setSelectedIcon('\uD83D\uDC8A');
                     } else if (isSupplements) {
-                      setSelectedIcon('✨');
+                      setSelectedIcon('\u2728');
                     }
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   }}
@@ -167,18 +155,65 @@ export const CreateHabitModal: React.FC<CreateHabitModalProps> = ({
                     isSelected && styles.pillSelected,
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.pillText,
-                      isSelected && styles.pillTextSelected,
-                    ]}
-                  >
-                    {cat.label}
-                  </Text>
+                  <View style={styles.pillIconRow}>
+                    <cat.Icon size={14} strokeWidth={1.5} color={isSelected ? '#FFFFFF' : '#6B5B52'} />
+                    <Text
+                      style={[
+                        styles.pillText,
+                        isSelected && styles.pillTextSelected,
+                      ]}
+                    >
+                      {cat.label}
+                    </Text>
+                  </View>
                 </Pressable>
               );
             })}
           </View>
+
+          {/* Suggestions */}
+          {suggestions.length > 0 && (
+            <>
+              <Text style={styles.label}>Suggestions</Text>
+              <View style={styles.pillRow}>
+                {suggestions.map((s) => (
+                  <Pressable
+                    key={s.name}
+                    onPress={() => {
+                      setName(s.name);
+                      setSelectedIcon(s.icon);
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }}
+                    style={[
+                      styles.pill,
+                      name === s.name && styles.pillSelected,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.pillText,
+                        name === s.name && styles.pillTextSelected,
+                      ]}
+                    >
+                      {s.icon} {s.name}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </>
+          )}
+
+          {/* Name Input */}
+          <Text style={styles.label}>Name</Text>
+          <TextInput
+            style={styles.textInput}
+            value={name}
+            onChangeText={(text) => setName(text.slice(0, 40))}
+            placeholder="e.g. Morning stretches"
+            placeholderTextColor={'#B8A99E'}
+            maxLength={40}
+          />
+          <Text style={styles.charCount}>{name.length}/40</Text>
 
           {/* Icon Picker */}
           <Text style={styles.label}>Icon</Text>
@@ -212,7 +247,7 @@ export const CreateHabitModal: React.FC<CreateHabitModalProps> = ({
                 value={dosage}
                 onChangeText={setDosage}
                 placeholder="e.g. 500 mg"
-                placeholderTextColor={theme.textMuted}
+                placeholderTextColor={'#B8A99E'}
               />
 
               <Text style={styles.label}>Timing</Text>
@@ -231,14 +266,17 @@ export const CreateHabitModal: React.FC<CreateHabitModalProps> = ({
                         isSelected && styles.pillSelected,
                       ]}
                     >
-                      <Text
-                        style={[
-                          styles.pillText,
-                          isSelected && styles.pillTextSelected,
-                        ]}
-                      >
-                        {opt.emoji} {opt.label}
-                      </Text>
+                      <View style={styles.pillIconRow}>
+                        <opt.Icon size={14} strokeWidth={1.5} color={isSelected ? '#FFFFFF' : '#6B5B52'} />
+                        <Text
+                          style={[
+                            styles.pillText,
+                            isSelected && styles.pillTextSelected,
+                          ]}
+                        >
+                          {opt.label}
+                        </Text>
+                      </View>
                     </Pressable>
                   );
                 })}
@@ -250,7 +288,7 @@ export const CreateHabitModal: React.FC<CreateHabitModalProps> = ({
                 value={notes}
                 onChangeText={setNotes}
                 placeholder="Any additional notes..."
-                placeholderTextColor={theme.textMuted}
+                placeholderTextColor={'#B8A99E'}
                 multiline
                 numberOfLines={3}
               />
@@ -267,12 +305,6 @@ export const CreateHabitModal: React.FC<CreateHabitModalProps> = ({
               pressed && name.trim() ? { opacity: 0.9, transform: [{ scale: 0.98 }] } : null,
             ]}
           >
-            <LinearGradient
-              colors={name.trim() ? ['#5C2D5C', '#7A4068'] : ['#B8A8B0', '#B8A8B0']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.createButtonGradient}
-            />
             <Text style={styles.createButtonText}>Create Habit</Text>
           </Pressable>
 
@@ -286,10 +318,7 @@ export const CreateHabitModal: React.FC<CreateHabitModalProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.background,
-  },
-  gradientBackground: {
-    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#FBF7F7',
   },
   header: {
     flexDirection: 'row',
@@ -304,13 +333,13 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     fontSize: 16,
-    color: theme.primary,
-    fontWeight: '500',
+    fontFamily: 'DMSans',
+    color: '#6B5B52',
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: theme.text,
+    fontFamily: 'Satoshi-Medium',
+    color: '#3A2E2B',
   },
   scrollView: {
     flex: 1,
@@ -319,26 +348,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.textSecondary,
+    fontSize: 12,
+    fontFamily: 'SpaceMono-Bold',
+    color: '#6B5B52',
     marginBottom: spacing.sm,
     marginTop: spacing.lg,
-    letterSpacing: 0.3,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
   textInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    borderRadius: borderRadius.md,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 4,
     fontSize: 16,
-    color: theme.text,
+    fontFamily: 'DMSans',
+    color: '#3A2E2B',
     borderWidth: 1,
-    borderColor: theme.borderLight,
+    borderColor: '#EDE4DC',
   },
   charCount: {
     fontSize: 12,
-    color: theme.textMuted,
+    fontFamily: 'DMSans',
+    color: '#B8A99E',
     textAlign: 'right',
     marginTop: spacing.xs,
   },
@@ -350,19 +382,24 @@ const styles = StyleSheet.create({
   pill: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,
-    borderRadius: borderRadius.pill,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    borderWidth: 1,
-    borderColor: theme.borderLight,
+    borderRadius: 9999,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#EDE4DC',
   },
   pillSelected: {
-    backgroundColor: theme.primary,
-    borderColor: theme.primary,
+    backgroundColor: '#3A2E2B',
+    borderColor: '#3A2E2B',
+  },
+  pillIconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   pillText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: theme.textSecondary,
+    fontFamily: 'DMSans',
+    color: '#6B5B52',
   },
   pillTextSelected: {
     color: '#FFFFFF',
@@ -375,17 +412,16 @@ const styles = StyleSheet.create({
   iconCell: {
     width: 48,
     height: 48,
-    borderRadius: borderRadius.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: theme.borderLight,
+    borderWidth: 1.5,
+    borderColor: '#EDE4DC',
   },
   iconCellSelected: {
-    backgroundColor: 'rgba(232, 164, 200, 0.25)',
-    borderColor: theme.accent,
-    ...shadows.glow,
+    backgroundColor: 'rgba(244, 198, 204, 0.12)',
+    borderColor: '#F2B4CC',
   },
   iconEmoji: {
     fontSize: 24,
@@ -397,21 +433,18 @@ const styles = StyleSheet.create({
   },
   createButton: {
     marginTop: spacing.xl,
-    borderRadius: borderRadius.button,
+    borderRadius: 12,
+    backgroundColor: '#3A2E2B',
     overflow: 'hidden',
-    ...shadows.glow,
   },
   createButtonDisabled: {
-    ...shadows.none,
-  },
-  createButtonGradient: {
-    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#B8A99E',
   },
   createButtonText: {
     textAlign: 'center',
     fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontFamily: 'DMSans',
+    color: '#F2B4CC',
     paddingVertical: spacing.md,
   },
 });

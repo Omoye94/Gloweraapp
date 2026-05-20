@@ -2,23 +2,22 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { theme, spacing } from '../../src/theme';
+import { spacing } from '../../src/theme';
 
-const STEPS = ['problem', 'validation', 'solution', 'focus', 'rituals', 'howitworks', 'notifications'];
+const STEPS = ['problem', 'solution', 'focus', 'rituals', 'firstgrowth', 'firstreflection', 'analyzing', 'results', 'paywall', 'notifications', 'welcome'];
 
-function ProgressDots({ currentStep }: { currentStep: number }) {
+function ProgressBar({ currentStep }: { currentStep: number }) {
+  const progress = (currentStep + 1) / STEPS.length;
   return (
     <View style={styles.progressContainer}>
-      {STEPS.map((_, index) => (
-        <View
-          key={index}
-          style={[
-            styles.dot,
-            index < currentStep && styles.dotCompleted,
-            index === currentStep && styles.dotActive,
-          ]}
+      <View style={styles.progressTrack}>
+        <LinearGradient
+          colors={['#F2B4CC', '#E87FA6']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={[styles.progressFill, { width: `${progress * 100}%` }]}
         />
-      ))}
+      </View>
     </View>
   );
 }
@@ -31,26 +30,27 @@ function OnboardingHeader() {
   const currentScreen = segments[segments.length - 1] || 'problem';
   const currentStep = STEPS.indexOf(currentScreen);
   const isFirstScreen = currentStep === 0;
+  const hideProgress = currentStep < 0;
 
   return (
     <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-      <View style={styles.headerRow}>
-        {!isFirstScreen ? (
-          <Pressable
-            onPress={() => router.back()}
-            style={({ pressed }) => [
-              styles.backButton,
-              pressed && styles.backButtonPressed,
-            ]}
-          >
-            <Text style={styles.backButtonText}>←</Text>
-          </Pressable>
-        ) : (
+      <Text style={styles.wordmark}>glowera</Text>
+      {!hideProgress && (
+        <View style={styles.headerRow}>
+          {!isFirstScreen ? (
+            <Pressable
+              onPress={() => router.back()}
+              style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
+            >
+              <Text style={styles.backButtonText}>←</Text>
+            </Pressable>
+          ) : (
+            <View style={styles.backButtonPlaceholder} />
+          )}
+          <ProgressBar currentStep={currentStep} />
           <View style={styles.backButtonPlaceholder} />
-        )}
-        <ProgressDots currentStep={currentStep} />
-        <View style={styles.backButtonPlaceholder} />
-      </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -58,12 +58,6 @@ function OnboardingHeader() {
 export default function OnboardingLayout() {
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={['#FDF6F8', '#FAE8ED', '#F5EBF8']}
-        style={StyleSheet.absoluteFillObject}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      />
       <OnboardingHeader />
       <Stack
         screenOptions={{
@@ -73,12 +67,21 @@ export default function OnboardingLayout() {
         }}
       >
         <Stack.Screen name="problem" />
-        <Stack.Screen name="validation" />
+        <Stack.Screen name="reframe" />
         <Stack.Screen name="solution" />
+        <Stack.Screen name="garden" />
         <Stack.Screen name="focus" />
         <Stack.Screen name="rituals" />
-        <Stack.Screen name="howitworks" />
+        <Stack.Screen name="supplements" />
+        <Stack.Screen name="challenges" />
+        <Stack.Screen name="firstreflection" />
+        <Stack.Screen name="firstgrowth" />
+        <Stack.Screen name="analyzing" />
+        <Stack.Screen name="results" />
+        <Stack.Screen name="socialproof" />
+        <Stack.Screen name="paywall" />
         <Stack.Screen name="notifications" />
+        <Stack.Screen name="welcome" />
       </Stack>
     </View>
   );
@@ -87,11 +90,18 @@ export default function OnboardingLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.background,
+    backgroundColor: '#1A1028',
   },
   header: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
+  },
+  wordmark: {
+    fontSize: 22,
+    fontFamily: 'Raleway-Regular',
+    color: '#E87FA6',
+    textAlign: 'center',
+    marginBottom: spacing.sm,
   },
   headerRow: {
     flexDirection: 'row',
@@ -102,7 +112,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -111,29 +121,25 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.95 }],
   },
   backButtonText: {
-    fontSize: 24,
-    color: theme.text,
+    fontSize: 20,
+    color: 'rgba(255,255,255,0.7)',
     fontWeight: '300',
   },
   backButtonPlaceholder: {
     width: 40,
   },
   progressContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
+    flex: 1,
+    marginHorizontal: spacing.md,
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(232, 164, 200, 0.3)',
+  progressTrack: {
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    overflow: 'hidden',
   },
-  dotCompleted: {
-    backgroundColor: theme.primary,
-  },
-  dotActive: {
-    width: 24,
-    backgroundColor: theme.primary,
+  progressFill: {
+    height: '100%',
+    borderRadius: 2,
   },
 });

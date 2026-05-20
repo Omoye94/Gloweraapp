@@ -4,17 +4,19 @@ export interface DefaultHabit {
   name: string;
   category: HabitCategory;
   icon: string;
+  targetValue?: number;
+  unit?: string;
 }
 
 export const DEFAULT_HABITS: DefaultHabit[] = [
   // Nutrition
-  { name: 'Drink 8 glasses of water', category: 'nutrition', icon: '💧' },
+  { name: 'Drink 8 glasses of water', category: 'nutrition', icon: '💧', targetValue: 2000, unit: 'ML' },
   { name: 'Eat a serving of vegetables', category: 'nutrition', icon: '🥗' },
   { name: 'Have a balanced breakfast', category: 'nutrition', icon: '🍳' },
   { name: 'Mindful eating moment', category: 'nutrition', icon: '🍽️' },
 
   // Movement
-  { name: '10-minute walk', category: 'movement', icon: '🚶‍♀️' },
+  { name: '10-minute walk', category: 'movement', icon: '🚶‍♀️', targetValue: 10000, unit: 'Steps' },
   { name: 'Stretching routine', category: 'movement', icon: '🧘' },
   { name: '15-minute workout', category: 'movement', icon: '💪' },
   { name: 'Dance break', category: 'movement', icon: '💃' },
@@ -38,18 +40,18 @@ export const DEFAULT_HABITS: DefaultHabit[] = [
 
   // Reflection
   { name: 'Morning gratitude', category: 'reflection', icon: '🙏' },
-  { name: '5-minute meditation', category: 'reflection', icon: '🧘‍♀️' },
+  { name: '5-minute meditation', category: 'reflection', icon: '🧘‍♀️', targetValue: 30, unit: 'Min' },
   { name: 'Journal entry', category: 'reflection', icon: '📝' },
   { name: 'Evening reflection', category: 'reflection', icon: '🌙' },
 ];
 
 export const HABIT_CATEGORIES: { id: HabitCategory; name: string; icon: string; color: string }[] = [
-  { id: 'nutrition', name: 'Nutrition', icon: '🥗', color: '#FF99B5' },
-  { id: 'movement', name: 'Movement', icon: '🏃‍♀️', color: '#66EFC7' },
-  { id: 'supplements', name: 'Supplements', icon: '💊', color: '#FFD699' },
-  { id: 'hobbies', name: 'Hobbies', icon: '🎨', color: '#C9ADFF' },
-  { id: 'self-care', name: 'Self-Care', icon: '✨', color: '#99D6FF' },
-  { id: 'reflection', name: 'Reflection', icon: '🌙', color: '#FFB3C7' },
+  { id: 'nutrition', name: 'Nutrition', icon: '🥗', color: '#D4D1AA' },
+  { id: 'movement', name: 'Movement', icon: '🏃‍♀️', color: '#F9C4B7' },
+  { id: 'supplements', name: 'Supplements', icon: '💊', color: '#F2B4CC' },
+  { id: 'hobbies', name: 'Hobbies', icon: '🎨', color: '#D3DBE2' },
+  { id: 'self-care', name: 'Self-Care', icon: '✨', color: '#C45A82' },
+  { id: 'reflection', name: 'Reflection', icon: '🌙', color: '#E2CBB2' },
 ];
 
 export const getHabitsByCategory = (category: HabitCategory): DefaultHabit[] => {

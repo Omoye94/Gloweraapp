@@ -8,7 +8,7 @@ import {
   Pressable,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Check } from 'lucide-react-native';
 import { WellnessGoal } from '../../types/supplement';
 import { WELLNESS_GOALS } from '../../constants/supplements';
 import { useSupplementStore } from '../../stores';
@@ -65,11 +65,6 @@ export const GoalsSelectionModal: React.FC<GoalsSelectionModalProps> = ({
     >
       <View style={styles.container}>
         <View style={styles.content}>
-          <LinearGradient
-            colors={['#FFFFFF', '#FAF5FC']}
-            style={styles.gradientBackground}
-          />
-
           {/* Header */}
           <View style={styles.header}>
             <View>
@@ -126,7 +121,7 @@ export const GoalsSelectionModal: React.FC<GoalsSelectionModalProps> = ({
                     </Text>
                     {isSelected && (
                       <View style={styles.checkmark}>
-                        <Text style={styles.checkmarkText}>✓</Text>
+                        <Check size={12} color="#FFFFFF" strokeWidth={3} />
                       </View>
                     )}
                   </Pressable>
@@ -175,16 +170,11 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   content: {
-    backgroundColor: theme.surface,
+    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: borderRadius.xxl,
     borderTopRightRadius: borderRadius.xxl,
     height: '85%',
     overflow: 'hidden',
-  },
-  gradientBackground: {
-    ...StyleSheet.absoluteFillObject,
-    borderTopLeftRadius: borderRadius.xxl,
-    borderTopRightRadius: borderRadius.xxl,
   },
   header: {
     flexDirection: 'row',
@@ -197,18 +187,18 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '600',
-    color: theme.text,
+    color: '#3A2E2B',
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
-    color: theme.textSecondary,
+    color: '#6B5B52',
     maxWidth: 250,
   },
   closeButton: {
     fontSize: 16,
     fontWeight: '500',
-    color: theme.textSecondary,
+    color: '#6B5B52',
     paddingHorizontal: spacing.sm,
   },
   scrollView: {
@@ -225,17 +215,17 @@ const styles = StyleSheet.create({
   },
   goalCard: {
     width: '48%',
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: '#FBF7F7',
     borderRadius: borderRadius.card,
     padding: spacing.md,
     borderWidth: 2,
-    borderColor: theme.borderLight,
+    borderColor: '#EDE4DC',
     position: 'relative',
     minHeight: 130,
   },
   goalCardSelected: {
-    backgroundColor: 'rgba(212, 196, 232, 0.15)',
-    borderColor: theme.primary,
+    backgroundColor: '#FBF7F7',
+    borderColor: '#3A2E2B',
   },
   goalCardPressed: {
     opacity: 0.9,
@@ -245,13 +235,13 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: 'rgba(212, 196, 232, 0.2)',
+    backgroundColor: '#EDE4DC',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
   },
   goalIconContainerSelected: {
-    backgroundColor: theme.primaryLight,
+    backgroundColor: '#F1E1E1',
   },
   goalIcon: {
     fontSize: 22,
@@ -259,15 +249,15 @@ const styles = StyleSheet.create({
   goalName: {
     fontSize: 15,
     fontWeight: '600',
-    color: theme.text,
+    color: '#3A2E2B',
     marginBottom: 4,
   },
   goalNameSelected: {
-    color: theme.primary,
+    color: '#3A2E2B',
   },
   goalDescription: {
     fontSize: 12,
-    color: theme.textSecondary,
+    color: '#6B5B52',
     lineHeight: 16,
   },
   checkmark: {
@@ -277,14 +267,9 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: theme.primary,
+    backgroundColor: '#3A2E2B',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  checkmarkText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: theme.textOnPrimary,
   },
   footer: {
     flexDirection: 'row',
@@ -293,8 +278,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
     paddingBottom: spacing.xxl,
     borderTopWidth: 1,
-    borderTopColor: theme.borderLight,
-    backgroundColor: theme.surface,
+    borderTopColor: '#EDE4DC',
+    backgroundColor: '#FFFFFF',
   },
   clearButton: {
     paddingVertical: spacing.sm,
@@ -303,15 +288,15 @@ const styles = StyleSheet.create({
   clearButtonText: {
     fontSize: 14,
     fontWeight: '500',
-    color: theme.textSecondary,
+    color: '#6B5B52',
   },
   selectedCount: {
     fontSize: 14,
-    color: theme.textMuted,
+    color: '#B8A99E',
     marginRight: spacing.md,
   },
   saveButton: {
-    backgroundColor: theme.primary,
+    backgroundColor: '#3A2E2B',
     paddingVertical: spacing.sm + 2,
     paddingHorizontal: spacing.xl,
     borderRadius: borderRadius.button,
@@ -322,6 +307,6 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: theme.textOnPrimary,
+    color: '#FFFFFF',
   },
 });

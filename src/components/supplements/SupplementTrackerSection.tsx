@@ -36,7 +36,7 @@ export function SupplementTrackerSection({ onMessage, onOpenLibrary }: Supplemen
     getCompletionForToday,
     dailySummaries,
   } = useHabitStore();
-  const { addPoints } = usePlantStore();
+  const { addPoints, recordDailyActivity } = usePlantStore();
 
   const supplementHabits = getActiveHabits().filter(h => h.category === 'supplements');
 
@@ -60,7 +60,10 @@ export function SupplementTrackerSection({ onMessage, onOpenLibrary }: Supplemen
     if (existing) return;
 
     const points = completeHabit(habit.id, 'full' as CompletionType);
-    if (points > 0) addPoints(points);
+    if (points > 0) {
+      recordDailyActivity();
+      addPoints(points, true);
+    }
 
     // Check if all supplements are now taken
     const newTakenCount = takenCount + 1;
@@ -159,12 +162,10 @@ export function SupplementTrackerSection({ onMessage, onOpenLibrary }: Supplemen
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
-    borderRadius: borderRadius.card,
+    backgroundColor: '#FEFAF9',
+    borderRadius: 16,
     padding: spacing.md,
     marginBottom: spacing.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(232, 164, 200, 0.2)',
     ...shadows.sm,
   },
   cardPressed: {
@@ -187,32 +188,32 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: theme.text,
+    fontFamily: 'Satoshi-Medium',
+    color: '#3A2E2B',
   },
   countBadge: {
-    backgroundColor: 'rgba(92, 45, 92, 0.1)',
+    backgroundColor: 'rgba(244, 198, 204, 0.15)',
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
-    borderRadius: borderRadius.pill,
+    borderRadius: 9999,
     marginLeft: spacing.sm,
   },
   countText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: theme.primary,
+    fontFamily: 'SpaceMono-Bold',
+    color: '#F2B4CC',
   },
   manageLink: {
     fontSize: 13,
-    fontWeight: '500',
-    color: theme.primary,
+    fontFamily: 'DMSans',
+    color: '#F2B4CC',
   },
   pillRow: {
     paddingVertical: spacing.xs,
   },
   progressTrack: {
     height: 4,
-    backgroundColor: 'rgba(92, 45, 92, 0.08)',
+    backgroundColor: 'rgba(244, 198, 204, 0.15)',
     borderRadius: 2,
     marginTop: spacing.md,
     overflow: 'hidden',
@@ -225,25 +226,23 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(232, 164, 200, 0.15)',
+    borderTopColor: '#EADBD4',
   },
   // Empty state
   emptyCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
-    borderRadius: borderRadius.card,
+    backgroundColor: '#FEFAF9',
+    borderRadius: 16,
     padding: spacing.md,
     marginBottom: spacing.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(232, 164, 200, 0.2)',
     ...shadows.sm,
   },
   emptyIconContainer: {
     width: 40,
     height: 40,
     borderRadius: 14,
-    backgroundColor: 'rgba(232, 164, 200, 0.15)',
+    backgroundColor: 'rgba(244, 198, 204, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
@@ -256,17 +255,17 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 15,
-    fontWeight: '600',
-    color: theme.text,
+    fontFamily: 'Satoshi-Medium',
+    color: '#3A2E2B',
     marginBottom: 2,
   },
   emptySubtitle: {
     fontSize: 12,
-    color: theme.textSecondary,
+    fontFamily: 'DMSans',
+    color: '#6B5B52',
   },
   emptyArrow: {
     fontSize: 22,
-    fontWeight: '300',
-    color: theme.textMuted,
+    color: '#9E8880',
   },
 });

@@ -3,293 +3,249 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   Alert,
   StyleSheet,
+  ImageBackground,
 } from 'react-native';
-import { Link, router } from 'expo-router';
-import { useAuthStore } from '../../stores/authStore';
+import { router } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { isValidEmail } from '../../lib/utils';
-
-const colors = {
-  primary: '#E8B4CB',
-  background: '#FFF9F5',
-  surface: '#FFFFFF',
-  text: '#4A4A4A',
-  textLight: '#8A8A8A',
-  error: '#E57373',
-};
+import { supabase } from '../../lib/supabase';
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
+  const insets = useSafeAreaInsets();
+  const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
-  const { signIn, isLoading } = useAuthStore();
+  const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors]     = useState<{ email?: string; password?: string }>({});
 
   const validate = () => {
-    const newErrors: { email?: string; password?: string } = {};
-
-    if (!email) {
-      newErrors.email = 'Email is required';
-    } else if (!isValidEmail(email)) {
-      newErrors.email = 'Please enter a valid email';
-    }
-
-    if (!password) {
-      newErrors.password = 'Password is required';
-    } else if (password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const e: { email?: string; password?: string } = {};
+    if (!email) e.email = 'Email is required';
+    else if (!isValidEmail(email)) e.email = 'Please enter a valid email';
+    if (!password) e.password = 'Password is required';
+    else if (password.length < 6) e.password = 'Password must be at least 6 characters';
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
   const handleLogin = async () => {
     if (!validate()) return;
-
-    const { error } = await signIn(email, password);
-
+    setIsLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     if (error) {
-      Alert.alert('Oops!', error.message || 'Something went wrong. Please try again.');
+      setIsLoading(false);
+      Alert.alert('Oops', error.message || 'Something went wrong. Please try again.');
     } else {
       router.replace('/');
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+    <ImageBackground
+      source={require('../../assets/images/garden-path.jpeg')}
+      style={styles.bg}
+      resizeMode="cover"
     >
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+      <LinearGradient
+        colors={['rgba(20,12,32,0.72)', 'rgba(20,12,32,0.45)', 'rgba(20,12,32,0.80)']}
+        locations={[0, 0.4, 1]}
+        style={StyleSheet.absoluteFill}
+      />
+
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
       >
-        <View style={styles.content}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.logo}>Glowera</Text>
-            <Text style={styles.tagline}>Glow With Every Habit</Text>
-          </View>
-
-          {/* Welcome Text */}
-          <View style={styles.welcomeSection}>
-            <Text style={styles.welcomeTitle}>Welcome back</Text>
-            <Text style={styles.welcomeSubtitle}>
-              Sign in to continue your glow journey
-            </Text>
-          </View>
-
-          {/* Form */}
-          <View style={styles.form}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  errors.email && styles.inputError,
-                ]}
-                placeholder="your@email.com"
-                placeholderTextColor={colors.textLight}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-              />
-              {errors.email && (
-                <Text style={styles.errorText}>{errors.email}</Text>
-              )}
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  errors.password && styles.inputError,
-                ]}
-                placeholder="Enter your password"
-                placeholderTextColor={colors.textLight}
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-              />
-              {errors.password && (
-                <Text style={styles.errorText}>{errors.password}</Text>
-              )}
-            </View>
-          </View>
-
-          {/* Login Button */}
-          <TouchableOpacity
-            style={[styles.button, isLoading && styles.buttonDisabled]}
-            onPress={handleLogin}
-            disabled={isLoading}
+        <ScrollView
+          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Back */}
+          <Pressable
+            onPress={() => router.back()}
+            style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.6 }]}
+            hitSlop={12}
           >
-            <Text style={styles.buttonText}>
-              {isLoading ? 'Signing in...' : 'Sign In'}
-            </Text>
-          </TouchableOpacity>
+            <Text style={styles.backText}>← Back</Text>
+          </Pressable>
 
-          {/* Sign Up Link */}
-          <View style={styles.signupRow}>
-            <Text style={styles.signupText}>Don't have an account? </Text>
-            <Link href="/(auth)/signup" asChild>
-              <TouchableOpacity>
-                <Text style={styles.signupLink}>Sign Up</Text>
-              </TouchableOpacity>
-            </Link>
-          </View>
+          <View style={styles.inner}>
 
-          {/* Decorative Element */}
-          <View style={styles.decorativeContainer}>
-            <View style={styles.decorativeOuter}>
-              <View style={styles.decorativeMiddle}>
-                <View style={styles.decorativeInner} />
+            {/* Heading */}
+            <View style={styles.heading}>
+              <Text style={styles.title}>Welcome back</Text>
+              <Text style={styles.subtitle}>Continue where you left off</Text>
+            </View>
+
+            {/* Form */}
+            <View style={styles.form}>
+              <View>
+                <TextInput
+                  style={[styles.input, errors.email && styles.inputError]}
+                  placeholder="your@email.com"
+                  placeholderTextColor="rgba(255,255,255,0.38)"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  value={email}
+                  onChangeText={t => { setEmail(t); setErrors(p => ({ ...p, email: undefined })); }}
+                />
+                {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+              </View>
+
+              <View>
+                <TextInput
+                  style={[styles.input, errors.password && styles.inputError]}
+                  placeholder="Password"
+                  placeholderTextColor="rgba(255,255,255,0.38)"
+                  secureTextEntry
+                  value={password}
+                  onChangeText={t => { setPassword(t); setErrors(p => ({ ...p, password: undefined })); }}
+                  onSubmitEditing={handleLogin}
+                  returnKeyType="done"
+                />
+                {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
               </View>
             </View>
+
+            {/* CTA */}
+            <Pressable
+              onPress={handleLogin}
+              disabled={isLoading}
+              style={({ pressed }) => [styles.ctaBtn, pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] }]}
+            >
+              <LinearGradient
+                colors={['#E87FA6', '#C45A82']}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={styles.ctaGradient}
+              >
+                <Text style={styles.ctaText}>{isLoading ? 'Signing in…' : 'Sign in'}</Text>
+              </LinearGradient>
+            </Pressable>
+
+            {/* Footer */}
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>New here? </Text>
+              <Pressable
+                onPress={() => router.replace('/(onboarding)/problem')}
+                style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+              >
+                <Text style={styles.footerLink}>Begin your journey</Text>
+              </Pressable>
+            </View>
+
           </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  bg: {
     flex: 1,
-    backgroundColor: colors.background,
   },
-  scrollView: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollContent: {
+  scroll: {
     flexGrow: 1,
+    paddingHorizontal: 28,
   },
-  content: {
+  backBtn: {
+    alignSelf: 'flex-start',
+    paddingVertical: 8,
+    marginBottom: 8,
+  },
+  backText: {
+    fontFamily: 'DMSans',
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.6)',
+  },
+  inner: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 80,
-    paddingBottom: 32,
+    justifyContent: 'center',
+    paddingTop: 40,
+    gap: 32,
   },
-  header: {
-    alignItems: 'center',
-    marginBottom: 48,
+  heading: {
+    gap: 8,
   },
-  logo: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: colors.primary,
-    marginBottom: 8,
+  title: {
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontSize: 38,
+    color: '#FEFAF9',
+    lineHeight: 46,
+    letterSpacing: -0.5,
   },
-  tagline: {
+  subtitle: {
+    fontFamily: 'DMSans',
     fontSize: 16,
-    color: colors.textLight,
-  },
-  welcomeSection: {
-    marginBottom: 32,
-  },
-  welcomeTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 8,
-  },
-  welcomeSubtitle: {
-    fontSize: 16,
-    color: colors.textLight,
+    color: 'rgba(255,255,255,0.55)',
+    lineHeight: 24,
   },
   form: {
-    gap: 16,
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.text,
-    marginBottom: 8,
+    gap: 14,
   },
   input: {
-    backgroundColor: colors.surface,
+    backgroundColor: 'rgba(255,255,255,0.10)',
     borderWidth: 1,
-    borderColor: `${colors.primary}33`,
+    borderColor: 'rgba(255,255,255,0.18)',
     borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
     fontSize: 16,
-    color: colors.text,
+    fontFamily: 'DMSans',
+    color: '#FEFAF9',
   },
   inputError: {
-    borderColor: colors.error,
+    borderColor: 'rgba(242,180,204,0.7)',
   },
   errorText: {
-    color: colors.error,
+    fontFamily: 'DMSans',
     fontSize: 12,
-    marginTop: 4,
+    color: '#F2B4CC',
+    marginTop: 6,
+    marginLeft: 4,
   },
-  button: {
-    backgroundColor: colors.primary,
-    borderRadius: 16,
-    paddingVertical: 16,
+  ctaBtn: {
+    borderRadius: 18,
+    overflow: 'hidden',
+    shadowColor: '#E87FA6',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+  },
+  ctaGradient: {
+    paddingVertical: 18,
     alignItems: 'center',
-    marginTop: 32,
+    borderRadius: 18,
   },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
+  ctaText: {
+    fontFamily: 'DMSans',
+    fontSize: 16,
     fontWeight: '600',
+    color: '#1A1028',
+    letterSpacing: 0.2,
   },
-  signupRow: {
+  footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 24,
+    alignItems: 'center',
   },
-  signupText: {
-    color: colors.textLight,
+  footerText: {
+    fontFamily: 'DMSans',
     fontSize: 14,
+    color: 'rgba(255,255,255,0.38)',
   },
-  signupLink: {
-    color: colors.primary,
+  footerLink: {
+    fontFamily: 'DMSans',
     fontSize: 14,
     fontWeight: '600',
-  },
-  decorativeContainer: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    marginTop: 32,
-  },
-  decorativeOuter: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: `${colors.primary}1A`,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  decorativeMiddle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: `${colors.primary}33`,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  decorativeInner: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: `${colors.primary}66`,
+    color: 'rgba(242,180,204,0.75)',
   },
 });

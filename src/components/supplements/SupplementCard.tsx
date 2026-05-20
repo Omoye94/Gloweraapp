@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { ChevronRight } from 'lucide-react-native';
 import { SupplementInfo } from '../../types/supplement';
 import { theme, spacing, borderRadius, shadows } from '../../theme';
 
@@ -49,7 +50,7 @@ export const SupplementCard: React.FC<SupplementCardProps> = ({
           )}
         </View>
       </View>
-      <Text style={styles.arrow}>›</Text>
+      <ChevronRight size={20} color={theme.textMuted} strokeWidth={1.5} />
     </Pressable>
   );
 };
@@ -62,13 +63,12 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.card,
     padding: spacing.md,
     marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: theme.borderLight,
     ...shadows.sm,
   },
   addedContainer: {
-    backgroundColor: 'rgba(212, 196, 232, 0.08)',
-    borderColor: 'rgba(212, 196, 232, 0.3)',
+    backgroundColor: '#FFF6F2',
+    borderWidth: 1,
+    borderColor: '#EADBD4',
   },
   pressed: {
     opacity: 0.8,
@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 16,
-    backgroundColor: 'rgba(232, 164, 200, 0.15)',
+    backgroundColor: '#EADBD4',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
@@ -96,8 +96,8 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 16,
-    fontWeight: '600',
-    color: theme.text,
+    fontFamily: 'Satoshi-Medium',
+    color: '#3A2E2B',
     flex: 1,
   },
   addedBadge: {
@@ -110,11 +110,12 @@ const styles = StyleSheet.create({
   addedText: {
     fontSize: 10,
     fontWeight: '600',
-    color: theme.primary,
+    color: '#F2B4CC',
   },
   description: {
     fontSize: 13,
-    color: theme.textSecondary,
+    fontFamily: 'DMSans',
+    color: '#6B5B52',
     lineHeight: 18,
     marginBottom: spacing.xs,
   },
@@ -125,24 +126,19 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   tag: {
-    backgroundColor: 'rgba(158, 207, 176, 0.2)',
+    backgroundColor: '#EADBD4',
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: borderRadius.pill,
   },
   tagText: {
     fontSize: 11,
-    fontWeight: '500',
-    color: theme.textSecondary,
+    fontFamily: 'DMSans',
+    color: '#6B5B52',
   },
   moreText: {
     fontSize: 11,
-    color: theme.textMuted,
-  },
-  arrow: {
-    fontSize: 24,
-    fontWeight: '300',
-    color: theme.textMuted,
-    marginLeft: spacing.sm,
+    fontFamily: 'DMSans',
+    color: '#9E8880',
   },
 });

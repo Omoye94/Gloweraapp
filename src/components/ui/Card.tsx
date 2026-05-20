@@ -4,14 +4,14 @@ import { theme, spacing, borderRadius, shadows } from '../../theme';
 
 interface CardProps {
   children: React.ReactNode;
-  variant?: 'default' | 'elevated' | 'outlined' | 'soft' | 'warm';
+  variant?: 'hero' | 'standard' | 'outlined' | 'flat';
   padding?: 'none' | 'small' | 'medium' | 'large';
   style?: ViewStyle;
 }
 
 export const Card: React.FC<CardProps> = ({
   children,
-  variant = 'default',
+  variant = 'standard',
   padding = 'medium',
   style,
 }) => {
@@ -25,34 +25,30 @@ export const Card: React.FC<CardProps> = ({
 const styles = StyleSheet.create({
   base: {
     backgroundColor: theme.surface,
-    borderRadius: borderRadius.card,
     overflow: 'hidden',
   },
 
-  // Variants
-  default: {
-    ...shadows.sm,
-    borderWidth: 1,
-    borderColor: theme.borderLight,
+  // Variants - distinct visual hierarchy
+  hero: {
+    borderRadius: borderRadius.hero,
+    ...shadows.md,
   },
-  elevated: {
-    ...shadows.lg,
+  standard: {
+    borderRadius: borderRadius.card,
+    ...shadows.sm,
   },
   outlined: {
-    borderWidth: 1.5,
+    borderRadius: borderRadius.card,
+    borderWidth: 1,
+    borderStyle: 'dashed',
     borderColor: theme.border,
     ...shadows.none,
   },
-  // New variants for warm aesthetic
-  soft: {
-    backgroundColor: theme.surfaceSecondary,
-    ...shadows.sm,
-  },
-  warm: {
-    backgroundColor: '#FFF9F5',
-    ...shadows.warmGlow,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 177, 153, 0.15)',
+  flat: {
+    borderRadius: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.borderLight,
+    ...shadows.none,
   },
 
   // Padding

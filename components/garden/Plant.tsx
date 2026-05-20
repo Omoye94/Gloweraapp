@@ -24,7 +24,7 @@ const plantSizes: Record<PlantGrowthStage, number> = {
 const glowColors: Record<PlantGrowthStage, string> = {
   seed: '#D4E8B4',
   sprout: '#B4E8C7',
-  bud: '#E8B4CB',
+  bud: '#E8C4B8',
   bloom: '#E8D4B4',
   glow: '#FFE4C7',
 };

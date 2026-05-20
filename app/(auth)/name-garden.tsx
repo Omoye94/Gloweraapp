@@ -15,11 +15,14 @@ import { theme, typography, spacing, borderRadius, shadows } from '../../src/the
 import { useUserStore } from '../../src/stores';
 
 const gardenSuggestions = [
-  'Serene Garden',
-  'My Glow Space',
-  'Peaceful Grove',
-  'Bloom Haven',
-  'Gentle Garden',
+  'Rose',
+  'Poppy',
+  'Luna',
+  'Clover',
+  'Willow',
+  'Honey',
+  'Petal',
+  'Fern',
 ];
 
 export default function NameGardenScreen() {

@@ -1,5 +1,5 @@
 import { Stack } from 'expo-router';
-import { theme } from '../../src/theme';
+import { gloweraScreen, theme } from '../../src/theme';
 
 export default function AuthLayout() {
   return (
@@ -10,7 +10,14 @@ export default function AuthLayout() {
         animation: 'slide_from_right',
       }}
     >
-      <Stack.Screen name="welcome" />
+      <Stack.Screen
+        name="welcome"
+        options={{ contentStyle: { backgroundColor: '#140C20' }, animation: 'fade' }}
+      />
+      <Stack.Screen
+        name="login"
+        options={{ contentStyle: { backgroundColor: '#140C20' }, animation: 'slide_from_right' }}
+      />
       <Stack.Screen name="philosophy" />
       <Stack.Screen name="select-habits" />
       <Stack.Screen name="name-garden" />

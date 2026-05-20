@@ -1,15 +1,17 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
+import React, { useRef } from 'react';
+import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { Habit, CompletionType, HabitCompletion } from '../../types/habit';
-import { theme, spacing, borderRadius, shadows } from '../../theme';
+import { Check } from 'lucide-react-native';
+import { Habit, HabitCompletion } from '../../types/habit';
+import { shadows } from '../../theme';
 import { categoryColors } from '../../theme/colors';
 
 interface HabitCardProps {
   habit: Habit;
   completion?: HabitCompletion;
-  onComplete: (type: CompletionType) => void;
+  onComplete: () => void;
   onUncomplete: () => void;
+  onIncrement?: () => void;
 }
 
 export const HabitCard: React.FC<HabitCardProps> = ({
@@ -17,249 +19,182 @@ export const HabitCard: React.FC<HabitCardProps> = ({
   completion,
   onComplete,
   onUncomplete,
+  onIncrement,
 }) => {
-  const categoryColor = categoryColors[habit.category] || theme.primary;
-  const isGentlyCompleted = completion?.completionType === 'gentle';
-  const isFullyCompleted = completion?.completionType === 'full';
-  const isCompleted = isGentlyCompleted || isFullyCompleted;
+  const categoryColor = categoryColors[habit.category] || '#C45A82';
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const checkAnim = useRef(new Animated.Value(0)).current;
 
-  const handleGentlyPress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (isGentlyCompleted) {
+  const hasTarget = !!habit.targetValue && habit.targetValue > 1;
+  const progressValue = completion?.progressValue ?? 0;
+  const targetValue = habit.targetValue ?? 1;
+  const unit = habit.unit ?? 'times';
+  const isCompleted = completion?.completionType === 'full' || (!hasTarget && !!completion);
+
+  const runCheckAnimation = () => {
+    checkAnim.setValue(0);
+    Animated.spring(checkAnim, {
+      toValue: 1,
+      friction: 5,
+      tension: 200,
+      useNativeDriver: true,
+    }).start();
+    Animated.sequence([
+      Animated.spring(scaleAnim, { toValue: 0.97, useNativeDriver: true, friction: 8 }),
+      Animated.spring(scaleAnim, { toValue: 1.0, friction: 5, useNativeDriver: true }),
+    ]).start();
+  };
+
+  const handlePress = () => {
+    if (isCompleted) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       onUncomplete();
+    } else if (hasTarget && onIncrement) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      onIncrement();
     } else {
-      onComplete('gentle');
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      runCheckAnimation();
+      onComplete();
     }
   };
 
-  const handleFullyPress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (isFullyCompleted) {
-      onUncomplete();
-    } else {
-      onComplete('full');
-    }
-  };
+  const checkScale = checkAnim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0.6, 1.2, 1],
+  });
 
   return (
-    <View style={[styles.container, isCompleted && styles.completedContainer]}>
-      {/* Category accent bar */}
-      <View style={[styles.accentBar, { backgroundColor: categoryColor }]} />
+    <Animated.View style={[styles.container, { transform: [{ scale: scaleAnim }] }]}>
+      <Pressable
+        onPress={handlePress}
+        style={({ pressed }) => [styles.inner, pressed && styles.innerPressed]}
+      >
+        {/* Checkbox */}
+        <View style={[styles.checkbox, isCompleted && styles.checkboxChecked]}>
+          {isCompleted && (
+            <Animated.View style={{ transform: [{ scale: checkScale }] }}>
+              <Check size={14} color="#FEFAF9" strokeWidth={3} />
+            </Animated.View>
+          )}
+        </View>
 
-      <View style={styles.mainContent}>
-        {/* Icon and name */}
-        <View style={styles.habitInfo}>
-          <View style={[styles.iconContainer, { backgroundColor: `${categoryColor}15` }]}>
-            <Text style={styles.icon}>{habit.icon}</Text>
-          </View>
-          <View style={styles.habitTextContainer}>
-            <Text style={[styles.name, isCompleted && styles.completedText]} numberOfLines={2}>
-              {habit.name}
-            </Text>
-            {/* Supplement metadata */}
-            {habit.category === 'supplements' && habit.supplementMeta && (
-              <View style={styles.supplementMeta}>
-                {habit.supplementMeta.dosage && (
-                  <View style={styles.metaItem}>
-                    <Text style={styles.metaIcon}>💊</Text>
-                    <Text style={styles.metaText}>{habit.supplementMeta.dosage}</Text>
-                  </View>
-                )}
-                {habit.supplementMeta.timingPreference && (
-                  <View style={styles.metaItem}>
-                    <Text style={styles.metaIcon}>
-                      {habit.supplementMeta.timingPreference === 'morning' ? '🌅' :
-                       habit.supplementMeta.timingPreference === 'evening' ? '🌙' :
-                       habit.supplementMeta.timingPreference === 'with-food' ? '🍽️' : '⏰'}
-                    </Text>
-                    <Text style={styles.metaText}>
-                      {habit.supplementMeta.timingPreference === 'morning' ? 'Morning' :
-                       habit.supplementMeta.timingPreference === 'evening' ? 'Evening' :
-                       habit.supplementMeta.timingPreference === 'with-food' ? 'With food' : 'Any time'}
-                    </Text>
-                  </View>
-                )}
+        {/* Text */}
+        <View style={styles.textContainer}>
+          <Text
+            style={[styles.name, isCompleted && styles.nameCompleted]}
+            numberOfLines={1}
+          >
+            {habit.name}
+          </Text>
+          {hasTarget && (
+            <View style={styles.progressRow}>
+              <View style={styles.progressTrack}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    {
+                      width: `${Math.min((progressValue / targetValue) * 100, 100)}%`,
+                      backgroundColor: categoryColor,
+                    },
+                  ]}
+                />
               </View>
-            )}
-          </View>
+              <Text style={styles.progressLabel}>
+                {progressValue}/{targetValue} {unit}
+              </Text>
+            </View>
+          )}
         </View>
 
-        {/* Completion buttons */}
-        <View style={styles.buttonsContainer}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.completionButton,
-              isGentlyCompleted ? styles.gentleActive : styles.gentleInactive,
-              pressed && styles.buttonPressed,
-            ]}
-            onPress={handleGentlyPress}
-          >
-            <Text style={[
-              styles.buttonLabel,
-              isGentlyCompleted && styles.activeLabel,
-            ]}>
-              gently
-            </Text>
-            <Text style={[
-              styles.buttonPoints,
-              isGentlyCompleted && styles.activeLabel,
-            ]}>
-              +5
-            </Text>
-          </Pressable>
-
-          <Pressable
-            style={({ pressed }) => [
-              styles.completionButton,
-              isFullyCompleted ? styles.fullyActive : styles.fullyInactive,
-              pressed && styles.buttonPressed,
-            ]}
-            onPress={handleFullyPress}
-          >
-            <Text style={[
-              styles.buttonLabel,
-              isFullyCompleted && styles.activeLabel,
-            ]}>
-              fully
-            </Text>
-            <Text style={[
-              styles.buttonPoints,
-              isFullyCompleted && styles.activeLabel,
-            ]}>
-              +10
-            </Text>
-          </Pressable>
-        </View>
-      </View>
-    </View>
+        {/* Category dot */}
+        <View style={[styles.categoryDot, { backgroundColor: categoryColor }]} />
+      </Pressable>
+    </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: theme.surface,
-    borderRadius: borderRadius.card,
-    marginBottom: spacing.sm + 4,
-    overflow: 'hidden',
-    ...shadows.sm,
-    borderWidth: 1,
-    borderColor: theme.borderLight,
-  },
-  completedContainer: {
-    backgroundColor: '#FAFBFA',
-    borderColor: theme.borderLight,
-  },
-  accentBar: {
-    height: 3,
-    width: '100%',
-  },
-  mainContent: {
-    padding: spacing.md,
-    paddingTop: spacing.md - 2,
-  },
-  habitInfo: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: spacing.md,
-  },
-  iconContainer: {
-    width: 44,
-    height: 44,
+    marginBottom: 8,
     borderRadius: 14,
+    ...shadows.sm,
+  },
+  inner: {
+    backgroundColor: '#FEFAF9',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  innerPressed: {
+    opacity: 0.85,
+  },
+
+  // Checkbox
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: '#EADBD4',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.sm + 4,
+    marginRight: 12,
+    backgroundColor: 'transparent',
   },
-  icon: {
-    fontSize: 22,
+  checkboxChecked: {
+    backgroundColor: '#C45A82',
+    borderColor: '#C45A82',
   },
-  habitTextContainer: {
+
+  // Text
+  textContainer: {
     flex: 1,
   },
   name: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: theme.text,
-    letterSpacing: -0.2,
+    fontSize: 15,
+    fontFamily: 'DMSans',
+    color: '#3A2E2B',
   },
-  completedText: {
-    color: theme.textSecondary,
+  nameCompleted: {
+    color: '#B8A09C',
+    textDecorationLine: 'line-through',
   },
-  supplementMeta: {
+
+  // Progress (for target habits)
+  progressRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
     marginTop: 6,
-    gap: spacing.sm,
   },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(232, 164, 200, 0.1)',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderRadius: borderRadius.pill,
-  },
-  metaIcon: {
-    fontSize: 10,
-    marginRight: 4,
-  },
-  metaText: {
-    fontSize: 11,
-    color: theme.textSecondary,
-    fontWeight: '500',
-  },
-  buttonsContainer: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  completionButton: {
+  progressTrack: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.sm + 2,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.button,
-    gap: 6,
+    height: 4,
+    backgroundColor: '#EDE4E2',
+    borderRadius: 9999,
+    overflow: 'hidden',
   },
-  gentleInactive: {
-    backgroundColor: '#FFF9F5',
-    borderWidth: 1.5,
-    borderColor: '#FFEDE0',
+  progressFill: {
+    height: '100%',
+    borderRadius: 9999,
   },
-  gentleActive: {
-    backgroundColor: theme.secondary,
-    borderWidth: 1.5,
-    borderColor: theme.secondary,
-    ...shadows.warmGlow,
+  progressLabel: {
+    fontSize: 11,
+    fontFamily: 'DMSans',
+    color: '#9E8880',
+    minWidth: 60,
+    textAlign: 'right',
   },
-  fullyInactive: {
-    backgroundColor: '#FFF5F7',
-    borderWidth: 1.5,
-    borderColor: '#FFE8ED',
-  },
-  fullyActive: {
-    backgroundColor: theme.primary,
-    borderWidth: 1.5,
-    borderColor: theme.primary,
-    ...shadows.glow,
-  },
-  buttonPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
-  },
-  buttonLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.textSecondary,
-    letterSpacing: -0.2,
-  },
-  buttonPoints: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: theme.textMuted,
-  },
-  activeLabel: {
-    color: theme.surface,
+
+  // Category dot
+  categoryDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginLeft: 10,
+    opacity: 0.7,
   },
 });

@@ -6,6 +6,13 @@ interface OnboardingState {
   validation_items: string[];
   focus_areas: string[];
   selected_rituals: string[];
+  selected_supplements: string[];
+  first_reflection: string;
+  garden_name: string;
+  morning_reminder: boolean;
+  evening_reminder: boolean;
+  morning_time: string;
+  evening_time: string;
   currentStep: number;
 }
 
@@ -16,6 +23,13 @@ interface OnboardingActions {
   toggleFocusArea: (area: string) => void;
   setSelectedRituals: (rituals: string[]) => void;
   toggleRitual: (ritual: string) => void;
+  toggleSupplement: (supplement: string) => void;
+  setFirstReflection: (text: string) => void;
+  setGardenName: (name: string) => void;
+  setMorningReminder: (enabled: boolean) => void;
+  setEveningReminder: (enabled: boolean) => void;
+  setMorningTime: (time: string) => void;
+  setEveningTime: (time: string) => void;
   setCurrentStep: (step: number) => void;
   resetOnboarding: () => void;
 }
@@ -24,6 +38,13 @@ const initialState: OnboardingState = {
   validation_items: [],
   focus_areas: [],
   selected_rituals: [],
+  selected_supplements: [],
+  first_reflection: '',
+  garden_name: '',
+  morning_reminder: true,
+  evening_reminder: true,
+  morning_time: '8:00 AM',
+  evening_time: '9:00 PM',
   currentStep: 1,
 };
 
@@ -62,6 +83,27 @@ export const useOnboardingStore = create<OnboardingState & OnboardingActions>()(
           set({ selected_rituals: current.filter((r) => r !== ritual) });
         } else if (current.length < 5) {
           set({ selected_rituals: [...current, ritual] });
+        }
+      },
+
+      setFirstReflection: (text) => set({ first_reflection: text }),
+
+      setGardenName: (name) => set({ garden_name: name }),
+
+      setMorningReminder: (enabled) => set({ morning_reminder: enabled }),
+
+      setEveningReminder: (enabled) => set({ evening_reminder: enabled }),
+
+      setMorningTime: (time) => set({ morning_time: time }),
+
+      setEveningTime: (time) => set({ evening_time: time }),
+
+      toggleSupplement: (supplement) => {
+        const current = get().selected_supplements;
+        if (current.includes(supplement)) {
+          set({ selected_supplements: current.filter((s) => s !== supplement) });
+        } else {
+          set({ selected_supplements: [...current, supplement] });
         }
       },
 

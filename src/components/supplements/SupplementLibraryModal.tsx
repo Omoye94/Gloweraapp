@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,8 +12,9 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SupplementInfo, SupplementCategory } from '../../types/supplement';
-import { SUPPLEMENT_CATALOG } from '../../constants/supplements';
+import { Search, X, Plus, ChevronRight } from 'lucide-react-native';
+import { SupplementInfo, SupplementCategory, WellnessGoal } from '../../types/supplement';
+import { SUPPLEMENT_CATALOG, WELLNESS_GOALS } from '../../constants/supplements';
 import { useHabitStore, useSupplementStore } from '../../stores';
 import { CategoryFilterBar } from './CategoryFilterBar';
 import { SupplementCard } from './SupplementCard';
@@ -27,31 +28,49 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 interface SupplementLibraryModalProps {
   visible: boolean;
   onClose: () => void;
+  initialGoalFilter?: WellnessGoal;
 }
 
 export const SupplementLibraryModal: React.FC<SupplementLibraryModalProps> = ({
   visible,
   onClose,
+  initialGoalFilter,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<SupplementCategory | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSupplement, setSelectedSupplement] = useState<SupplementInfo | null>(null);
   const [showCreateCustom, setShowCreateCustom] = useState(false);
+  const [goalFilter, setGoalFilter] = useState<WellnessGoal | null>(null);
+
+  useEffect(() => {
+    if (visible && initialGoalFilter) {
+      setGoalFilter(initialGoalFilter);
+    }
+    if (!visible) {
+      setGoalFilter(null);
+    }
+  }, [visible, initialGoalFilter]);
 
   const { addSupplementHabit, habits } = useHabitStore();
-  const { markSupplementAdded, addedSupplementIds } = useSupplementStore();
+  const { markSupplementAdded } = useSupplementStore();
 
-  // Get list of supplement IDs already added as habits
+  // Derive "already added" purely from the live habits list to avoid stale state
   const addedIds = useMemo(() => {
-    const idsFromHabits = habits
-      .filter(h => h.category === 'supplements' && h.supplementMeta?.supplementInfoId)
-      .map(h => h.supplementMeta!.supplementInfoId!);
-    return new Set([...idsFromHabits, ...addedSupplementIds]);
-  }, [habits, addedSupplementIds]);
+    return new Set(
+      habits
+        .filter(h => h.category === 'supplements' && h.supplementMeta?.supplementInfoId)
+        .map(h => h.supplementMeta!.supplementInfoId!)
+    );
+  }, [habits]);
 
-  // Filter supplements based on category and search
+  // Filter supplements based on category, search, and goal
   const filteredSupplements = useMemo(() => {
     let results = SUPPLEMENT_CATALOG;
+
+    // Filter by wellness goal
+    if (goalFilter) {
+      results = results.filter(s => s.tags.includes(goalFilter));
+    }
 
     // Filter by category
     if (selectedCategory !== 'all') {
@@ -70,7 +89,7 @@ export const SupplementLibraryModal: React.FC<SupplementLibraryModalProps> = ({
     }
 
     return results;
-  }, [selectedCategory, searchQuery]);
+  }, [selectedCategory, searchQuery, goalFilter]);
 
   const handleSelectSupplement = (supplement: SupplementInfo) => {
     setSelectedSupplement(supplement);
@@ -87,14 +106,17 @@ export const SupplementLibraryModal: React.FC<SupplementLibraryModalProps> = ({
     });
     markSupplementAdded(selectedSupplement.id);
 
-    // Go back to list
-    setSelectedSupplement(null);
+    // Let the "Added" animation play before going back to list
+    setTimeout(() => {
+      setSelectedSupplement(null);
+    }, 1200);
   };
 
   const handleClose = () => {
     setSelectedSupplement(null);
     setSearchQuery('');
     setSelectedCategory('all');
+    setGoalFilter(null);
     onClose();
   };
 
@@ -119,7 +141,7 @@ export const SupplementLibraryModal: React.FC<SupplementLibraryModalProps> = ({
       ) : (
         <View style={styles.container}>
           <LinearGradient
-            colors={['#FAE8ED', '#F5EBF8', '#FAF5FC']}
+            colors={['#FBF7F7', '#EDE4DC']}
             style={styles.gradientBackground}
           />
 
@@ -145,7 +167,7 @@ export const SupplementLibraryModal: React.FC<SupplementLibraryModalProps> = ({
 
             {/* Search */}
             <View style={styles.searchContainer}>
-              <Text style={styles.searchIcon}>🔍</Text>
+              <Search size={16} color={theme.textMuted} strokeWidth={2} style={{ marginRight: spacing.sm }} />
               <TextInput
                 style={styles.searchInput}
                 value={searchQuery}
@@ -158,11 +180,32 @@ export const SupplementLibraryModal: React.FC<SupplementLibraryModalProps> = ({
                   onPress={() => setSearchQuery('')}
                   style={styles.clearButton}
                 >
-                  <Text style={styles.clearButtonText}>✕</Text>
+                  <X size={14} color={theme.textMuted} strokeWidth={2} />
                 </Pressable>
               )}
             </View>
           </View>
+
+          {/* Active Goal Filter Chip */}
+          {goalFilter && (() => {
+            const goalInfo = WELLNESS_GOALS.find(g => g.id === goalFilter);
+            return goalInfo ? (
+              <View style={styles.goalFilterContainer}>
+                <Pressable
+                  onPress={() => setGoalFilter(null)}
+                  style={({ pressed }) => [
+                    styles.goalFilterChip,
+                    pressed && { opacity: 0.7 },
+                  ]}
+                >
+                  <Text style={styles.goalFilterText}>
+                    {goalInfo.icon} {goalInfo.name}
+                  </Text>
+                  <X size={14} color="#3A2E2B" strokeWidth={2} style={{ marginLeft: 6 }} />
+                </Pressable>
+              </View>
+            ) : null;
+          })()}
 
           {/* Category Filter */}
           <CategoryFilterBar
@@ -192,14 +235,8 @@ export const SupplementLibraryModal: React.FC<SupplementLibraryModalProps> = ({
                 pressed && { opacity: 0.9, transform: [{ scale: 0.99 }] },
               ]}
             >
-              <LinearGradient
-                colors={['rgba(232, 164, 200, 0.12)', 'rgba(212, 196, 232, 0.12)']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFillObject}
-              />
               <View style={styles.createCustomIcon}>
-                <Text style={styles.createCustomIconText}>+</Text>
+                <Plus size={22} color="#F2B4CC" strokeWidth={1.5} />
               </View>
               <View style={styles.createCustomContent}>
                 <Text style={styles.createCustomTitle}>Create Custom Supplement</Text>
@@ -207,12 +244,12 @@ export const SupplementLibraryModal: React.FC<SupplementLibraryModalProps> = ({
                   Add your own supplement to track
                 </Text>
               </View>
-              <Text style={styles.createCustomArrow}>›</Text>
+              <ChevronRight size={20} color={theme.textMuted} strokeWidth={1.5} />
             </Pressable>
 
             {filteredSupplements.length === 0 ? (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyIcon}>🔍</Text>
+                <Search size={48} color={theme.textMuted} strokeWidth={1.5} style={{ marginBottom: spacing.md }} />
                 <Text style={styles.emptyTitle}>No supplements found</Text>
                 <Text style={styles.emptyText}>
                   Try adjusting your search or filters
@@ -246,7 +283,7 @@ export const SupplementLibraryModal: React.FC<SupplementLibraryModalProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.background,
+    backgroundColor: '#FBF7F7',
   },
   gradientBackground: {
     ...StyleSheet.absoluteFillObject,
@@ -268,12 +305,12 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: '600',
-    color: theme.text,
+    color: '#3A2E2B',
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: theme.textSecondary,
+    color: '#6B5B52',
   },
   closeButton: {
     paddingHorizontal: spacing.sm,
@@ -282,33 +319,45 @@ const styles = StyleSheet.create({
   closeButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: theme.primary,
+    color: '#F2B4CC',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: '#FFFFFF',
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.md,
     borderWidth: 1,
-    borderColor: theme.borderLight,
-  },
-  searchIcon: {
-    fontSize: 16,
-    marginRight: spacing.sm,
+    borderColor: '#EDE4DC',
   },
   searchInput: {
     flex: 1,
     paddingVertical: spacing.sm + 2,
     fontSize: 15,
-    color: theme.text,
+    color: '#3A2E2B',
   },
   clearButton: {
     padding: spacing.xs,
   },
-  clearButtonText: {
+  goalFilterContainer: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  goalFilterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.xs + 2,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.pill,
+    backgroundColor: '#FBF7F7',
+    borderWidth: 1,
+    borderColor: '#EDE4DC',
+  },
+  goalFilterText: {
     fontSize: 14,
-    color: theme.textMuted,
+    fontWeight: '600',
+    color: '#3A2E2B',
   },
   scrollView: {
     flex: 1,
@@ -322,12 +371,12 @@ const styles = StyleSheet.create({
   createCustomCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.surface,
+    backgroundColor: '#FFFFFF',
     borderRadius: borderRadius.card,
     padding: spacing.md,
     marginBottom: spacing.md,
     borderWidth: 1.5,
-    borderColor: theme.accent,
+    borderColor: '#EDE4DC',
     borderStyle: 'dashed',
     overflow: 'hidden',
   },
@@ -335,15 +384,10 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: 'rgba(232, 164, 200, 0.2)',
+    backgroundColor: '#EDE4DC',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
-  },
-  createCustomIconText: {
-    fontSize: 24,
-    fontWeight: '300',
-    color: theme.primary,
   },
   createCustomContent: {
     flex: 1,
@@ -351,35 +395,26 @@ const styles = StyleSheet.create({
   createCustomTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: theme.text,
+    color: '#3A2E2B',
     marginBottom: 2,
   },
   createCustomSubtitle: {
     fontSize: 13,
-    color: theme.textSecondary,
-  },
-  createCustomArrow: {
-    fontSize: 24,
-    fontWeight: '300',
-    color: theme.textMuted,
+    color: '#6B5B52',
   },
   emptyState: {
     alignItems: 'center',
     paddingVertical: spacing.xxl,
   },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: spacing.md,
-  },
   emptyTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: theme.text,
+    color: '#3A2E2B',
     marginBottom: spacing.xs,
   },
   emptyText: {
     fontSize: 14,
-    color: theme.textSecondary,
+    color: '#6B5B52',
     textAlign: 'center',
   },
 });

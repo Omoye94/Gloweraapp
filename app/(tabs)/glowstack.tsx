@@ -1,361 +1,775 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   Pressable,
+  Alert,
+  Platform,
+  Animated,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHabitStore, useSupplementStore } from '../../src/stores';
 import {
-  GlowStackHeader,
-  SupplementHabitList,
   SupplementLibraryModal,
-  GoalsSelectionModal,
   SupplementDetailView,
-  SupplementTrackerSection,
 } from '../../src/components/supplements';
-import { SupplementInfo } from '../../src/types/supplement';
-import { theme, spacing, borderRadius, shadows } from '../../src/theme';
+import { SupplementInfo, WellnessGoal } from '../../src/types/supplement';
+import { SUPPLEMENT_CATALOG } from '../../src/constants/supplements';
+import { SolarIcon } from '../../src/components/ui/SolarIcon';
+
+const SUPP_COLORS = ['#F4A888', '#B8CFB1', '#D8C9EC', '#F2B4CC', '#FBD4BF'];
 
 export default function GlowStackScreen() {
+  const insets = useSafeAreaInsets();
   const [showLibraryModal, setShowLibraryModal] = useState(false);
-  const [showGoalsModal, setShowGoalsModal] = useState(false);
   const [selectedSupplement, setSelectedSupplement] = useState<SupplementInfo | null>(null);
+  const [selectedGoalFilter, setSelectedGoalFilter] = useState<WellnessGoal | undefined>(undefined);
+  const [editingHabit, setEditingHabit] = useState<any>(null);
+  const [editDosage, setEditDosage] = useState('');
+  const [editTiming, setEditTiming] = useState('morning');
+  const [editNotes, setEditNotes] = useState('');
 
-  const { getSuggestions, hasGoals } = useSupplementStore();
-  const { addSupplementHabit, habits } = useHabitStore();
-  const { markSupplementAdded, addedSupplementIds } = useSupplementStore();
+  const { habits, dailySummaries, completeHabit, uncompleteHabit, getCompletionForToday, removeHabit, updateSupplementMeta } = useHabitStore();
+  const { markSupplementAdded, markSupplementRemoved } = useSupplementStore();
 
-  const suggestions = getSuggestions(3);
+  const supplementHabits = useMemo(
+    () => habits.filter(h => h.category === 'supplements' && h.isActive).sort((a, b) => a.order - b.order),
+    [habits]
+  );
 
-  // Get list of supplement IDs already added as habits
+  const taken = supplementHabits.filter(h => getCompletionForToday(h.id) !== undefined).length;
+  const total = supplementHabits.length;
+  const progress = total > 0 ? Math.round((taken / total) * 100) : 0;
+
+  const morningSupps = supplementHabits.filter(h => {
+    const timing = (h.supplementMeta?.timingPreference ?? '').toLowerCase();
+    return !timing.includes('evening') && !timing.includes('night');
+  });
+  const eveningSupps = supplementHabits.filter(h => {
+    const timing = (h.supplementMeta?.timingPreference ?? '').toLowerCase();
+    return timing.includes('evening') || timing.includes('night');
+  });
+
   const addedIds = useMemo(() => {
-    const idsFromHabits = habits
-      .filter(h => h.category === 'supplements' && h.supplementMeta?.supplementInfoId)
-      .map(h => h.supplementMeta!.supplementInfoId!);
-    return new Set([...idsFromHabits, ...addedSupplementIds]);
-  }, [habits, addedSupplementIds]);
+    return new Set(
+      habits
+        .filter(h => h.category === 'supplements' && h.supplementMeta?.supplementInfoId)
+        .map(h => h.supplementMeta!.supplementInfoId!)
+    );
+  }, [habits]);
+
+  // Week dates Mon–Sun
+  const weekDates = useMemo(() => {
+    const today = new Date();
+    const dow = today.getDay();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    });
+  }, []);
+  const todayDayIdx = useMemo(() => { const d = new Date().getDay(); return d === 0 ? 6 : d - 1; }, []);
+
+  // Completion celebration animation
+  const alreadyComplete = taken === total && total > 0;
+  const celebScale   = useRef(new Animated.Value(alreadyComplete ? 1 : 0.94)).current;
+  const celebOpacity = useRef(new Animated.Value(alreadyComplete ? 1 : 0)).current;
+  const prevTakenRef = useRef(taken);
+
+  useEffect(() => {
+    const justCompleted = taken === total && total > 0 && prevTakenRef.current < total;
+    if (justCompleted) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Animated.parallel([
+        Animated.spring(celebScale,   { toValue: 1, useNativeDriver: true, tension: 120, friction: 8 }),
+        Animated.timing(celebOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+      ]).start();
+    }
+    if (taken < total) { celebScale.setValue(0.94); celebOpacity.setValue(0); }
+    prevTakenRef.current = taken;
+  }, [taken, total]);
+
+  const handleToggle = (habitId: string) => {
+    const completion = getCompletionForToday(habitId);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (completion) {
+      uncompleteHabit(habitId);
+    } else {
+      completeHabit(habitId, 'full');
+    }
+  };
 
   const handleBrowseSupplements = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedGoalFilter(undefined);
     setShowLibraryModal(true);
   };
 
-  const handleEditGoals = () => {
-    setShowGoalsModal(true);
+  const handleRemoveSupplement = (habitId: string, supplementInfoId?: string) => {
+    Alert.alert('Remove Supplement', 'Remove this supplement from your stack?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove', style: 'destructive',
+        onPress: () => {
+          removeHabit(habitId);
+          if (supplementInfoId) markSupplementRemoved(supplementInfoId);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        },
+      },
+    ]);
   };
 
-  const handleViewSupplement = (supplement: SupplementInfo) => {
-    setSelectedSupplement(supplement);
+  const handleOpenEdit = (habit: any) => {
+    const suppInfo = SUPPLEMENT_CATALOG.find((s: SupplementInfo) => s.id === habit.supplementMeta?.supplementInfoId);
+    setEditDosage(habit.supplementMeta?.dosage || suppInfo?.typicalDosage || '');
+    setEditTiming(habit.supplementMeta?.timingPreference || suppInfo?.timing || 'morning');
+    setEditNotes(habit.supplementMeta?.notes || '');
+    setEditingHabit(habit);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingHabit) return;
+    updateSupplementMeta(editingHabit.id, {
+      dosage: editDosage,
+      timingPreference: editTiming,
+      notes: editNotes,
+    });
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setEditingHabit(null);
   };
 
   const handleAddToHabits = (dosage: string, timing: string, notes: string) => {
     if (!selectedSupplement) return;
-
-    addSupplementHabit(selectedSupplement, {
-      dosage,
-      timingPreference: timing,
-      notes,
-    });
+    const { addSupplementHabit } = useHabitStore.getState();
+    addSupplementHabit(selectedSupplement, { dosage, timingPreference: timing, notes });
     markSupplementAdded(selectedSupplement.id);
     setSelectedSupplement(null);
   };
 
-  const handleBackFromDetail = () => {
-    setSelectedSupplement(null);
+  const renderSupplementRow = (habit: any, colorIndex: number) => {
+    const isTaken = getCompletionForToday(habit.id) !== undefined;
+    const color = SUPP_COLORS[colorIndex % SUPP_COLORS.length];
+    const suppInfo = habit.supplementMeta?.supplementInfoId
+      ? SUPPLEMENT_CATALOG.find((s: SupplementInfo) => s.id === habit.supplementMeta!.supplementInfoId)
+      : null;
+    const displayName = suppInfo?.name ?? habit.name;
+    const dose = habit.supplementMeta?.dosage || suppInfo?.typicalDosage || '';
+    const timing = suppInfo?.timing ?? 'morning';
+    const emoji = timing === 'evening' ? '🌙' : '💊';
+
+    return (
+      <Pressable
+        key={habit.id}
+        style={[styles.suppRow, isTaken && { backgroundColor: `${color}20` }]}
+        onPress={() => handleToggle(habit.id)}
+        onLongPress={() => handleRemoveSupplement(habit.id, habit.supplementMeta?.supplementInfoId)}
+      >
+        <View style={[styles.suppIconBox, { backgroundColor: `${color}30` }]}>
+          <Text style={styles.suppEmoji}>{habit.icon || emoji}</Text>
+        </View>
+        <View style={styles.suppInfo}>
+          <Text style={[styles.suppName, isTaken && styles.suppNameTaken]} numberOfLines={1}>
+            {displayName}
+          </Text>
+          {dose ? <Text style={styles.suppDose}>{dose}</Text> : null}
+          <View style={styles.weekDots}>
+            {(['M','T','W','T','F','S','S']).map((label, i) => {
+              const dateKey = weekDates[i];
+              const done = dailySummaries[dateKey]?.completions[habit.id] !== undefined;
+              const isToday = i === todayDayIdx;
+              return (
+                <View key={i} style={styles.weekDotCol}>
+                  <View
+                    style={[
+                      styles.weekDot,
+                      done && { backgroundColor: color },
+                      isToday && !done && styles.weekDotToday,
+                    ]}
+                  />
+                  <Text style={[styles.weekDotLabel, isToday && { color: '#C45A82' }]}>{label}</Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+        <Pressable
+          onPress={() => handleOpenEdit(habit)}
+          hitSlop={8}
+          style={styles.editBtn}
+        >
+          <SolarIcon name="pen-new-square-bold" size={15} color="#B8A9A5" />
+        </Pressable>
+        <Pressable
+          onPress={() => handleToggle(habit.id)}
+          hitSlop={6}
+          style={[styles.checkBox, isTaken && { backgroundColor: color, borderColor: color }]}
+        >
+          {isTaken && <SolarIcon name="check-circle-bold" size={14} color="#FFFAF8" />}
+        </Pressable>
+      </Pressable>
+    );
   };
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={['#FAE8ED', '#F5EBF8', '#E8D9F0']}
-        style={styles.gradientBackground}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      />
-
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20 }]}
         showsVerticalScrollIndicator={false}
-        bounces={true}
+        bounces
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Your Glow Stack</Text>
-          <Text style={styles.subtitle}>Your supplement journey</Text>
+          <View style={styles.headerTextBlock}>
+            <Text style={styles.headerLabel}>SUPPLEMENT STACK</Text>
+            <Text style={styles.title}>Nourish from within</Text>
+          </View>
+          <Pressable
+            style={({ pressed }) => [styles.addButton, pressed && { opacity: 0.8, transform: [{ scale: 0.95 }] }]}
+            onPress={handleBrowseSupplements}
+          >
+            <SolarIcon name="add-circle-bold" color="#FFFAF8" size={24} />
+          </Pressable>
         </View>
 
-        {/* Quick Check-off & Weekly View */}
-        <SupplementTrackerSection
-          onOpenLibrary={handleBrowseSupplements}
-        />
-
-        {/* Wellness Focus */}
-        <GlowStackHeader onEditGoals={handleEditGoals} />
-
-        {/* Today's Supplements */}
-        <SupplementHabitList onBrowseSupplements={handleBrowseSupplements} />
-
-        {/* Suggested For You - Only show if has goals and suggestions */}
-        {hasGoals() && suggestions.length > 0 && (
-          <View style={styles.suggestionsSection}>
-            <LinearGradient
-              colors={['rgba(158, 207, 176, 0.1)', 'rgba(212, 196, 232, 0.1)']}
-              style={styles.suggestionsGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            />
-
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionHeaderLeft}>
-                <Text style={styles.sectionLabel}>SUGGESTED FOR YOU</Text>
-              </View>
-              <Pressable
-                onPress={handleBrowseSupplements}
-                style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+        {/* TODAY'S STACK progress card / celebration */}
+        {total > 0 && (
+          taken === total ? (
+            <Animated.View style={{ opacity: celebOpacity, transform: [{ scale: celebScale }], marginBottom: 20 }}>
+              <LinearGradient
+                colors={['#FFF0F5', '#F6DFE8', '#EDD5CB']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.celebCard}
               >
-                <Text style={styles.seeAllText}>See all</Text>
-              </Pressable>
+                <Text style={styles.celebEmoji}>✦</Text>
+                <View style={styles.celebBody}>
+                  <Text style={styles.celebTitle}>Stack complete</Text>
+                  <Text style={styles.celebSub}>You nourished yourself today · {total}/{total} taken</Text>
+                </View>
+              </LinearGradient>
+            </Animated.View>
+          ) : (
+            <View style={styles.progressCard}>
+              <View style={styles.progressCardHeader}>
+                <Text style={styles.progressCardLabel}>TODAY'S STACK</Text>
+                <Text style={styles.progressCardCount}>{taken}/{total} taken</Text>
+              </View>
+              <View style={styles.progressTrack}>
+                <LinearGradient
+                  colors={['#F2B4CC', '#E87FA6', '#9B86D4']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={[styles.progressFill, { width: `${progress}%` as any }]}
+                />
+              </View>
             </View>
+          )
+        )}
 
-            <View style={styles.suggestionsList}>
-              {suggestions.map((supplement) => (
-                <Pressable
-                  key={supplement.id}
-                  style={({ pressed }) => [
-                    styles.suggestionItem,
-                    pressed && styles.suggestionItemPressed,
-                  ]}
-                  onPress={() => handleViewSupplement(supplement)}
-                >
-                  <View style={styles.suggestionIcon}>
-                    <Text style={styles.suggestionIconText}>{supplement.icon}</Text>
-                  </View>
-                  <View style={styles.suggestionInfo}>
-                    <Text style={styles.suggestionName} numberOfLines={1}>
-                      {supplement.name}
-                    </Text>
-                    <Text style={styles.suggestionBenefit} numberOfLines={1}>
-                      {supplement.benefits[0]}
-                    </Text>
-                  </View>
-                  <Text style={styles.suggestionArrow}>›</Text>
-                </Pressable>
-              ))}
+        {/* Empty state */}
+        {total === 0 && (
+          <Pressable
+            style={({ pressed }) => [styles.emptyCard, pressed && { opacity: 0.85 }]}
+            onPress={handleBrowseSupplements}
+          >
+            <Text style={styles.emptyIcon}>💊</Text>
+            <Text style={styles.emptyTitle}>Build your stack</Text>
+            <Text style={styles.emptySubtitle}>Add supplements to track your daily intake</Text>
+            <View style={styles.emptyButton}>
+              <Text style={styles.emptyButtonText}>Browse Supplements</Text>
             </View>
+          </Pressable>
+        )}
 
-            <Text style={styles.suggestionsDisclaimer}>
-              Based on your wellness goals
-            </Text>
+        {/* Morning */}
+        {morningSupps.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>MORNING</Text>
+            <View style={styles.suppList}>
+              {morningSupps.map((h, i) => renderSupplementRow(h, i))}
+            </View>
           </View>
         )}
 
-        {/* Browse All Button */}
-        <Pressable
-          style={({ pressed }) => [
-            styles.browseButton,
-            pressed && styles.browseButtonPressed,
-          ]}
-          onPress={handleBrowseSupplements}
-        >
-          <LinearGradient
-            colors={['rgba(212, 196, 232, 0.3)', 'rgba(232, 164, 200, 0.2)']}
-            style={styles.browseButtonGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          />
-          <Text style={styles.browseButtonIcon}>+</Text>
-          <Text style={styles.browseButtonText}>Browse All Supplements</Text>
-        </Pressable>
+        {/* Evening */}
+        {eveningSupps.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>EVENING</Text>
+            <View style={styles.suppList}>
+              {eveningSupps.map((h, i) => renderSupplementRow(h, morningSupps.length + i))}
+            </View>
+          </View>
+        )}
 
-        <View style={styles.bottomSpacer} />
+        <View style={{ height: 120 }} />
       </ScrollView>
 
-      {/* Modals */}
       <SupplementLibraryModal
         visible={showLibraryModal}
         onClose={() => setShowLibraryModal(false)}
+        initialGoalFilter={selectedGoalFilter}
       />
 
-      <GoalsSelectionModal
-        visible={showGoalsModal}
-        onClose={() => setShowGoalsModal(false)}
-      />
-
-      {/* Supplement Detail Modal */}
       {selectedSupplement && (
-        <View style={styles.detailOverlay}>
+        <View style={StyleSheet.absoluteFill}>
           <SupplementDetailView
             supplement={selectedSupplement}
             isAdded={addedIds.has(selectedSupplement.id)}
             onAddToHabits={handleAddToHabits}
-            onClose={handleBackFromDetail}
+            onClose={() => setSelectedSupplement(null)}
           />
         </View>
       )}
+
+      {/* Edit supplement modal */}
+      <Modal
+        visible={!!editingHabit}
+        animationType="slide"
+        presentationStyle="formSheet"
+        onRequestClose={() => setEditingHabit(null)}
+      >
+        <KeyboardAvoidingView
+          style={styles.editModal}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          {/* Modal header */}
+          <View style={styles.editModalHeader}>
+            <Pressable onPress={() => setEditingHabit(null)} hitSlop={8}>
+              <Text style={styles.editModalCancel}>Cancel</Text>
+            </Pressable>
+            <Text style={styles.editModalTitle}>Edit Supplement</Text>
+            <Pressable onPress={handleSaveEdit} hitSlop={8}>
+              <Text style={styles.editModalSave}>Save</Text>
+            </Pressable>
+          </View>
+
+          <ScrollView
+            style={styles.editModalScroll}
+            contentContainerStyle={styles.editModalContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Supplement name pill */}
+            {editingHabit && (() => {
+              const suppInfo = SUPPLEMENT_CATALOG.find((s: SupplementInfo) => s.id === editingHabit.supplementMeta?.supplementInfoId);
+              const name = suppInfo?.name ?? editingHabit.name;
+              return (
+                <View style={styles.editNameRow}>
+                  <Text style={styles.editNameEmoji}>{editingHabit.icon || '💊'}</Text>
+                  <Text style={styles.editNameText}>{name}</Text>
+                </View>
+              );
+            })()}
+
+            <Text style={styles.editLabel}>DOSAGE</Text>
+            <TextInput
+              style={styles.editInput}
+              value={editDosage}
+              onChangeText={setEditDosage}
+              placeholder="e.g. 500mg, 1 capsule"
+              placeholderTextColor="#B8A9A5"
+            />
+
+            <Text style={styles.editLabel}>WHEN TO TAKE</Text>
+            <View style={styles.editTimingRow}>
+              {[
+                { id: 'morning', label: 'Morning', icon: '🌅' },
+                { id: 'with-food', label: 'With Food', icon: '🍽️' },
+                { id: 'evening', label: 'Evening', icon: '🌙' },
+                { id: 'any', label: 'Any Time', icon: '⏰' },
+              ].map(opt => (
+                <Pressable
+                  key={opt.id}
+                  onPress={() => setEditTiming(opt.id)}
+                  style={[styles.editTimingChip, editTiming === opt.id && styles.editTimingChipActive]}
+                >
+                  <Text style={styles.editTimingIcon}>{opt.icon}</Text>
+                  <Text style={[styles.editTimingLabel, editTiming === opt.id && styles.editTimingLabelActive]}>
+                    {opt.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <Text style={styles.editLabel}>NOTES</Text>
+            <TextInput
+              style={[styles.editInput, styles.editNotesInput]}
+              value={editNotes}
+              onChangeText={setEditNotes}
+              placeholder="Any reminders for yourself..."
+              placeholderTextColor="#B8A9A5"
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
+
+            <Pressable
+              style={styles.editRemoveBtn}
+              onPress={() => {
+                setEditingHabit(null);
+                setTimeout(() => handleRemoveSupplement(editingHabit.id, editingHabit.supplementMeta?.supplementInfoId), 300);
+              }}
+            >
+              <Text style={styles.editRemoveText}>Remove from Stack</Text>
+            </Pressable>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.background,
-  },
-  gradientBackground: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: 60,
-  },
+  container: { flex: 1, backgroundColor: '#EDD5CB' },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingHorizontal: 24 },
+
   header: {
-    marginBottom: spacing.xl,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  headerTextBlock: { flex: 1, marginRight: 16 },
+  headerLabel: {
+    fontSize: 10,
+    fontFamily: 'SpaceMono-Bold',
+    color: '#5C3D2E',
+    letterSpacing: 1.2,
+    marginBottom: 6,
+    textTransform: 'uppercase',
   },
   title: {
     fontSize: 28,
-    fontWeight: '300',
-    color: theme.text,
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: 15,
+    fontFamily: 'Raleway-SemiBold',
+    color: '#1A0A06',
+    letterSpacing: -0.3,
     fontWeight: '500',
-    color: theme.textSecondary,
-    marginTop: spacing.xs,
   },
-  // Suggestions Section
-  suggestionsSection: {
-    backgroundColor: theme.surface,
-    borderRadius: borderRadius.card,
-    padding: spacing.md,
-    marginBottom: spacing.lg,
-    borderWidth: 1,
-    borderColor: theme.borderLight,
-    overflow: 'hidden',
-    ...shadows.sm,
+  addButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#C45A82',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#C45A82',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  suggestionsGradient: {
-    ...StyleSheet.absoluteFillObject,
+
+  progressCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#C4A99A',
+    shadowOpacity: 0.07,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
-  sectionHeader: {
+  progressCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    marginBottom: 10,
   },
-  sectionHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  progressCardLabel: {
+    fontFamily: 'SpaceMono-Bold',
+    fontSize: 10,
+    color: '#5C3D2E',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
   },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: theme.textSecondary,
-    letterSpacing: 0.5,
-  },
-  seeAllText: {
+  progressCardCount: {
+    fontFamily: 'DMSans',
     fontSize: 13,
-    fontWeight: '500',
-    color: theme.primary,
-  },
-  suggestionsList: {
-    gap: spacing.sm,
-  },
-  suggestionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
-    borderRadius: borderRadius.md,
-    padding: spacing.sm,
-    paddingRight: spacing.md,
-    borderWidth: 1,
-    borderColor: 'rgba(212, 196, 232, 0.2)',
-  },
-  suggestionItemPressed: {
-    opacity: 0.8,
-  },
-  suggestionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: 'rgba(232, 164, 200, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.sm,
-  },
-  suggestionIconText: {
-    fontSize: 18,
-  },
-  suggestionInfo: {
-    flex: 1,
-  },
-  suggestionName: {
-    fontSize: 14,
+    color: '#C45A82',
     fontWeight: '600',
-    color: theme.text,
-    marginBottom: 2,
   },
-  suggestionBenefit: {
-    fontSize: 12,
-    color: theme.textSecondary,
-  },
-  suggestionArrow: {
-    fontSize: 18,
-    fontWeight: '300',
-    color: theme.textMuted,
-  },
-  suggestionsDisclaimer: {
-    fontSize: 11,
-    color: theme.textMuted,
-    textAlign: 'center',
-    marginTop: spacing.sm,
-  },
-  // Browse Button
-  browseButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.md + 2,
-    borderRadius: borderRadius.card,
-    marginBottom: spacing.lg,
-    borderWidth: 1.5,
-    borderColor: theme.secondary,
-    borderStyle: 'dashed',
+  progressTrack: {
+    height: 6,
+    backgroundColor: 'rgba(242,180,204,0.2)',
+    borderRadius: 999,
     overflow: 'hidden',
   },
-  browseButtonPressed: {
-    opacity: 0.8,
-    transform: [{ scale: 0.99 }],
+  progressFill: { height: '100%', borderRadius: 999 },
+
+  emptyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    marginBottom: 20,
+    shadowColor: '#C4A99A',
+    shadowOpacity: 0.07,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 2 },
   },
-  browseButtonGradient: {
-    ...StyleSheet.absoluteFillObject,
+  emptyIcon: { fontSize: 36, marginBottom: 12 },
+  emptyTitle: { fontFamily: 'Raleway-SemiBold', fontSize: 18, fontWeight: '600', color: '#1A0A06', marginBottom: 6 },
+  emptySubtitle: { fontFamily: 'DMSans', fontSize: 13, color: '#5C3D2E', textAlign: 'center', lineHeight: 18, marginBottom: 20 },
+  emptyButton: {
+    backgroundColor: '#C45A82',
+    borderRadius: 999,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
   },
-  browseButtonIcon: {
-    fontSize: 20,
-    fontWeight: '300',
-    color: theme.primary,
-    marginRight: spacing.sm,
+  emptyButtonText: { fontFamily: 'DMSans', fontSize: 14, fontWeight: '600', color: '#FFFAF8' },
+
+  section: { marginBottom: 20 },
+  sectionLabel: {
+    fontFamily: 'SpaceMono-Bold',
+    fontSize: 10,
+    color: '#5C3D2E',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginBottom: 12,
   },
-  browseButtonText: {
+  suppList: { gap: 8 },
+
+  suppRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    shadowColor: '#C4A99A',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
+  },
+  suppIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  suppEmoji: { fontSize: 20 },
+  suppInfo: { flex: 1 },
+  suppName: {
+    fontFamily: 'DMSans',
     fontSize: 15,
+    fontWeight: '500',
+    color: '#1A0A06',
+  },
+  suppNameTaken: {
+    color: '#5C3D2E',
+    textDecorationLine: 'line-through',
+  },
+  suppDose: {
+    fontFamily: 'SpaceMono-Bold',
+    fontSize: 10,
+    color: '#B8A9A5',
+    letterSpacing: 0.5,
+    marginTop: 2,
+  },
+  checkBox: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#EADBD4',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  weekDots: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 8,
+  },
+  weekDotCol: {
+    alignItems: 'center' as const,
+    gap: 3,
+  },
+  weekDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(0,0,0,0.08)',
+  },
+  weekDotToday: {
+    borderWidth: 1.5,
+    borderColor: '#C45A82',
+    backgroundColor: 'transparent',
+  },
+  weekDotLabel: {
+    fontFamily: 'SpaceMono-Bold',
+    fontSize: 8,
+    color: '#B8A9A5',
+  },
+
+  celebCard: {
+    borderRadius: 24,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    shadowColor: '#C4A99A',
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  celebEmoji: { fontSize: 28 },
+  celebBody: { flex: 1 },
+  celebTitle: {
+    fontFamily: 'Raleway-SemiBold',
+    fontSize: 17,
     fontWeight: '600',
-    color: theme.primary,
+    color: '#1A0A06',
+    marginBottom: 2,
   },
-  bottomSpacer: {
-    height: 120,
+  celebSub: {
+    fontFamily: 'DMSans',
+    fontSize: 12,
+    color: '#5C3D2E',
   },
-  // Detail Overlay
-  detailOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: theme.surface,
+
+  editBtn: {
+    padding: 6,
+    marginRight: -4,
+  },
+
+  // Edit modal
+  editModal: {
+    flex: 1,
+    backgroundColor: '#EDD5CB',
+  },
+  editModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.06)',
+    backgroundColor: '#FFFFFF',
+  },
+  editModalCancel: {
+    fontFamily: 'DMSans',
+    fontSize: 16,
+    color: '#5C3D2E',
+  },
+  editModalTitle: {
+    fontFamily: 'Raleway-SemiBold',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1A0A06',
+  },
+  editModalSave: {
+    fontFamily: 'DMSans',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#C45A82',
+  },
+  editModalScroll: { flex: 1 },
+  editModalContent: { padding: 24, gap: 6 },
+
+  editNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  },
+  editNameEmoji: { fontSize: 22 },
+  editNameText: {
+    fontFamily: 'Raleway-SemiBold',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1A0A06',
+    flex: 1,
+  },
+
+  editLabel: {
+    fontFamily: 'SpaceMono-Bold',
+    fontSize: 10,
+    color: '#5C3D2E',
+    letterSpacing: 1.2,
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  editInput: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontFamily: 'DMSans',
+    fontSize: 15,
+    color: '#1A0A06',
+    borderWidth: 1,
+    borderColor: '#E0CCBF',
+  },
+  editNotesInput: {
+    minHeight: 90,
+  },
+
+  editTimingRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  editTimingChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 999,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#E0CCBF',
+  },
+  editTimingChipActive: {
+    backgroundColor: '#FFF0F5',
+    borderColor: '#C45A82',
+  },
+  editTimingIcon: { fontSize: 14 },
+  editTimingLabel: {
+    fontFamily: 'DMSans',
+    fontSize: 13,
+    color: '#5C3D2E',
+  },
+  editTimingLabelActive: {
+    color: '#C45A82',
+    fontWeight: '600',
+  },
+
+  editRemoveBtn: {
+    marginTop: 24,
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(196,90,130,0.3)',
+  },
+  editRemoveText: {
+    fontFamily: 'DMSans',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#C45A82',
   },
 });

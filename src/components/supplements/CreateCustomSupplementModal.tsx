@@ -96,7 +96,7 @@ export const CreateCustomSupplementModal: React.FC<CreateCustomSupplementModalPr
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <LinearGradient
-          colors={['#FAE8ED', '#F5EBF8', '#FAF5FC']}
+          colors={['#FBF7F7', '#EDE4DC']}
           style={styles.gradientBackground}
         />
 
@@ -218,7 +218,7 @@ export const CreateCustomSupplementModal: React.FC<CreateCustomSupplementModalPr
             ]}
           >
             <LinearGradient
-              colors={name.trim() ? ['#5C2D5C', '#7A4068'] : ['#B8A8B0', '#B8A8B0']}
+              colors={name.trim() ? ['#3A2E2B', '#A85C3C'] : ['#B8A99E', '#B8A99E']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.addButtonGradient}
@@ -236,7 +236,7 @@ export const CreateCustomSupplementModal: React.FC<CreateCustomSupplementModalPr
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.background,
+    backgroundColor: '#FBF7F7',
   },
   gradientBackground: {
     ...StyleSheet.absoluteFillObject,
@@ -254,13 +254,13 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     fontSize: 16,
-    color: theme.primary,
+    color: '#3A2E2B',
     fontWeight: '500',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: theme.text,
+    color: '#3A2E2B',
   },
   scrollView: {
     flex: 1,
@@ -271,20 +271,20 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: theme.textSecondary,
+    color: '#6B5B52',
     marginBottom: spacing.sm,
     marginTop: spacing.lg,
     letterSpacing: 0.3,
   },
   textInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: '#FFFFFF',
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 4,
     fontSize: 16,
-    color: theme.text,
+    color: '#3A2E2B',
     borderWidth: 1,
-    borderColor: theme.borderLight,
+    borderColor: '#EDE4DC',
   },
   pillRow: {
     flexDirection: 'row',
@@ -295,18 +295,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,
     borderRadius: borderRadius.pill,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: theme.borderLight,
+    borderColor: '#EDE4DC',
   },
   pillSelected: {
-    backgroundColor: theme.primary,
-    borderColor: theme.primary,
+    backgroundColor: '#3A2E2B',
+    borderColor: '#3A2E2B',
   },
   pillText: {
     fontSize: 14,
     fontWeight: '500',
-    color: theme.textSecondary,
+    color: '#6B5B52',
   },
   pillTextSelected: {
     color: '#FFFFFF',
@@ -320,16 +320,16 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: borderRadius.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: theme.borderLight,
+    borderColor: '#EDE4DC',
   },
   iconCellSelected: {
-    backgroundColor: 'rgba(232, 164, 200, 0.25)',
-    borderColor: theme.accent,
-    ...shadows.glow,
+    backgroundColor: '#EDE4DC',
+    borderColor: '#3A2E2B',
+    ...shadows.warmGlow,
   },
   iconEmoji: {
     fontSize: 24,

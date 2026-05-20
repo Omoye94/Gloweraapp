@@ -1,61 +1,41 @@
-// Glowera Color System - "Lavender Bloom"
-// Soft lavender and plum palette inspired by spring blossoms
+// Glowera Brand Color System — Modern Bloom (2026)
+// Warm cream base + saturated magenta/lavender/peach gradient accents, deep plum ink.
+// Pulls from Serenity Waves gradient language on a Breathe-style warm neutral.
 
 export const colors = {
-  // Primary - Lavender range (flower petals)
-  lavender50: '#FAF5FC',
-  lavender100: '#F5EBF8',
-  lavender200: '#E8D9F0',
-  lavender300: '#D4C4E8',  // Main lavender accent
-  lavender400: '#C4B0E0',
-  lavender500: '#B09AD6',
+  // Brand Primary
+  porcelain: '#FFF6F2',    // Warm cream base (app background)
+  linen: '#F4E8E0',        // Deeper warm cream surface
+  bloom: '#E87FA6',        // Saturated magenta — primary accent / CTAs
+  blush: '#F2B4CC',        // Soft pink (tints, pill bgs)
+  rose: '#C45A82',         // Deep magenta (pressed / active states)
+  lavender: '#9B86D4',     // Saturated lavender (gradient mid, reflect contexts)
+  lilac: '#D8C9EC',        // Soft lavender tint
+  peach: '#F4A888',        // Warm peach (gradient warm stop, accent)
+  apricot: '#FBD4BF',      // Soft peach tint
+  ink: '#3A2E2B',          // Warm dark brown (primary text)
+  mocha: '#3A2E2B',        // alias for ink (legacy)
+  brandDark: '#2D1A1B',    // Warm dark brown from logo background
 
-  // Secondary - Blush Pink
-  blush50: '#FDF5F8',
-  blush100: '#FAE8ED',  // Main background
-  blush200: '#F5D6E0',
-  blush300: '#EDBED0',
-  blush400: '#E8A4C8',  // Pink border/accent
-  blush500: '#DE8AB8',
+  // Extended Palette
+  sage: '#8FA886',         // Deeper moss green (nature/growth accent)
+  mint: '#B8CFB1',         // Soft sage tint
+  vanilla: '#E8D2B0',      // Warm neutral
+  sky: '#B8C8D9',          // Cool neutral accent
+  teal: '#6FA8A3',         // Deeper teal accent (mixed-warm palette)
+  pearl: '#F8EFEE',        // Pink-tinted white for overlays
+  sunrise: '#F4A888',      // alias for peach (legacy)
 
-  // Tertiary - Deep Plum (for headlines)
-  plum50: '#F5EBF0',
-  plum100: '#E8D4DE',
-  plum200: '#D4A8C0',
-  plum300: '#A86890',
-  plum400: '#7A4068',
-  plum500: '#5C2D5C',  // Deep plum text
-
-  // Accent - Soft Sage (kept for variety)
-  sage50: '#F5FAF7',
-  sage100: '#E8F4ED',
-  sage200: '#D1E9DB',
-  sage300: '#B8DCC6',
-  sage400: '#9ECFB0',
-
-  // Neutral backgrounds - soft pink tints
-  cream50: '#FEFCFD',
-  cream100: '#FCF8FA',
-  cream200: '#FAF5F7',
-  cream300: '#F5EDF0',
-  cream400: '#EDE3E8',
-
-  // Warm neutrals
-  tan50: '#FAF7F8',
-  tan100: '#F5EEEF',
-  tan200: '#EBE3E5',
-  tan300: '#DED3D6',
-
-  // Text - with plum undertones
-  textPrimary: '#1A1A1A',      // Near black for body
-  textSecondary: '#5C4A52',    // Warm gray-plum
-  textMuted: '#8A7A82',        // Muted plum-gray
-  textLight: '#B8A8B0',        // Light muted
+  // Text — warm brown hierarchy on warm cream
+  textPrimary: '#3A2E2B',
+  textSecondary: '#6B5752',
+  textMuted: '#9E8880',
+  textLight: '#B8A9A5',
 
   // Semantic
-  success: '#9ECFB0',
-  warning: '#F5D4A8',
-  error: '#E89090',
+  success: '#8FA886',
+  warning: '#F4C072',
+  error: '#C45A82',
 
   // Base
   white: '#FFFFFF',
@@ -63,118 +43,133 @@ export const colors = {
   transparent: 'transparent',
 };
 
-// Category colors - lavender bloom palette
+// Category colors - brand extended palette
 export const categoryColors: Record<string, string> = {
-  nutrition: '#D4C4E8',     // Lavender
-  movement: '#9ECFB0',      // Soft sage
-  supplements: '#E8A4C8',   // Pink
-  hobbies: '#B09AD6',       // Deep lavender
-  'self-care': '#EDBED0',   // Blush
-  reflection: '#7A4068',    // Plum
+  nutrition: '#B8CFB1',      // Mint
+  movement: '#F4A888',       // Peach
+  supplements: '#F2B4CC',    // Blush
+  hobbies: '#8FA886',        // Sage
+  'self-care': '#9B86D4',    // Lavender
+  reflection: '#E8D2B0',     // Vanilla
 };
 
-// Gradient definitions for backgrounds
+// Gradient definitions — multi-stop, saturated. Use with expo-linear-gradient.
 export const gradients = {
-  lavenderBloom: ['#FAE8ED', '#F5EBF8', '#E8D9F0'],
-  softBlush: ['#FDF5F8', '#FAE8ED', '#F5D6E0'],
-  lavenderMist: ['#FAF5FC', '#F5EBF8', '#FAE8ED'],
-  plumGlow: ['#FAE8ED', '#E8D4DE', '#D4A8C0'],
+  // Hero card — Serenity Waves-style lavender → magenta → peach
+  heroBloom:     ['#9B86D4', '#E87FA6', '#F4A888'],
+  // Softer version for secondary cards
+  softBloom:     ['#D8C9EC', '#F2B4CC', '#FBD4BF'],
+  // Reflect / journal — lavender dominant
+  lavenderMist:  ['#9B86D4', '#D8C9EC', '#FFF6F2'],
+  // Garden / nature — sage dominant, warm peach glow
+  sageBloom:     ['#8FA886', '#B8CFB1', '#FBD4BF'],
+  // Dawn — for morning / rituals
+  etherealDawn:  ['#F4A888', '#F2B4CC', '#D8C9EC'],
+  // Subtle cream surface gradient
+  warmCream:     ['#FFF6F2', '#F4E8E0'],
+  // Progress / glow
+  bloomGlow:     ['#E87FA6', '#F4A888'],
+  // Legacy aliases
+  lavenderBloom: ['#D8C9EC', '#F2B4CC'],
+  softBlush:     ['#F2B4CC', '#FBD4BF'],
+  plumGlow:      ['#9B86D4', '#E87FA6'],
+  sageMist:      ['#B8CFB1', '#FFF6F2'],
 };
 
 // Light theme
 export const lightTheme = {
   // Core colors
-  primary: colors.plum500,       // Deep plum for primary actions
-  primaryLight: colors.plum200,
-  primaryDark: colors.plum500,
+  primary: colors.bloom,
+  primaryLight: colors.blush,
+  primaryDark: colors.rose,
 
-  secondary: colors.lavender300, // Lavender accent
-  secondaryLight: colors.lavender100,
+  secondary: colors.lavender,
+  secondaryLight: colors.lilac,
 
-  accent: colors.blush400,       // Pink accent
-  accentLight: colors.blush200,
+  accent: colors.peach,
+  accentLight: colors.apricot,
 
-  tertiary: colors.sage400,
+  tertiary: colors.sage,
 
   // Backgrounds
-  background: colors.blush100,   // Main background - light pink
-  backgroundWarm: colors.blush50,
-  backgroundGradientStart: '#FAE8ED',
-  backgroundGradientEnd: '#F5EBF8',
+  background: colors.porcelain,
+  backgroundWarm: colors.linen,
+  backgroundGradientStart: colors.porcelain,
+  backgroundGradientEnd: colors.linen,
 
   // Surfaces
-  surface: colors.white,
-  surfaceSecondary: colors.blush50,
-  surfaceTertiary: colors.cream200,
-  surfaceElevated: colors.white,
+  surface: '#FFFAF8',
+  surfaceSecondary: colors.linen,
+  surfaceTertiary: colors.pearl,
+  surfaceElevated: '#FFFAF8',
 
-  // Text
-  text: colors.textPrimary,
-  textSecondary: colors.textSecondary,
-  textMuted: colors.textMuted,
-  textLight: colors.textLight,
-  textOnPrimary: colors.white,
+  // Text - warm brown hierarchy
+  text: colors.ink,
+  textSecondary: '#6B5752',
+  textMuted: '#9E8880',
+  textLight: '#B8A9A5',
+  textOnPrimary: '#FFFAF8',
 
   // Borders
-  border: colors.blush300,
-  borderLight: colors.blush200,
-  borderSubtle: colors.cream200,
+  border: '#EADBD4',
+  borderLight: '#F4E8E0',
+  borderSubtle: '#F4E8E0',
 
   // Semantic
   success: colors.success,
   warning: colors.warning,
   error: colors.error,
 
-  // Shadows (lavender-tinted)
-  shadowColor: colors.lavender300,
+  // Shadows
+  shadowColor: 'rgba(58,46,43,0.08)',
 
   // Status bar
   statusBarStyle: 'dark' as const,
 };
 
-// Dark theme - "Midnight Bloom"
+// Dark theme - Deep Plum
 export const darkTheme = {
   // Core colors
-  primary: '#E8A4C8',            // Pink for primary actions (brighter in dark)
-  primaryLight: '#3D2A3D',
-  primaryDark: '#F5D6E0',
+  primary: colors.bloom,
+  primaryLight: '#3A2847',
+  primaryDark: colors.rose,
 
-  secondary: '#B09AD6',          // Lavender accent
-  secondaryLight: '#2A2435',
+  secondary: colors.lavender,
+  secondaryLight: '#3A2847',
 
-  accent: '#E8A4C8',             // Pink accent
-  accentLight: '#3D2A35',
+  accent: colors.peach,
+  accentLight: '#4A3B5C',
 
-  tertiary: '#9ECFB0',
+  tertiary: colors.sage,
 
   // Backgrounds
-  background: '#1A1418',         // Dark plum-black
-  backgroundWarm: '#221C20',
-  backgroundGradientStart: '#1A1418',
-  backgroundGradientEnd: '#241E22',
+  background: colors.ink,
+  backgroundWarm: '#2A1D3F',
+  backgroundGradientStart: colors.ink,
+  backgroundGradientEnd: '#2A1D3F',
 
   // Surfaces
-  surface: '#2A2428',
-  surfaceSecondary: '#322C30',
-  surfaceTertiary: '#3A3438',
-  surfaceElevated: '#3A3438',
+  surface: '#2A1D3F',
+  surfaceSecondary: '#3A2847',
+  surfaceTertiary: '#4A3555',
+  surfaceElevated: '#2A1D3F',
 
   // Text
-  text: '#F5EBF0',               // Light lavender white
-  textSecondary: '#B8A8B0',
-  textMuted: '#8A7A82',
-  textLight: '#5C4A52',
-  textOnPrimary: '#1A1418',
+  text: colors.porcelain,
+  textSecondary: '#D8C9EC',
+  textMuted: '#9A8BA5',
+  textLight: '#6A5B75',
+  textOnPrimary: colors.ink,
 
   // Borders
-  border: '#3D2A35',
-  borderLight: '#2A2428',
-  borderSubtle: '#322C30',
+  border: '#4A3555',
+  borderLight: '#3A2847',
+  borderSubtle: '#2A1D3F',
 
   // Semantic
-  success: '#9ECFB0',
-  warning: '#F5D4A8',
-  error: '#E89090',
+  success: colors.success,
+  warning: colors.warning,
+  error: colors.error,
 
   // Shadows
   shadowColor: '#000000',
@@ -185,10 +180,17 @@ export const darkTheme = {
 
 // Dark mode gradients
 export const darkGradients = {
-  lavenderBloom: ['#1A1418', '#241E22', '#2A2435'],
-  softBlush: ['#1A1418', '#221C20', '#2A2428'],
-  lavenderMist: ['#1A1418', '#241E22', '#1A1418'],
-  plumGlow: ['#1A1418', '#2A2435', '#3D2A3D'],
+  heroBloom:     ['#4A3555', '#7B5C9A', '#B15C7E'],
+  softBloom:     ['#3A2847', '#4A3555', '#5A4365'],
+  lavenderMist:  ['#4A3555', '#3A2847', '#1F1530'],
+  sageBloom:     ['#3E5A3A', '#4A3555', '#1F1530'],
+  etherealDawn:  ['#5A4365', '#4A3555', '#3A2847'],
+  warmCream:     ['#1F1530', '#2A1D3F'],
+  bloomGlow:     ['#B15C7E', '#7B5C9A'],
+  lavenderBloom: ['#4A3555', '#3A2847'],
+  softBlush:     ['#3A2847', '#1F1530'],
+  plumGlow:      ['#4A3555', '#3A2847'],
+  sageMist:      ['#3E5A3A', '#1F1530'],
 };
 
 // Default theme (light)

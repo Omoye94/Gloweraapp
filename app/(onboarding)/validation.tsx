@@ -1,20 +1,10 @@
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { theme, spacing } from '../../src/theme';
-import { Card, PrimaryButton, ChecklistItem } from '../../src/components/onboarding';
-import { useOnboardingStore } from '../../src/stores/onboardingStore';
-
-const VALIDATION_ITEMS = [
-  "I start habits but don't stay consistent",
-  "I feel overwhelmed by doing it all",
-  "I want routines, but not pressure",
-  "I forget to check in with myself",
-  "I want wellness to feel softer",
-];
+import { Card, PrimaryButton } from '../../src/components/onboarding';
 
 export default function ValidationScreen() {
   const router = useRouter();
-  const { validation_items, toggleValidationItem } = useOnboardingStore();
 
   return (
     <ScrollView
@@ -24,25 +14,20 @@ export default function ValidationScreen() {
     >
       <View style={styles.content}>
         <View style={styles.mainContent}>
-          <Text style={styles.headline}>Does this sound like you?</Text>
-
           <Card style={styles.card}>
-            {VALIDATION_ITEMS.map((item) => (
-              <ChecklistItem
-                key={item}
-                label={item}
-                checked={validation_items.includes(item)}
-                onPress={() => toggleValidationItem(item)}
-              />
-            ))}
+            <Text style={styles.headline}>
+              When everything feels disorganized, consistency becomes difficult.
+            </Text>
+            <Text style={styles.body}>
+              You forget things. You restart routines. Nothing sticks.
+            </Text>
           </Card>
         </View>
 
         <View style={styles.bottomSection}>
           <PrimaryButton
-            title="Yes, that's me"
-            onPress={() => router.push('/(onboarding)/solution')}
-            disabled={validation_items.length === 0}
+            title="Continue"
+            onPress={() => router.push('/(onboarding)/reframe')}
           />
         </View>
       </View>
@@ -66,18 +51,26 @@ const styles = StyleSheet.create({
   },
   mainContent: {
     flex: 1,
-    paddingTop: spacing.md,
+    justifyContent: 'center',
+    paddingVertical: spacing.xl,
+  },
+  card: {
+    alignItems: 'center',
   },
   headline: {
     fontSize: 26,
     fontWeight: '600',
     color: theme.text,
     textAlign: 'center',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
     letterSpacing: -0.5,
+    lineHeight: 34,
   },
-  card: {
-    paddingVertical: spacing.md,
+  body: {
+    fontSize: 16,
+    color: theme.textSecondary,
+    textAlign: 'center',
+    lineHeight: 24,
   },
   bottomSection: {
     paddingTop: spacing.lg,

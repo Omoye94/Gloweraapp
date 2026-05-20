@@ -8,17 +8,20 @@ import { formatDateKey, getISOTimestamp } from '../utils/dateUtils';
 interface JournalState {
   entries: JournalEntry[];
   lastWeeklyPromptDate: string | null;
+  moodByDate: Record<string, Mood>;
 
   // Actions
-  addEntry: (content: string, mood?: Mood, promptUsed?: string) => JournalEntry;
+  addEntry: (content: string, mood?: Mood, promptUsed?: string, audioUri?: string) => JournalEntry;
   updateEntry: (id: string, updates: Partial<Pick<JournalEntry, 'content' | 'mood' | 'tags'>>) => void;
   deleteEntry: (id: string) => void;
+  setMoodForDate: (date: string, mood: Mood) => void;
 
   // Queries
   getEntryById: (id: string) => JournalEntry | undefined;
   getEntriesForDate: (date: string) => JournalEntry[];
   getRecentEntries: (limit?: number) => JournalEntry[];
   searchEntries: (query: string) => JournalEntry[];
+  getMoodForDate: (date: string) => Mood | undefined;
   shouldShowWeeklyPrompt: () => boolean;
   markWeeklyPromptShown: () => void;
 
@@ -31,8 +34,9 @@ export const useJournalStore = create<JournalState>()(
     (set, get) => ({
       entries: [],
       lastWeeklyPromptDate: null,
+      moodByDate: {},
 
-      addEntry: (content, mood, promptUsed) => {
+      addEntry: (content, mood, promptUsed, audioUri) => {
         const now = getISOTimestamp();
         const newEntry: JournalEntry = {
           id: uuidv4(),
@@ -42,6 +46,7 @@ export const useJournalStore = create<JournalState>()(
           content,
           mood,
           promptUsed,
+          audioUri,
           tags: [],
         };
 
@@ -66,6 +71,16 @@ export const useJournalStore = create<JournalState>()(
         set(state => ({
           entries: state.entries.filter(entry => entry.id !== id),
         }));
+      },
+
+      setMoodForDate: (date, mood) => {
+        set(state => ({
+          moodByDate: { ...state.moodByDate, [date]: mood },
+        }));
+      },
+
+      getMoodForDate: (date) => {
+        return get().moodByDate[date];
       },
 
       getEntryById: (id) => {
@@ -105,7 +120,7 @@ export const useJournalStore = create<JournalState>()(
       },
 
       resetJournal: () => {
-        set({ entries: [], lastWeeklyPromptDate: null });
+        set({ entries: [], lastWeeklyPromptDate: null, moodByDate: {} });
       },
     }),
     {

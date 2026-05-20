@@ -1,281 +1,204 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Switch, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { theme, spacing, borderRadius } from '../../src/theme';
-import { Card, PrimaryButton } from '../../src/components/onboarding';
+import { PrimaryButton } from '../../src/components/onboarding';
 import { useOnboardingStore } from '../../src/stores/onboardingStore';
-import { useHabitStore, useUserStore } from '../../src/stores';
 import { requestPermission, scheduleDaily } from '../../src/lib/notifications';
-import { supabase } from '../../lib/supabase';
 
-const LOCAL_ONBOARDING_KEY = 'glowera-onboarding-complete';
+const MORNING_TIMES = ['6:00 AM', '7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM'];
+const EVENING_TIMES = ['7:00 PM', '8:00 PM', '9:00 PM', '10:00 PM', '11:00 PM'];
 
 export default function NotificationsScreen() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const { selected_rituals, resetOnboarding } = useOnboardingStore();
-  const { addHabit } = useHabitStore();
-  const { initializeUser } = useUserStore();
+  const {
+    morning_reminder, evening_reminder,
+    morning_time, evening_time,
+    setMorningReminder, setEveningReminder,
+    setMorningTime, setEveningTime,
+  } = useOnboardingStore();
 
-  const completeOnboarding = async (remindersEnabled: boolean) => {
+  const hasAnyReminder = morning_reminder || evening_reminder;
+
+  const handleEnable = async () => {
     setIsLoading(true);
-
-    try {
-      // Add selected rituals as habits
-      const iconMap: Record<string, string> = {
-        'Drink water': '💧',
-        'Move your body': '🏃‍♀️',
-        'Take supplements': '💊',
-        'Read or learn': '📚',
-        'Stretch': '🧘‍♀️',
-        'Morning routine': '🌅',
-        'Evening wind-down': '🌙',
-      };
-
-      const categoryMap: Record<string, string> = {
-        'Drink water': 'nutrition',
-        'Move your body': 'movement',
-        'Take supplements': 'supplements',
-        'Read or learn': 'hobbies',
-        'Stretch': 'movement',
-        'Morning routine': 'self-care',
-        'Evening wind-down': 'self-care',
-      };
-
-      selected_rituals.forEach((ritual) => {
-        addHabit({
-          name: ritual,
-          icon: iconMap[ritual] || '✨',
-          category: (categoryMap[ritual] || 'self-care') as any,
-          isCustom: false,
-        });
-      });
-
-      // Initialize user
-      initializeUser('My Garden');
-
-      // Try to update Supabase user_settings if authenticated
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        await supabase
-          .from('users')
-          .upsert({
-            id: session.user.id,
-            onboarding_completed: true,
-            reminders_enabled: remindersEnabled,
-            updated_at: new Date().toISOString(),
-          }, { onConflict: 'id' });
-      }
-
-      // Mark local onboarding as complete
-      await AsyncStorage.setItem(LOCAL_ONBOARDING_KEY, 'true');
-
-      // Clear onboarding draft
-      resetOnboarding();
-
-      // Navigate to main app
-      router.replace('/(tabs)');
-    } catch (error) {
-      console.error('[Notifications] Error completing onboarding:', error);
-      // Still navigate even if Supabase update fails
-      router.replace('/(tabs)');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleEnableReminders = async () => {
-    setIsLoading(true);
-
     try {
       const granted = await requestPermission();
-
-      if (granted) {
-        // Schedule both morning (8 AM) and evening (9 PM) notifications
-        await scheduleDaily();
-        await completeOnboarding(true);
-      } else {
-        // Permission not granted
-        await completeOnboarding(false);
-      }
-    } catch (error) {
-      console.error('[Notifications] Error enabling reminders:', error);
-      await completeOnboarding(false);
+      if (granted) await scheduleDaily();
+    } catch (e) {
+      console.error('[Notifications]', e);
+    } finally {
+      setIsLoading(false);
+      router.push('/(onboarding)/welcome');
     }
-  };
-
-  const handleNotNow = async () => {
-    await completeOnboarding(false);
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.content}>
-        <View style={styles.mainContent}>
-          <Text style={styles.emoji}>🔔</Text>
-          <Text style={styles.headline}>Want gentle reminders?</Text>
-          <Text style={styles.body}>
-            We'll send you a morning and evening reminder — never guilt, never pressure.
-          </Text>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <View style={styles.main}>
+        <Text style={styles.label}>GENTLE NUDGES</Text>
+        <Text style={styles.headline}>Stay on track{'\n'}your way</Text>
+        <Text style={styles.body}>
+          Reminders to keep your glow ritual going — never guilt, never pressure.
+        </Text>
 
-          <Card style={styles.card}>
-            {/* Morning notification preview */}
-            <View style={styles.previewContainer}>
-              <View style={styles.previewHeader}>
+        {/* Morning card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardTitleRow}>
+              <Text style={styles.cardEmoji}>☀️</Text>
+              <View>
+                <Text style={styles.cardTitle}>Morning ritual</Text>
+                <Text style={styles.cardSubtitle}>Start your day with intention</Text>
+              </View>
+            </View>
+            <Switch
+              value={morning_reminder}
+              onValueChange={setMorningReminder}
+              trackColor={{ false: 'rgba(255,255,255,0.1)', true: 'rgba(232,127,166,0.4)' }}
+              thumbColor={morning_reminder ? '#E87FA6' : 'rgba(255,255,255,0.4)'}
+            />
+          </View>
+
+          {morning_reminder && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.timePillsScroll} contentContainerStyle={styles.timePillsRow}>
+              {MORNING_TIMES.map((time) => (
+                <Pressable
+                  key={time}
+                  style={[styles.timePill, morning_time === time && styles.timePillSelected]}
+                  onPress={() => setMorningTime(time)}
+                >
+                  <Text style={[styles.timePillText, morning_time === time && styles.timePillTextSelected]}>{time}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
+
+          {morning_reminder && (
+            <View style={styles.previewCard}>
+              <View style={styles.previewRow}>
                 <Text style={styles.previewApp}>GLOWERA</Text>
-                <Text style={styles.previewTime}>8:00 AM</Text>
+                <Text style={styles.previewTime}>{morning_time}</Text>
               </View>
               <Text style={styles.previewTitle}>Glowera ✨</Text>
-              <Text style={styles.previewBody}>Good morning! Time for your glow ritual.</Text>
+              <Text style={styles.previewBody}>Your garden is ready for a new day of growth.</Text>
             </View>
-
-            <View style={styles.previewDivider} />
-
-            {/* Evening notification preview */}
-            <View style={styles.previewContainer}>
-              <View style={styles.previewHeader}>
-                <Text style={styles.previewApp}>GLOWERA</Text>
-                <Text style={styles.previewTime}>9:00 PM</Text>
-              </View>
-              <Text style={styles.previewTitle}>Glowera 🌙</Text>
-              <Text style={styles.previewBody}>Wind down time. How did your day glow?</Text>
-            </View>
-          </Card>
-        </View>
-
-        <View style={styles.bottomSection}>
-          {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={theme.primary} />
-              <Text style={styles.loadingText}>Setting up your garden...</Text>
-            </View>
-          ) : (
-            <>
-              <PrimaryButton
-                title="Enable reminders"
-                onPress={handleEnableReminders}
-              />
-              <Pressable
-                style={({ pressed }) => [
-                  styles.secondaryButton,
-                  pressed && styles.secondaryButtonPressed,
-                ]}
-                onPress={handleNotNow}
-              >
-                <Text style={styles.secondaryButtonText}>Not now</Text>
-              </Pressable>
-            </>
           )}
         </View>
+
+        {/* Evening card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardTitleRow}>
+              <Text style={styles.cardEmoji}>🌙</Text>
+              <View>
+                <Text style={styles.cardTitle}>Evening wind-down</Text>
+                <Text style={styles.cardSubtitle}>Reflect on your day</Text>
+              </View>
+            </View>
+            <Switch
+              value={evening_reminder}
+              onValueChange={setEveningReminder}
+              trackColor={{ false: 'rgba(255,255,255,0.1)', true: 'rgba(232,127,166,0.4)' }}
+              thumbColor={evening_reminder ? '#E87FA6' : 'rgba(255,255,255,0.4)'}
+            />
+          </View>
+
+          {evening_reminder && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.timePillsScroll} contentContainerStyle={styles.timePillsRow}>
+              {EVENING_TIMES.map((time) => (
+                <Pressable
+                  key={time}
+                  style={[styles.timePill, evening_time === time && styles.timePillSelected]}
+                  onPress={() => setEveningTime(time)}
+                >
+                  <Text style={[styles.timePillText, evening_time === time && styles.timePillTextSelected]}>{time}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
+
+          {evening_reminder && (
+            <View style={styles.previewCard}>
+              <View style={styles.previewRow}>
+                <Text style={styles.previewApp}>GLOWERA</Text>
+                <Text style={styles.previewTime}>{evening_time}</Text>
+              </View>
+              <Text style={styles.previewTitle}>Glowera 🌙</Text>
+              <Text style={styles.previewBody}>Time to reflect. Your garden remembers every moment.</Text>
+            </View>
+          )}
+        </View>
+      </View>
+
+      <View style={styles.bottom}>
+        {isLoading ? (
+          <View style={styles.loadingWrap}>
+            <ActivityIndicator size="large" color="#E87FA6" />
+            <Text style={styles.loadingText}>Setting up your garden...</Text>
+          </View>
+        ) : (
+          <>
+            <PrimaryButton
+              title={hasAnyReminder ? 'Enable reminders' : 'Continue without reminders'}
+              onPress={hasAnyReminder ? handleEnable : () => router.push('/(onboarding)/welcome')}
+            />
+            {hasAnyReminder && (
+              <Pressable
+                style={({ pressed }) => [styles.notNowBtn, pressed && { opacity: 0.6 }]}
+                onPress={() => router.push('/(onboarding)/welcome')}
+              >
+                <Text style={styles.notNowText}>Not now</Text>
+              </Pressable>
+            )}
+          </>
+        )}
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  contentContainer: {
-    flexGrow: 1,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
-    justifyContent: 'space-between',
-    minHeight: '100%',
-  },
-  mainContent: {
-    flex: 1,
-    alignItems: 'center',
-    paddingTop: spacing.xl,
-  },
-  emoji: {
-    fontSize: 64,
-    marginBottom: spacing.md,
-  },
-  headline: {
-    fontSize: 26,
-    fontWeight: '600',
-    color: theme.text,
-    textAlign: 'center',
-    marginBottom: spacing.md,
-    letterSpacing: -0.5,
-  },
-  body: {
-    fontSize: 16,
-    color: theme.textSecondary,
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: spacing.xl,
-    paddingHorizontal: spacing.md,
-  },
+  container: { flex: 1 },
+  content: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 40, justifyContent: 'space-between' },
+  main: { flex: 1, paddingTop: 8 },
+  label: { fontSize: 10, fontFamily: 'SpaceMono-Bold', color: 'rgba(242,180,204,0.6)', letterSpacing: 1.2, marginBottom: 12 },
+  headline: { fontSize: 28, fontFamily: 'PlayfairDisplay', fontWeight: '600', color: '#FEFAF9', lineHeight: 36, letterSpacing: -0.3, marginBottom: 10 },
+  body: { fontSize: 15, fontFamily: 'DMSans', color: 'rgba(255,255,255,0.5)', lineHeight: 22, marginBottom: 24 },
   card: {
-    width: '100%',
+    backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 20,
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.1)',
+    padding: 20, marginBottom: 12,
   },
-  previewContainer: {
-    backgroundColor: 'rgba(232, 164, 200, 0.08)',
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
+  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  cardEmoji: { fontSize: 22 },
+  cardTitle: { fontSize: 15, fontFamily: 'DMSans', fontWeight: '600', color: '#FEFAF9' },
+  cardSubtitle: { fontSize: 12, fontFamily: 'DMSans', color: 'rgba(255,255,255,0.4)', marginTop: 2 },
+  timePillsScroll: { marginTop: 14 },
+  timePillsRow: { gap: 8 },
+  timePill: {
+    paddingHorizontal: 14, paddingVertical: 7,
+    borderRadius: 999, borderWidth: 1.5,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.1)',
   },
-  previewDivider: {
-    height: spacing.sm,
+  timePillSelected: { backgroundColor: 'rgba(232,127,166,0.18)', borderColor: 'rgba(232,127,166,0.5)' },
+  timePillText: { fontSize: 13, fontFamily: 'DMSans', color: 'rgba(255,255,255,0.5)' },
+  timePillTextSelected: { color: '#F2B4CC', fontWeight: '600' },
+  previewCard: {
+    backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 14,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    padding: 14, marginTop: 14,
   },
-  previewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  previewApp: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: theme.textSecondary,
-    letterSpacing: 0.5,
-  },
-  previewTime: {
-    fontSize: 11,
-    color: theme.textMuted,
-  },
-  previewTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: theme.text,
-    marginBottom: 2,
-  },
-  previewBody: {
-    fontSize: 14,
-    color: theme.textSecondary,
-    lineHeight: 20,
-  },
-  bottomSection: {
-    gap: spacing.md,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    paddingVertical: spacing.lg,
-  },
-  loadingText: {
-    marginTop: spacing.md,
-    fontSize: 15,
-    color: theme.textSecondary,
-  },
-  secondaryButton: {
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
-  secondaryButtonPressed: {
-    opacity: 0.7,
-  },
-  secondaryButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: theme.textSecondary,
-  },
+  previewRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
+  previewApp: { fontSize: 10, fontFamily: 'SpaceMono-Bold', color: 'rgba(255,255,255,0.35)', letterSpacing: 0.5 },
+  previewTime: { fontSize: 10, fontFamily: 'DMSans', color: 'rgba(255,255,255,0.25)' },
+  previewTitle: { fontSize: 14, fontFamily: 'DMSans', fontWeight: '600', color: '#FEFAF9', marginBottom: 2 },
+  previewBody: { fontSize: 13, fontFamily: 'DMSans', color: 'rgba(255,255,255,0.5)', lineHeight: 19 },
+  bottom: { paddingTop: 8 },
+  loadingWrap: { alignItems: 'center', paddingVertical: 20 },
+  loadingText: { marginTop: 12, fontSize: 14, fontFamily: 'DMSans', color: 'rgba(255,255,255,0.5)' },
+  notNowBtn: { paddingVertical: 14, alignItems: 'center' },
+  notNowText: { fontSize: 15, fontFamily: 'DMSans', fontWeight: '500', color: 'rgba(255,255,255,0.45)' },
 });
