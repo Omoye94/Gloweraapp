@@ -8,6 +8,7 @@ interface OnboardingState {
   selected_rituals: string[];
   selected_supplements: string[];
   first_reflection: string;
+  preferred_name: string;
   garden_name: string;
   morning_reminder: boolean;
   evening_reminder: boolean;
@@ -25,6 +26,7 @@ interface OnboardingActions {
   toggleRitual: (ritual: string) => void;
   toggleSupplement: (supplement: string) => void;
   setFirstReflection: (text: string) => void;
+  setPreferredName: (name: string) => void;
   setGardenName: (name: string) => void;
   setMorningReminder: (enabled: boolean) => void;
   setEveningReminder: (enabled: boolean) => void;
@@ -40,6 +42,7 @@ const initialState: OnboardingState = {
   selected_rituals: [],
   selected_supplements: [],
   first_reflection: '',
+  preferred_name: '',
   garden_name: '',
   morning_reminder: true,
   evening_reminder: true,
@@ -87,6 +90,8 @@ export const useOnboardingStore = create<OnboardingState & OnboardingActions>()(
       },
 
       setFirstReflection: (text) => set({ first_reflection: text }),
+
+      setPreferredName: (name) => set({ preferred_name: name }),
 
       setGardenName: (name) => set({ garden_name: name }),
 

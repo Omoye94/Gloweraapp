@@ -1,10 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, Animated, Image, Pressable, Easing,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useOnboardingStore } from '../../src/stores/onboardingStore';
 
 const STAGES = ['seed', 'sprout', 'bud', 'bloom', 'glow'] as const;
 
@@ -24,13 +25,7 @@ const STAGE_COLORS: Record<string, [string, string]> = {
   glow:   ['rgba(251,212,191,0.5)', 'rgba(251,212,191,0.1)'],
 };
 
-const TRANSITION_HABITS = [
-  null,
-  'Drink water ✓',
-  'Morning skincare ✓',
-  'Reflect & journal ✓',
-  'Gratitude practice ✓',
-];
+const FALLBACK_HABITS = ['Drink water', 'Morning skincare', 'Reflect & journal', 'Gratitude practice'];
 
 const PLANT_ASSETS: Record<string, any> = {
   seed:   require('../../assets/plants/seed.png'),
@@ -44,10 +39,15 @@ export default function FirstGrowthScreen() {
   const router  = useRouter();
   const insets  = useSafeAreaInsets();
   const mounted = useRef(true);
+  const { selected_rituals } = useOnboardingStore();
+
+  const habits = useMemo<(string | null)[]>(() => {
+    const source = selected_rituals.length > 0 ? selected_rituals : FALLBACK_HABITS;
+    return [null, ...Array.from({ length: 4 }, (_, i) => `${source[i % source.length]} ✓`)];
+  }, [selected_rituals]);
 
   const [stageIdx, setStageIdx]     = useState(0);
   const [habitLabel, setHabitLabel] = useState<string | null>(null);
-  const [, setShowCTA]       = useState(false);
 
   const plantOpacity  = useRef(new Animated.Value(1)).current;
   const habitOpacity  = useRef(new Animated.Value(0)).current;
@@ -110,12 +110,11 @@ export default function FirstGrowthScreen() {
     if (next >= STAGES.length) {
       // All stages shown — reveal CTA
       if (!mounted.current) return;
-      setShowCTA(true);
       Animated.timing(ctaOpacity, { toValue: 1, duration: 600, delay: 400, useNativeDriver: true }).start();
       return;
     }
 
-    const habit = TRANSITION_HABITS[next]!;
+    const habit = habits[next]!;
     showHabit(habit, () => {
       transitionPlant(next, () => {
         hideHabit(() => {
@@ -142,7 +141,7 @@ export default function FirstGrowthScreen() {
       <Animated.View style={[styles.titleBlock, { opacity: titleOpacity, transform: [{ translateY: titleTransY }] }]}>
         <Text style={styles.eyebrow}>YOUR GARDEN</Text>
         <Text style={styles.title}>Watch yourself bloom</Text>
-        <Text style={styles.subtitle}>Every ritual you complete helps your plant grow through five stages of beauty.</Text>
+        <Text style={styles.subtitle}>Every ritual you keep grows your plant through five stages.</Text>
       </Animated.View>
 
       {/* Plant orb */}
@@ -195,7 +194,7 @@ export default function FirstGrowthScreen() {
       <Animated.View style={[styles.ctaBlock, { opacity: ctaOpacity }]}>
         <Text style={styles.ctaCaption}>Your garden is ready to grow 🌿</Text>
         <Pressable
-          onPress={() => router.push('/(onboarding)/firstreflection')}
+          onPress={() => router.push('/(onboarding)/yourname')}
           style={({ pressed }) => [styles.ctaBtn, pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] }]}
         >
           <LinearGradient
@@ -203,7 +202,7 @@ export default function FirstGrowthScreen() {
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
             style={styles.ctaBtnGradient}
           >
-            <Text style={styles.ctaBtnText}>Start growing</Text>
+            <Text style={styles.ctaBtnText}>Make it yours</Text>
           </LinearGradient>
         </Pressable>
       </Animated.View>

@@ -15,7 +15,7 @@ export default function WelcomeScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const {
     selected_rituals, selected_supplements, first_reflection,
-    garden_name, morning_reminder, evening_reminder, resetOnboarding,
+    preferred_name, garden_name, morning_reminder, evening_reminder, resetOnboarding,
   } = useOnboardingStore();
   const { addHabit } = useHabitStore();
   const { initializeUser } = useUserStore();
@@ -110,7 +110,7 @@ export default function WelcomeScreen() {
         });
       });
 
-      initializeUser(displayName);
+      initializeUser(displayName, preferred_name);
 
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {

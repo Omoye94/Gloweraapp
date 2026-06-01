@@ -10,8 +10,9 @@ interface UserState {
   isOnboardingComplete: boolean;
 
   // Actions
-  initializeUser: (gardenName: string) => void;
+  initializeUser: (gardenName: string, firstName?: string) => void;
   updateGardenName: (name: string) => void;
+  updateFirstName: (name: string) => void;
   updateNotificationSettings: (settings: Partial<NotificationSettings>) => void;
   setTheme: (themeId: string) => void;
   addPoints: (points: number) => void;
@@ -25,10 +26,11 @@ export const useUserStore = create<UserState>()(
       user: null,
       isOnboardingComplete: false,
 
-      initializeUser: (gardenName: string) => {
+      initializeUser: (gardenName: string, firstName?: string) => {
         const newUser: User = {
           id: uuidv4(),
           gardenName,
+          firstName: firstName?.trim() || undefined,
           createdAt: getISOTimestamp(),
           onboardingCompleted: false,
           totalPoints: 0,
@@ -42,6 +44,13 @@ export const useUserStore = create<UserState>()(
         const { user } = get();
         if (user) {
           set({ user: { ...user, gardenName: name } });
+        }
+      },
+
+      updateFirstName: (name: string) => {
+        const { user } = get();
+        if (user) {
+          set({ user: { ...user, firstName: name.trim() || undefined } });
         }
       },
 

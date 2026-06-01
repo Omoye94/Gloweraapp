@@ -12,12 +12,20 @@ import * as Haptics from 'expo-haptics';
 import { useHabitStore, usePlantStore, useUserStore } from '../../src/stores';
 import { supabase } from '../../lib/supabase';
 import { formatDateKey } from '../../src/utils/dateUtils';
+import { DailyAffirmation } from '../../src/components/home/DailyAffirmation';
 
 function getGreeting(): string {
   const h = new Date().getHours();
   if (h < 12) return 'Good morning,';
   if (h < 18) return 'Good afternoon,';
   return 'Good evening,';
+}
+
+function formatHeaderDate(): string {
+  const d = new Date();
+  const day = d.toLocaleDateString('en-US', { weekday: 'long' });
+  const month = d.toLocaleDateString('en-US', { month: 'long' });
+  return `${day} · ${month} ${d.getDate()}`.toUpperCase();
 }
 
 const PLANT_STAGE_ASSETS: Record<string, any> = {
@@ -30,14 +38,6 @@ const PLANT_STAGE_ASSETS: Record<string, any> = {
 
 const STAGE_LABELS: Record<string, string> = {
   seed: 'Seed', sprout: 'Sprout', bud: 'Bud', bloom: 'Bloom', glow: 'Glow',
-};
-
-const STAGE_MSGS: Record<string, string> = {
-  seed:   'A tiny beginning holds infinite potential.',
-  sprout: 'Your first steps are already remarkable.',
-  bud:    'You are quietly becoming something beautiful.',
-  bloom:  'Your consistency is in full flower.',
-  glow:   "You radiate the glow you've tended so carefully.",
 };
 
 const CAT_COLORS: Record<string, string> = {
@@ -107,26 +107,26 @@ function ShareGlowBanner({ stage, completedCount, total, onPress }: {
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.shareBanner, pressed && { opacity: 0.9, transform: [{ scale: 0.99 }] }]}
+      style={({ pressed }) => [styles.shareBanner, pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] }]}
     >
       <LinearGradient
-        colors={['#FFF0F5', '#F6DFE8', '#EDD5CB']}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        colors={['#FDF5F0', '#F4E0EC', '#EDD5CB']}
+        start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }}
         style={styles.shareBannerGradient}
       >
-        <Image source={PLANT_STAGE_ASSETS[stage] || PLANT_STAGE_ASSETS.seed} style={styles.shareBannerPlant} resizeMode="contain" />
-        <View style={styles.shareBannerBody}>
-          <Text style={styles.shareBannerTitle}>Let someone see you bloom</Text>
-          <Text style={styles.shareBannerSub}>
-            {total > 0 ? `${completedCount} of ${total} rituals · ${STAGE_LABELS[stage]}` : STAGE_LABELS[stage]}
-          </Text>
-          <Pressable onPress={onPress} style={styles.shareBannerBtn}>
-            <Text style={styles.shareBannerBtnText}>Share your glow 🌷</Text>
-          </Pressable>
-          <Pressable onPress={onPress}>
-            <Text style={styles.shareBannerInvite}>Invite a friend to grow with you →</Text>
-          </Pressable>
+        <View style={styles.shareBannerPlantCircle}>
+          <Image source={PLANT_STAGE_ASSETS[stage] || PLANT_STAGE_ASSETS.seed} style={styles.shareBannerPlant} resizeMode="contain" />
         </View>
+        <View style={styles.shareBannerBadge}>
+          <Text style={styles.shareBannerBadgeText}>{STAGE_LABELS[stage]}</Text>
+        </View>
+        <Text style={styles.shareBannerTitle}>Let someone see you bloom</Text>
+        {total > 0 && (
+          <Text style={styles.shareBannerSub}>{completedCount} of {total} rituals complete today</Text>
+        )}
+        <Pressable onPress={onPress} style={styles.shareBannerBtn}>
+          <Text style={styles.shareBannerBtnText}>Share your glow</Text>
+        </Pressable>
       </LinearGradient>
     </Pressable>
   );
@@ -260,17 +260,16 @@ function HabitSwipeRow({
           style={({ pressed }) => [
             styles.habitRow,
             done && styles.habitRowDone,
-            pressed && { transform: [{ scale: 0.985 }] },
+            pressed && { opacity: 0.85 },
           ]}
         >
-          <View style={[styles.habitAccent, { backgroundColor: catColor }]} />
-          <View style={[styles.habitCheck, done && { backgroundColor: catColor, borderColor: catColor }]}>
-            {done && <Text style={styles.habitCheckmark}>✓</Text>}
+          <View style={[styles.habitIconCircle, { backgroundColor: catColor + '40' }]}>
+            <Text style={styles.habitEmoji}>{habit.icon}</Text>
           </View>
           <Text style={[styles.habitName, done && styles.habitNameDone]} numberOfLines={1}>
             {habit.name}
           </Text>
-          {reordering && (
+          {reordering ? (
             <View style={styles.reorderControls}>
               <Pressable onPress={onMoveUp} style={styles.reorderArrow} disabled={isFirst}>
                 <Text style={[styles.reorderArrowText, isFirst && { opacity: 0.25 }]}>↑</Text>
@@ -278,6 +277,10 @@ function HabitSwipeRow({
               <Pressable onPress={onMoveDown} style={styles.reorderArrow} disabled={isLast}>
                 <Text style={[styles.reorderArrowText, isLast && { opacity: 0.25 }]}>↓</Text>
               </Pressable>
+            </View>
+          ) : (
+            <View style={[styles.habitCheck, done && styles.habitCheckFilled]}>
+              {done && <Text style={styles.habitCheckmark}>✓</Text>}
             </View>
           )}
         </Pressable>
@@ -434,6 +437,7 @@ export default function HomeScreen() {
   const router          = useRouter();
   const insets          = useSafeAreaInsets();
   const gardenName      = useUserStore(s => s.user?.gardenName ?? '');
+  const storedFirstName = useUserStore(s => s.user?.firstName ?? '');
   const plant           = usePlantStore(s => s.plant);
   const addPoints       = usePlantStore(s => s.addPoints);
   const recordDaily     = usePlantStore(s => s.recordDailyActivity);
@@ -456,19 +460,20 @@ export default function HomeScreen() {
   const toastOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    if (storedFirstName) return;
     (async () => {
       try {
         const { data: { user: authUser } } = await supabase.auth.getUser();
         if (authUser) {
-          setUserName(
+          const raw =
             authUser.user_metadata?.full_name ||
             authUser.user_metadata?.name ||
-            authUser.email?.split('@')[0] || ''
-          );
+            authUser.email?.split('@')[0] || '';
+          setUserName(raw.trim().split(/\s+/)[0] || '');
         }
       } catch { /* noop */ }
     })();
-  }, []);
+  }, [storedFirstName]);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -480,7 +485,7 @@ export default function HomeScreen() {
     ]).start();
   };
 
-  const displayName = userName || gardenName || 'friend';
+  const displayName = storedFirstName || userName || gardenName || 'friend';
   const stage       = plant.currentStage;
   const streak      = plant.streak.currentStreak;
   const dateKey     = formatDateKey();
@@ -577,6 +582,12 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
+      <LinearGradient
+        colors={['#F5E6E0', '#EDD5CB', '#E8C9BC']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0.3, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
 
       {/* Toast */}
       <Animated.View pointerEvents="none" style={[styles.toast, { top: insets.top + 12, opacity: toastOpacity }]}>
@@ -591,19 +602,29 @@ export default function HomeScreen() {
       >
 
         {/* ── Header ── */}
-        <View style={[styles.headerSection, { paddingTop: insets.top + 16 }]}>
-          <Text style={styles.greeting}>{getGreeting()}</Text>
-          <Text style={styles.greetingName}>{displayName}</Text>
-          {streak > 0 && (
-            <Text style={styles.streakInline}>🔥 {streak}-day streak</Text>
-          )}
+        <View style={[styles.headerSection, { paddingTop: insets.top + 18 }]}>
+          <View style={styles.headerTopRow}>
+            <Text style={styles.dateLine}>{formatHeaderDate()}</Text>
+            {streak > 0 && (
+              <View style={styles.streakPill}>
+                <View style={styles.streakDot} />
+                <Text style={styles.streakPillText}>Day {streak}</Text>
+              </View>
+            )}
+          </View>
+
+          <Text style={styles.greetingLine}>
+            {getGreeting()}{' '}
+            <Text style={styles.greetingLineItalic}>{storedFirstName || userName || 'friend'}</Text>.
+          </Text>
+          <Text style={styles.welcomeLine}>
+            Welcome back to{' '}
+            <Text style={styles.welcomeLineItalic}>{gardenName || 'your garden'}</Text>.
+          </Text>
         </View>
 
         {/* ── Daily Affirmation ── */}
-        <View style={styles.affirmSection}>
-          <Text style={styles.affirmLabel}>Affirmation of the day</Text>
-          <Text style={styles.affirmText}>"{STAGE_MSGS[stage]}"</Text>
-        </View>
+        <DailyAffirmation />
 
         {/* ── Plant Hero ── */}
         <View style={styles.plantSection}>
@@ -889,7 +910,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#EDD5CB' },
+  container: { flex: 1 },
   scroll:    { flex: 1 },
 
   // Toast
@@ -902,30 +923,54 @@ const styles = StyleSheet.create({
 
   // Header
   headerSection: { paddingHorizontal: 28 },
-  greeting: {
-    fontFamily: 'Raleway-Regular', fontSize: 30,
-    color: '#1A0A06', letterSpacing: -0.3, lineHeight: 38,
+  headerTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 22,
   },
-  greetingName: {
-    fontFamily: 'Raleway-SemiBold', fontSize: 30,
-    color: '#C45A82', letterSpacing: -0.3, lineHeight: 38,
+  dateLine: {
+    fontFamily: 'SpaceMono-Bold',
+    fontSize: 10,
+    letterSpacing: 1.6,
+    color: '#A89A93',
   },
-  streakInline: {
-    fontFamily: 'DMSans', fontSize: 13, color: '#5C3D2E', marginTop: 6,
+  streakPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(196,90,130,0.10)',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
-
-  // Affirmation
-  affirmSection: {
-    marginTop: 20, paddingHorizontal: 32, alignItems: 'center',
+  streakDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: '#C45A82',
   },
-  affirmLabel: {
-    fontFamily: 'DMSans', fontSize: 11, fontWeight: '600',
-    color: '#C45A82', letterSpacing: 1.4, textTransform: 'uppercase',
-    marginBottom: 10,
+  streakPillText: {
+    fontFamily: 'SpaceMono-Bold',
+    fontSize: 10,
+    letterSpacing: 1.2,
+    color: '#C45A82',
+    textTransform: 'uppercase',
   },
-  affirmText: {
-    fontFamily: 'Optima-Italic', fontSize: 17,
-    color: '#3A1A10', textAlign: 'center', lineHeight: 26, fontWeight: '600',
+  greetingLine: {
+    fontFamily: 'PlayfairDisplay', fontSize: 30,
+    color: '#3A2E2B', letterSpacing: -0.5, lineHeight: 38,
+  },
+  greetingLineItalic: {
+    fontFamily: 'PlayfairDisplay-Italic',
+  },
+  welcomeLine: {
+    fontFamily: 'PlayfairDisplay', fontSize: 16,
+    color: '#9A857C', letterSpacing: 0.1, lineHeight: 22, marginTop: 8,
+  },
+  welcomeLineItalic: {
+    fontFamily: 'PlayfairDisplay-Italic',
+    color: '#7A6258',
   },
 
   // Plant card
@@ -989,7 +1034,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between', marginBottom: 16,
   },
-  ritualsTitle: { fontFamily: 'Raleway-SemiBold', fontSize: 22, color: '#1A0A06', letterSpacing: -0.2 },
+  ritualsTitle: { fontFamily: 'PlayfairDisplay', fontSize: 22, color: '#3A2E2B', letterSpacing: -0.3 },
   ritualsHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   addBtn:       { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, backgroundColor: 'rgba(196,90,130,0.10)' },
   addBtnText:   { fontFamily: 'DMSans', fontSize: 13, fontWeight: '600', color: '#C45A82' },
@@ -1008,9 +1053,9 @@ const styles = StyleSheet.create({
 
   // Category divider
   catDivider: {
-    fontFamily: 'DMSans', fontSize: 11, fontWeight: '600',
-    color: '#6B4A38', letterSpacing: 1.2, textTransform: 'uppercase',
-    marginBottom: 8, marginTop: 4,
+    fontFamily: 'DMSans', fontSize: 10, fontWeight: '400',
+    color: '#A89A93', letterSpacing: 2, textTransform: 'uppercase',
+    marginBottom: 10, marginTop: 20,
   },
 
   // Swipe action
@@ -1028,21 +1073,26 @@ const styles = StyleSheet.create({
   // Habit rows
   habitsList: { gap: 0 },
   habitRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingVertical: 15, paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF', borderRadius: 18, marginBottom: 8,
-    shadowColor: '#3A1A10', shadowOpacity: 0.07, shadowRadius: 10, shadowOffset: { width: 0, height: 2 },
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    paddingVertical: 16, paddingHorizontal: 16,
+    backgroundColor: 'rgba(255,246,242,0.75)', borderRadius: 22, marginBottom: 10,
+    borderWidth: 1, borderColor: 'rgba(58,46,43,0.07)',
   },
-  habitRowDone: { opacity: 0.5 },
-  habitAccent:  { width: 3, borderRadius: 999, alignSelf: 'stretch' },
-  habitCheck: {
-    width: 26, height: 26, borderRadius: 999,
-    borderWidth: 1.5, borderColor: '#D8C0B8',
+  habitRowDone: { opacity: 0.45 },
+  habitIconCircle: {
+    width: 44, height: 44, borderRadius: 22,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  habitCheckmark: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
-  habitName:      { fontFamily: 'DMSans', fontSize: 15, fontWeight: '500', color: '#1A0A06', flex: 1 },
-  habitNameDone:  { color: '#5C3D2E' },
+  habitEmoji: { fontSize: 20 },
+  habitCheck: {
+    width: 24, height: 24, borderRadius: 12,
+    borderWidth: 1.5, borderColor: '#C9BDB6',
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  habitCheckFilled: { backgroundColor: '#9CBFA0', borderColor: '#9CBFA0' },
+  habitCheckmark: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
+  habitName:      { fontFamily: 'PlayfairDisplay', fontSize: 16, color: '#3A2E2B', flex: 1 },
+  habitNameDone:  { color: '#A89A93' },
 
   // Empty state
   emptyCard: {
@@ -1058,25 +1108,76 @@ const styles = StyleSheet.create({
   shareBanner: {
     marginHorizontal: 20,
     marginTop: 28,
-    borderRadius: 20,
+    borderRadius: 28,
     overflow: 'hidden',
     shadowColor: '#C4A99A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.22,
+    shadowRadius: 18,
   },
-  shareBannerGradient: { flexDirection: 'row', alignItems: 'center', padding: 18, gap: 16 },
-  shareBannerPlant:    { width: 74, height: 74 },
-  shareBannerBody:     { flex: 1, gap: 3 },
-  shareBannerTitle:    { fontFamily: 'Raleway-SemiBold', fontSize: 15, color: '#1A0A06', lineHeight: 20 },
-  shareBannerSub:      { fontFamily: 'DMSans', fontSize: 12, color: '#5C3D2E' },
+  shareBannerGradient: {
+    alignItems: 'center',
+    paddingTop: 32,
+    paddingBottom: 28,
+    paddingHorizontal: 28,
+  },
+  shareBannerPlantCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255,255,255,0.52)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  shareBannerPlant: { width: 84, height: 84 },
+  shareBannerBadge: {
+    backgroundColor: 'rgba(255,255,255,0.60)',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    marginBottom: 14,
+  },
+  shareBannerBadgeText: {
+    fontFamily: 'SpaceMono-Bold',
+    fontSize: 10,
+    letterSpacing: 1.4,
+    color: '#5C3D2E',
+    textTransform: 'uppercase',
+  },
+  shareBannerTitle: {
+    fontFamily: 'PlayfairDisplay',
+    fontSize: 22,
+    color: '#3A1A10',
+    textAlign: 'center',
+    lineHeight: 30,
+    marginBottom: 8,
+  },
+  shareBannerSub: {
+    fontFamily: 'DMSans',
+    fontSize: 13,
+    color: '#6B4A38',
+    textAlign: 'center',
+    marginBottom: 22,
+  },
   shareBannerBtn: {
-    backgroundColor: '#C45A82', borderRadius: 999,
-    paddingHorizontal: 14, paddingVertical: 7,
-    alignSelf: 'flex-start', marginTop: 10,
+    backgroundColor: '#3A2E2B',
+    borderRadius: 100,
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    shadowColor: '#3A2E2B',
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 6 },
   },
-  shareBannerBtnText:  { fontFamily: 'DMSans', fontSize: 13, fontWeight: '600', color: '#FFFFFF' },
-  shareBannerInvite:   { fontFamily: 'DMSans', fontSize: 12, color: '#C45A82', marginTop: 6 },
+  shareBannerBtnText: {
+    fontFamily: 'DMSans',
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#FFF6F2',
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
+  },
 
   // Explore
   exploreSection: { marginTop: 28, paddingBottom: 8 },

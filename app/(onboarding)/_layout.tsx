@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { spacing } from '../../src/theme';
 
-const STEPS = ['problem', 'solution', 'focus', 'rituals', 'firstgrowth', 'firstreflection', 'analyzing', 'results', 'paywall', 'notifications', 'welcome'];
+const STEPS = ['problem', 'focus', 'rituals', 'firstgrowth', 'yourname', 'solution', 'firstreflection', 'analyzing', 'results', 'vision', 'socialproof', 'paywall', 'invite', 'notifications', 'welcome'];
 
 function ProgressBar({ currentStep }: { currentStep: number }) {
   const progress = (currentStep + 1) / STEPS.length;
@@ -64,6 +64,8 @@ export default function OnboardingLayout() {
           headerShown: false,
           contentStyle: { backgroundColor: 'transparent' },
           animation: 'slide_from_right',
+          gestureEnabled: true,
+          fullScreenGestureEnabled: true,
         }}
       >
         <Stack.Screen name="problem" />
@@ -76,10 +78,13 @@ export default function OnboardingLayout() {
         <Stack.Screen name="challenges" />
         <Stack.Screen name="firstreflection" />
         <Stack.Screen name="firstgrowth" />
+        <Stack.Screen name="yourname" />
         <Stack.Screen name="analyzing" />
         <Stack.Screen name="results" />
+        <Stack.Screen name="vision" />
         <Stack.Screen name="socialproof" />
         <Stack.Screen name="paywall" />
+        <Stack.Screen name="invite" />
         <Stack.Screen name="notifications" />
         <Stack.Screen name="welcome" />
       </Stack>

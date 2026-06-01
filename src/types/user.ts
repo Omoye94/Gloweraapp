@@ -9,6 +9,7 @@ export interface NotificationSettings {
 export interface User {
   id: string;
   gardenName: string;
+  firstName?: string;
   createdAt: string; // ISO date
   onboardingCompleted: boolean;
   totalPoints: number;
