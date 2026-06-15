@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.omoyeoziegbe.glowera"
+      "bundleIdentifier": "com.glowera.wellness"
     },
     "android": {
       "adaptiveIcon": {

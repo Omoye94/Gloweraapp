@@ -11,7 +11,7 @@ We built Glowera to be a calm, private space for your wellness journey. This pol
 
 ## 1. Who We Are
 
-Glowera is a wellness app created to help you build gentle habits, track your self-care rituals, and reflect on your growth. For questions about this policy, reach us at **[your support email]**.
+Glowera is a wellness app created to help you build gentle habits, track your self-care rituals, and reflect on your growth. For questions about this policy, reach us at **hello@gloweraapp.co**.
 
 ---
 
@@ -122,7 +122,7 @@ You are always in control:
 - **Opt out of notifications** — toggle off in Profile → Notifications or in your device Settings
 - **Revoke microphone access** — go to your device Settings → Glowera → Microphone
 
-If you are in the EU, UK, or California, you may also have additional rights under GDPR or CCPA — including the right to request a copy of your data or object to processing. Contact us at **[your support email]** to exercise these rights.
+If you are in the EU, UK, or California, you may also have additional rights under GDPR or CCPA — including the right to request a copy of your data or object to processing. Contact us at **hello@gloweraapp.co** to exercise these rights.
 
 ---
 
@@ -142,7 +142,7 @@ If we make material changes to this policy, we'll update the "Last updated" date
 
 Questions, concerns, or data requests:
 
-**Email:** [your support email]
+**Email:** hello@gloweraapp.co
 **Website:** [your website]
 
 ---

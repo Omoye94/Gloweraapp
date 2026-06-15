@@ -7,7 +7,7 @@ import type {
 
 const IOS_KEY = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? '';
 
-export const ENTITLEMENT_ID = 'Glowera Pro';
+export const ENTITLEMENT_ID = 'Glowera Premium';
 
 let purchasesModule: any | null = null;
 let purchasesUnavailable = false;
@@ -81,7 +81,12 @@ export async function fetchOfferings(): Promise<PurchasesOffering | null> {
     const offerings = await mod.default.getOfferings();
     return offerings.current ?? null;
   } catch (e) {
-    console.error('[Purchases] fetchOfferings failed:', e);
+    // Use warn instead of error: the app falls back gracefully to hardcoded
+    // prices when offerings aren't available (e.g. App Store Connect products
+    // in MISSING_METADATA state, no network, sandbox account not signed in).
+    // Logging at warn level keeps the dev-mode red-box from triggering on every
+    // startup while we wait for App Store Connect metadata to be approved.
+    console.warn('[Purchases] fetchOfferings failed:', e);
     return null;
   }
 }
