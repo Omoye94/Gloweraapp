@@ -9,11 +9,6 @@ import {
   type Affirmation,
 } from '../../constants/affirmations';
 
-function formatDayLabel(): string {
-  const day = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-  return `A THOUGHT FOR ${day.toUpperCase()}`;
-}
-
 export function DailyAffirmation() {
   const initial = getDailyAffirmation();
   const [current, setCurrent] = useState<Affirmation>(initial);
@@ -44,21 +39,24 @@ export function DailyAffirmation() {
 
   return (
     <Pressable onPress={handlePress} style={styles.wrap}>
-      <Animated.View style={[styles.inner, { opacity }]}>
-        <Text style={styles.eyebrow}>{formatDayLabel()}</Text>
+      <View style={styles.card}>
+        <View style={[styles.topAccent, { backgroundColor: categoryColor }]} />
+        <Animated.View style={[styles.inner, { opacity }]}>
+          <Text style={styles.eyebrow}>AFFIRMATION OF THE DAY</Text>
 
-        <Text style={styles.glyph}>❝</Text>
+          <Text style={styles.glyph}>❝</Text>
 
-        <Text style={styles.quote}>{current.text}</Text>
+          <Text style={styles.quote}>{current.text}</Text>
 
-        <View style={styles.categoryRow}>
-          <View style={[styles.categoryDot, { backgroundColor: categoryColor }]} />
-          <Text style={styles.categoryLabel}>{current.category}</Text>
-          <View style={[styles.categoryDot, { backgroundColor: categoryColor }]} />
-        </View>
+          <View style={styles.categoryRow}>
+            <View style={[styles.categoryDot, { backgroundColor: categoryColor }]} />
+            <Text style={styles.categoryLabel}>{current.category}</Text>
+            <View style={[styles.categoryDot, { backgroundColor: categoryColor }]} />
+          </View>
 
-        <Text style={styles.hint}>tap for another</Text>
-      </Animated.View>
+          <Text style={styles.hint}>tap for another</Text>
+        </Animated.View>
+      </View>
     </Pressable>
   );
 }
@@ -66,7 +64,28 @@ export function DailyAffirmation() {
 const styles = StyleSheet.create({
   wrap: {
     marginTop: 28,
-    paddingHorizontal: 36,
+    paddingHorizontal: 20,
+  },
+  card: {
+    backgroundColor: '#FCF1EB',
+    borderRadius: 24,
+    paddingTop: 20,
+    paddingBottom: 16,
+    paddingHorizontal: 22,
+    overflow: 'hidden',
+    shadowColor: '#3A1A10',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  topAccent: {
+    position: 'absolute',
+    top: 0,
+    left: '42%',
+    right: '42%',
+    height: 2,
+    borderRadius: 1,
+    opacity: 0.6,
   },
   inner: {
     alignItems: 'center',
@@ -76,31 +95,31 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1.6,
     color: '#A89A93',
-    marginBottom: 18,
+    marginBottom: 12,
   },
   glyph: {
     fontFamily: 'PlayfairDisplay',
-    fontSize: 52,
+    fontSize: 44,
     color: '#C45A82',
-    opacity: 0.38,
-    height: 36,
-    lineHeight: 52,
-    marginBottom: 10,
+    opacity: 0.32,
+    height: 28,
+    lineHeight: 44,
+    marginBottom: 6,
   },
   quote: {
     fontFamily: 'PlayfairDisplay-Italic',
-    fontSize: 22,
+    fontSize: 19,
     color: '#3A2E2B',
-    lineHeight: 32,
+    lineHeight: 28,
     letterSpacing: -0.2,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 14,
   },
   categoryRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 14,
+    marginBottom: 10,
   },
   categoryDot: {
     width: 3,

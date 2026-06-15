@@ -29,6 +29,7 @@ export const AFFIRMATIONS: Affirmation[] = [
   { id: 'growth-4', text: 'I give myself permission to be a work in progress.', category: 'growth' },
   { id: 'growth-5', text: 'What I am building takes time, and that is okay.', category: 'growth' },
   { id: 'growth-6', text: 'Each day I return to myself is a victory.', category: 'growth' },
+  { id: 'growth-7', text: 'Routines are rituals of devotion to yourself and your dreams.', category: 'growth' },
   // strength
   { id: 'strength-1', text: 'I have survived every hard day until now.', category: 'strength' },
   { id: 'strength-2', text: 'My softness is not weakness — it is strength.', category: 'strength' },

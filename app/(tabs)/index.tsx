@@ -618,8 +618,8 @@ export default function HomeScreen() {
             <Text style={styles.greetingLineItalic}>{storedFirstName || userName || 'friend'}</Text>.
           </Text>
           <Text style={styles.welcomeLine}>
-            Welcome back to{' '}
-            <Text style={styles.welcomeLineItalic}>{gardenName || 'your garden'}</Text>.
+            Welcome back to your{' '}
+            <Text style={styles.welcomeLineItalic}>{gardenName || 'garden'}</Text>.
           </Text>
         </View>
 
