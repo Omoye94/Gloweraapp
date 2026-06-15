@@ -74,6 +74,7 @@ export default function ProfileScreen() {
   const [showManageHabitsModal, setShowManageHabitsModal] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showTimePickerModal, setShowTimePickerModal] = useState(false);
   const [showAddHabitModal, setShowAddHabitModal] = useState(false);
@@ -216,6 +217,31 @@ export default function ProfileScreen() {
   const handleToggleHabit = (habitId: string) => {
     toggleHabitActive(habitId);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const INVITE_MESSAGE =
+    "I'm building my daily ritual on Glowera — affirmations, supplements, journal, all in one quiet place. Come grow with me 🌿";
+
+  const handleInviteFriend = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setShowInviteModal(true);
+  };
+
+  const confirmShareInvite = async () => {
+    setShowInviteModal(false);
+    // Small delay so the modal dismiss animation completes before the
+    // system share sheet slides in (otherwise iOS can fail to present it).
+    setTimeout(async () => {
+      try {
+        await Share.share({
+          title: 'Grow with me on Glowera',
+          message: INVITE_MESSAGE,
+        });
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch {
+        // Share sheet was dismissed or unavailable — silent no-op.
+      }
+    }, 250);
   };
 
   const handleExportData = async () => {
@@ -414,29 +440,9 @@ export default function ProfileScreen() {
 
           {/* Name */}
           <Text style={styles.headerName}>{displayName}</Text>
-          <Text style={styles.headerSubtitle}>Level {level} • Glowera Platinum</Text>
-
-          {/* Stats grid */}
-          <View style={styles.statsGrid}>
-            {/* Streak */}
-            <View style={styles.statCell}>
-              <SolarIcon name="fire-bold" size={22} color="#C45A82" />
-              <Text style={styles.statValue}>{currentStreak}</Text>
-              <Text style={styles.statLabel}>STREAK</Text>
-            </View>
-            {/* Points */}
-            <View style={styles.statCell}>
-              <SolarIcon name="star-bold" size={22} color="#9B86D4" />
-              <Text style={styles.statValue}>{totalPoints}</Text>
-              <Text style={styles.statLabel}>POINTS</Text>
-            </View>
-            {/* Badges */}
-            <View style={styles.statCell}>
-              <SolarIcon name="medal-ribbon-bold" size={22} color="#8FA886" />
-              <Text style={styles.statValue}>{badgeCount}</Text>
-              <Text style={styles.statLabel}>BADGES</Text>
-            </View>
-          </View>
+          <Text style={styles.headerSubtitle}>
+            {currentStreak > 0 ? `${currentStreak} days of tending your garden` : 'Your garden is growing'}
+          </Text>
         </LinearGradient>
 
         {/* ── Settings & Preferences ── */}
@@ -466,15 +472,9 @@ export default function ProfileScreen() {
               iconBg="rgba(212,201,248,0.2)"
               label="Privacy"
               onPress={() => setShowPrivacyModal(true)}
-            />
-            <SettingsRow
-              iconName="palette-bold"
-              iconColor="#8FA886"
-              iconBg="rgba(184,206,172,0.2)"
-              label="Appearance"
-              onPress={() => setShowAppearanceModal(true)}
               isLast
             />
+            {/* Appearance row hidden until dark mode is fully implemented across the app */}
           </View>
         </View>
 
@@ -487,7 +487,7 @@ export default function ProfileScreen() {
               iconColor="#C45A82"
               iconBg="rgba(244,198,204,0.2)"
               label="Invite Friends"
-              onPress={handleExportData}
+              onPress={handleInviteFriend}
             />
             <SettingsRow
               iconName="question-square-bold"
@@ -753,6 +753,64 @@ export default function ProfileScreen() {
         </View>
       </Modal>
 
+      {/* ── Invite Friend Modal ── */}
+      <Modal
+        visible={showInviteModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowInviteModal(false)}
+      >
+        <Pressable
+          style={styles.inviteOverlay}
+          onPress={() => setShowInviteModal(false)}
+        >
+          <Pressable style={styles.inviteSheet} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.inviteHandle} />
+            <Text style={styles.inviteEyebrow}>INVITE A FRIEND</Text>
+            <Text style={styles.inviteTitle}>Grow with someone you care about.</Text>
+
+            <LinearGradient
+              colors={['#FFF7F2', '#F6DFE8', '#EDE5F2']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.invitePreviewCard}
+            >
+              <View style={styles.inviteFlowerWrap}>
+                <View style={styles.inviteFlowerPetal1} />
+                <View style={styles.inviteFlowerPetal2} />
+                <View style={styles.inviteFlowerPetal3} />
+                <View style={styles.inviteFlowerPetal4} />
+                <View style={styles.inviteFlowerPetal5} />
+                <View style={styles.inviteFlowerPetal6} />
+                <View style={styles.inviteFlowerCenter} />
+              </View>
+              <Text style={styles.inviteAppName}>glowera</Text>
+              <Text style={styles.inviteMessageQuote}>
+                {`"${INVITE_MESSAGE}"`}
+              </Text>
+              <Text style={styles.inviteFromLine}>
+                — from {user?.gardenName || 'a friend'}
+              </Text>
+            </LinearGradient>
+
+            <View style={styles.inviteActions}>
+              <Pressable
+                onPress={confirmShareInvite}
+                style={({ pressed }) => [styles.invitePrimaryBtn, pressed && { opacity: 0.86 }]}
+              >
+                <Text style={styles.invitePrimaryText}>Send invite</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setShowInviteModal(false)}
+                style={({ pressed }) => [styles.inviteSecondaryBtn, pressed && { opacity: 0.7 }]}
+              >
+                <Text style={styles.inviteSecondaryText}>Maybe later</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       {/* ── About / Help Modal ── */}
       <Modal
         visible={showAboutModal}
@@ -805,6 +863,21 @@ export default function ProfileScreen() {
                   </View>
                 </View>
               </View>
+              <View style={styles.aboutSection}>
+                <Text style={[styles.aboutSectionTitle, { color: theme.text }]}>Contact Us</Text>
+                <Text style={[styles.aboutText, { color: theme.textSecondary }]}>
+                  Questions, feedback, or something feeling off? We read every message.
+                </Text>
+                <Pressable
+                  style={({ pressed }) => [styles.contactRow, pressed && { opacity: 0.7 }]}
+                  onPress={() => Linking.openURL('mailto:hello@gloweraapp.co')}
+                >
+                  <SolarIcon name="letter-bold" size={18} color="#C45A82" />
+                  <Text style={styles.contactEmail}>hello@gloweraapp.co</Text>
+                  <SolarIcon name="arrow-right-up-linear" size={16} color="#C45A82" />
+                </Pressable>
+              </View>
+
               <View style={styles.aboutSection}>
                 <Text style={[styles.aboutText, { color: theme.textSecondary }]}>Glowera v1.0.0 — Made with care for your wellness journey</Text>
               </View>
@@ -952,7 +1025,7 @@ const styles = StyleSheet.create({
   // ── Header ──
   headerGradient: {
     paddingTop: 64,
-    paddingBottom: 32,
+    paddingBottom: 40,
     paddingHorizontal: 24,
     borderBottomLeftRadius: 40,
     borderBottomRightRadius: 40,
@@ -1025,39 +1098,6 @@ const styles = StyleSheet.create({
     fontFamily: 'DMSans',
     color: 'rgba(255,251,245,0.9)',
     marginBottom: 0,
-  },
-
-  // Stats grid
-  statsGrid: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 20,
-    width: '100%',
-  },
-  statCell: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 16,
-    padding: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    gap: 4,
-  },
-  statValue: {
-    fontSize: 18,
-    fontFamily: 'Raleway-SemiBold',
-    fontWeight: '600',
-    color: '#FEFAF9',
-    lineHeight: 22,
-    marginTop: 4,
-  },
-  statLabel: {
-    fontSize: 8,
-    fontFamily: 'SpaceMono-Bold',
-    color: 'rgba(255,251,245,0.6)',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
   },
 
   // ── Sections ──
@@ -1200,8 +1240,11 @@ const styles = StyleSheet.create({
   modalButton: {
     flex: 1,
     paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
     borderRadius: borderRadius.md,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
   },
   modalButtonPrimary: {
     backgroundColor: defaultTheme.primary,
@@ -1286,7 +1329,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: borderRadius.xxl,
     paddingTop: spacing.lg,
     paddingHorizontal: spacing.lg,
-    maxHeight: '80%',
+    height: '80%',
   },
   fullModalHeader: {
     flexDirection: 'row',
@@ -1388,6 +1431,24 @@ const styles = StyleSheet.create({
     color: '#C45A82',
     fontWeight: '600',
   },
+  contactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(212,144,154,0.10)',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginTop: 12,
+  },
+  contactEmail: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: 'DMSans',
+    color: '#C45A82',
+    fontWeight: '600',
+    letterSpacing: 0.1,
+  },
 
   // Time picker
   timePickerContainer: {
@@ -1435,5 +1496,148 @@ const styles = StyleSheet.create({
     fontFamily: 'DMSans',
     color: defaultTheme.text,
     marginHorizontal: spacing.xs,
+  },
+
+  // ── Invite Friend Modal ──
+  inviteOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(30,10,6,0.45)',
+    justifyContent: 'flex-end',
+  },
+  inviteSheet: {
+    backgroundColor: '#FFFAF8',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingTop: 14,
+    paddingHorizontal: 22,
+    paddingBottom: 36,
+  },
+  inviteHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#D8C0B8',
+    alignSelf: 'center',
+    marginBottom: 18,
+  },
+  inviteEyebrow: {
+    fontFamily: 'SpaceMono-Bold',
+    fontSize: 10,
+    letterSpacing: 1.4,
+    color: '#C45A82',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  inviteTitle: {
+    fontFamily: 'PlayfairDisplay',
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#3A1A10',
+    textAlign: 'center',
+    lineHeight: 30,
+    marginBottom: 22,
+  },
+  invitePreviewCard: {
+    borderRadius: 24,
+    paddingVertical: 28,
+    paddingHorizontal: 22,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(196,90,130,0.12)',
+    shadowColor: '#3A1A10',
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    marginBottom: 22,
+  },
+  // Stylized flower built from positioned ellipses
+  inviteFlowerWrap: {
+    width: 64,
+    height: 64,
+    marginBottom: 10,
+    position: 'relative',
+  },
+  inviteFlowerPetal1: {
+    position: 'absolute', width: 22, height: 30, borderRadius: 15,
+    backgroundColor: '#FFFFFF', top: 0, left: 21,
+  },
+  inviteFlowerPetal2: {
+    position: 'absolute', width: 22, height: 30, borderRadius: 15,
+    backgroundColor: '#FFFFFF', top: 7, left: 38, transform: [{ rotate: '60deg' }],
+  },
+  inviteFlowerPetal3: {
+    position: 'absolute', width: 22, height: 30, borderRadius: 15,
+    backgroundColor: '#FFFFFF', top: 27, left: 38, transform: [{ rotate: '120deg' }],
+  },
+  inviteFlowerPetal4: {
+    position: 'absolute', width: 22, height: 30, borderRadius: 15,
+    backgroundColor: '#FFFFFF', bottom: 0, left: 21,
+  },
+  inviteFlowerPetal5: {
+    position: 'absolute', width: 22, height: 30, borderRadius: 15,
+    backgroundColor: '#FFFFFF', top: 27, left: 4, transform: [{ rotate: '60deg' }],
+  },
+  inviteFlowerPetal6: {
+    position: 'absolute', width: 22, height: 30, borderRadius: 15,
+    backgroundColor: '#FFFFFF', top: 7, left: 4, transform: [{ rotate: '120deg' }],
+  },
+  inviteFlowerCenter: {
+    position: 'absolute', width: 18, height: 18, borderRadius: 9,
+    backgroundColor: '#C45A82', top: 23, left: 23,
+  },
+  inviteAppName: {
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontSize: 22,
+    color: '#3A1A10',
+    marginBottom: 16,
+    letterSpacing: -0.3,
+  },
+  inviteMessageQuote: {
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontSize: 15,
+    color: '#3A1A10',
+    lineHeight: 22,
+    textAlign: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 6,
+  },
+  inviteFromLine: {
+    fontFamily: 'DMSans',
+    fontStyle: 'italic',
+    fontSize: 12,
+    color: '#8C7670',
+    letterSpacing: 0.2,
+  },
+  inviteActions: {
+    gap: 10,
+  },
+  invitePrimaryBtn: {
+    backgroundColor: '#C45A82',
+    borderRadius: 18,
+    paddingVertical: 16,
+    alignItems: 'center',
+    shadowColor: '#C45A82',
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 5 },
+  },
+  invitePrimaryText: {
+    fontFamily: 'DMSans',
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
+  },
+  inviteSecondaryBtn: {
+    borderRadius: 18,
+    paddingVertical: 15,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  inviteSecondaryText: {
+    fontFamily: 'DMSans',
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#8C7670',
   },
 });

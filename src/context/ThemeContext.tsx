@@ -32,9 +32,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // Determine if dark mode is active
-  const isDark =
+  // Dark mode is forced OFF for launch — only ~8 of 40+ screens currently honor
+  // the theme tokens, so allowing dark mode produces an inconsistent UI where
+  // some screens go dark and most stay light. The infrastructure stays wired so
+  // this single override can be removed once every screen is dark-mode-aware.
+  // The appearance picker in Profile has been hidden in lockstep with this.
+  const _wouldBeDark =
     themeMode === 'dark' || (themeMode === 'system' && systemColorScheme === 'dark');
+  const isDark = false;
+  void _wouldBeDark; // keep var around for the eventual unforced behavior
 
   // Get the active theme
   const activeTheme = isDark ? darkTheme : lightTheme;

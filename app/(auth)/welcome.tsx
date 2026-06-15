@@ -9,7 +9,11 @@ import {
   Image,
   ImageBackground,
   Dimensions,
+  Linking,
 } from 'react-native';
+
+const PRIVACY_URL =
+  'https://keen-cheshire-158.notion.site/Glowera-App-Privacy-Policy-34324bc53c8c80f0bda8f2f0d0527ed6';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -157,6 +161,14 @@ export default function WelcomeScreen() {
             <Text style={styles.signInText}>Already glowing? </Text>
             <Text style={styles.signInTextBold}>Sign in</Text>
           </Pressable>
+
+          <Text style={styles.legalLine}>
+            By continuing, you agree to our{' '}
+            <Text style={styles.legalLink} onPress={() => Linking.openURL(PRIVACY_URL)}>
+              Privacy Policy
+            </Text>
+            .
+          </Text>
         </View>
       </FadeUp>
     </View>
@@ -303,5 +315,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: 'rgba(242,180,204,0.7)',
+  },
+  legalLine: {
+    marginTop: 22,
+    paddingHorizontal: 24,
+    fontFamily: 'DMSans',
+    fontSize: 11,
+    lineHeight: 16,
+    color: 'rgba(255,255,255,0.32)',
+    textAlign: 'center',
+    letterSpacing: 0.1,
+  },
+  legalLink: {
+    color: 'rgba(242,180,204,0.85)',
+    textDecorationLine: 'underline',
   },
 });
