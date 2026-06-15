@@ -177,3 +177,62 @@ export async function ensureScheduledFromSettings(
 export async function getScheduledNotifications(): Promise<Notifications.NotificationRequest[]> {
   return Notifications.getAllScheduledNotificationsAsync();
 }
+
+const SUPP_NOTIF_PREFIX = 'notif:supp:';
+
+function timingToHour(timing: string): { hour: number; minute: number } {
+  const t = timing.toLowerCase();
+  if (t.includes('evening') || t.includes('night')) return { hour: 21, minute: 0 };
+  if (t.includes('with-food') || t.includes('food') || t.includes('noon')) return { hour: 12, minute: 0 };
+  return { hour: 8, minute: 0 }; // morning / any / default
+}
+
+/**
+ * Schedule a daily reminder for a specific supplement.
+ * Safe to call repeatedly — always cancels existing before scheduling.
+ */
+export async function scheduleSupplementReminder(
+  habitId: string,
+  name: string,
+  timing: string,
+): Promise<void> {
+  try {
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') return;
+
+    await cancelSupplementReminder(habitId);
+
+    const { hour, minute } = timingToHour(timing);
+    const id = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'Time for your supplement ✨',
+        body: `Don't forget to take your ${name}`,
+        sound: true,
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
+        hour,
+        minute,
+      },
+    });
+    await AsyncStorage.setItem(`${SUPP_NOTIF_PREFIX}${habitId}`, id);
+  } catch (error) {
+    console.error('[Notifications] Failed to schedule supplement reminder:', error);
+  }
+}
+
+/**
+ * Cancel a previously scheduled supplement reminder.
+ */
+export async function cancelSupplementReminder(habitId: string): Promise<void> {
+  try {
+    const key = `${SUPP_NOTIF_PREFIX}${habitId}`;
+    const id = await AsyncStorage.getItem(key);
+    if (id) {
+      await Notifications.cancelScheduledNotificationAsync(id);
+      await AsyncStorage.removeItem(key);
+    }
+  } catch (error) {
+    console.error('[Notifications] Failed to cancel supplement reminder:', error);
+  }
+}

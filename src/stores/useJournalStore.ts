@@ -25,6 +25,9 @@ interface JournalState {
   shouldShowWeeklyPrompt: () => boolean;
   markWeeklyPromptShown: () => void;
 
+  // Streak
+  getJournalStreak: () => number;
+
   // Reset
   resetJournal: () => void;
 }
@@ -117,6 +120,22 @@ export const useJournalStore = create<JournalState>()(
 
       markWeeklyPromptShown: () => {
         set({ lastWeeklyPromptDate: getISOTimestamp() });
+      },
+
+      getJournalStreak: () => {
+        const { entries } = get();
+        if (entries.length === 0) return 0;
+        const entryDates = new Set(entries.map(e => e.date));
+        const toKey = (d: Date) =>
+          `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        let streak = 0;
+        const cur = new Date();
+        if (entryDates.has(toKey(cur))) { streak++; cur.setDate(cur.getDate() - 1); }
+        for (let i = 0; i < 365; i++) {
+          if (entryDates.has(toKey(cur))) { streak++; cur.setDate(cur.getDate() - 1); }
+          else break;
+        }
+        return streak;
       },
 
       resetJournal: () => {

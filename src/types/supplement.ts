@@ -43,6 +43,9 @@ export interface SupplementMetadata {
   dosage?: string;            // User's custom dosage
   timingPreference?: string;  // When user prefers to take it
   notes?: string;             // Any additional notes
+  checkInRating?: 'positive' | 'neutral' | 'negative';
+  checkInNote?: string;
+  checkInCompletedAt?: string; // ISO timestamp
 }
 
 // User's wellness goal preference

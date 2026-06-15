@@ -23,8 +23,40 @@ import {
 import { SupplementInfo, WellnessGoal } from '../../src/types/supplement';
 import { SUPPLEMENT_CATALOG } from '../../src/constants/supplements';
 import { SolarIcon } from '../../src/components/ui/SolarIcon';
+import { scheduleSupplementReminder, cancelSupplementReminder } from '../../src/lib/notifications';
 
 const SUPP_COLORS = ['#F4A888', '#B8CFB1', '#D8C9EC', '#F2B4CC', '#FBD4BF'];
+
+function toDateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function getStreak(habitId: string, summaries: Record<string, any>): number {
+  let streak = 0;
+  const cur = new Date();
+  if (summaries[toDateKey(cur)]?.completions[habitId]) streak++;
+  cur.setDate(cur.getDate() - 1);
+  for (let i = 0; i < 365; i++) {
+    if (summaries[toDateKey(cur)]?.completions[habitId]) { streak++; cur.setDate(cur.getDate() - 1); }
+    else break;
+  }
+  return streak;
+}
+
+function getTotalDaysUsed(habitId: string, summaries: Record<string, any>): number {
+  return Object.values(summaries).filter((s: any) => s?.completions[habitId] !== undefined).length;
+}
+
+function getAdherence30d(habitId: string, summaries: Record<string, any>): number {
+  let taken = 0;
+  const cur = new Date();
+  for (let i = 0; i < 30; i++) {
+    const dk = toDateKey(cur);
+    if (summaries[dk]?.completions[habitId]) taken++;
+    cur.setDate(cur.getDate() - 1);
+  }
+  return Math.round((taken / 30) * 100);
+}
 
 export default function GlowStackScreen() {
   const insets = useSafeAreaInsets();
@@ -35,6 +67,9 @@ export default function GlowStackScreen() {
   const [editDosage, setEditDosage] = useState('');
   const [editTiming, setEditTiming] = useState('morning');
   const [editNotes, setEditNotes] = useState('');
+  const [checkInHabit, setCheckInHabit] = useState<any>(null);
+  const [checkInRating, setCheckInRating] = useState<'positive' | 'neutral' | 'negative' | null>(null);
+  const [checkInNote, setCheckInNote] = useState('');
 
   const { habits, dailySummaries, completeHabit, uncompleteHabit, getCompletionForToday, removeHabit, updateSupplementMeta } = useHabitStore();
   const { markSupplementAdded, markSupplementRemoved } = useSupplementStore();
@@ -79,6 +114,19 @@ export default function GlowStackScreen() {
   }, []);
   const todayDayIdx = useMemo(() => { const d = new Date().getDay(); return d === 0 ? 6 : d - 1; }, []);
 
+  // 7-day stack health score
+  const healthScore = useMemo(() => {
+    if (total === 0) return null;
+    let possible = 0, done = 0;
+    weekDates.forEach(dk => {
+      supplementHabits.forEach(h => {
+        possible++;
+        if (dailySummaries[dk]?.completions[h.id]) done++;
+      });
+    });
+    return possible > 0 ? Math.round((done / possible) * 100) : 0;
+  }, [supplementHabits, dailySummaries, weekDates, total]);
+
   // Completion celebration animation
   const alreadyComplete = taken === total && total > 0;
   const celebScale   = useRef(new Animated.Value(alreadyComplete ? 1 : 0.94)).current;
@@ -121,6 +169,7 @@ export default function GlowStackScreen() {
         text: 'Remove', style: 'destructive',
         onPress: () => {
           removeHabit(habitId);
+          cancelSupplementReminder(habitId);
           if (supplementInfoId) markSupplementRemoved(supplementInfoId);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         },
@@ -144,14 +193,31 @@ export default function GlowStackScreen() {
       timingPreference: editTiming,
       notes: editNotes,
     });
+    const suppInfo = SUPPLEMENT_CATALOG.find((s: SupplementInfo) => s.id === editingHabit.supplementMeta?.supplementInfoId);
+    const displayName = suppInfo?.name ?? editingHabit.name;
+    scheduleSupplementReminder(editingHabit.id, displayName, editTiming);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setEditingHabit(null);
+  };
+
+  const handleSaveCheckIn = () => {
+    if (!checkInHabit || !checkInRating) return;
+    updateSupplementMeta(checkInHabit.id, {
+      checkInRating,
+      checkInNote: checkInNote.trim() || undefined,
+      checkInCompletedAt: new Date().toISOString(),
+    });
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setCheckInHabit(null);
+    setCheckInRating(null);
+    setCheckInNote('');
   };
 
   const handleAddToHabits = (dosage: string, timing: string, notes: string) => {
     if (!selectedSupplement) return;
     const { addSupplementHabit } = useHabitStore.getState();
-    addSupplementHabit(selectedSupplement, { dosage, timingPreference: timing, notes });
+    const habitId = addSupplementHabit(selectedSupplement, { dosage, timingPreference: timing, notes });
+    scheduleSupplementReminder(habitId, selectedSupplement.name, timing);
     markSupplementAdded(selectedSupplement.id);
     setSelectedSupplement(null);
   };
@@ -166,57 +232,98 @@ export default function GlowStackScreen() {
     const dose = habit.supplementMeta?.dosage || suppInfo?.typicalDosage || '';
     const timing = suppInfo?.timing ?? 'morning';
     const emoji = timing === 'evening' ? '🌙' : '💊';
+    const streak = getStreak(habit.id, dailySummaries);
+    const totalDays = getTotalDaysUsed(habit.id, dailySummaries);
+    const needsCheckIn = totalDays >= 14 && !habit.supplementMeta?.checkInCompletedAt;
+    const checkInDone = !!habit.supplementMeta?.checkInCompletedAt;
+    const checkInRatingVal = habit.supplementMeta?.checkInRating;
 
     return (
-      <Pressable
-        key={habit.id}
-        style={[styles.suppRow, isTaken && { backgroundColor: `${color}20` }]}
-        onPress={() => handleToggle(habit.id)}
-        onLongPress={() => handleRemoveSupplement(habit.id, habit.supplementMeta?.supplementInfoId)}
-      >
-        <View style={[styles.suppIconBox, { backgroundColor: `${color}30` }]}>
-          <Text style={styles.suppEmoji}>{habit.icon || emoji}</Text>
-        </View>
-        <View style={styles.suppInfo}>
-          <Text style={[styles.suppName, isTaken && styles.suppNameTaken]} numberOfLines={1}>
-            {displayName}
-          </Text>
-          {dose ? <Text style={styles.suppDose}>{dose}</Text> : null}
-          <View style={styles.weekDots}>
-            {(['M','T','W','T','F','S','S']).map((label, i) => {
-              const dateKey = weekDates[i];
-              const done = dailySummaries[dateKey]?.completions[habit.id] !== undefined;
-              const isToday = i === todayDayIdx;
-              return (
-                <View key={i} style={styles.weekDotCol}>
-                  <View
-                    style={[
-                      styles.weekDot,
-                      done && { backgroundColor: color },
-                      isToday && !done && styles.weekDotToday,
-                    ]}
-                  />
-                  <Text style={[styles.weekDotLabel, isToday && { color: '#C45A82' }]}>{label}</Text>
-                </View>
-              );
-            })}
-          </View>
-        </View>
+      <View key={habit.id}>
         <Pressable
-          onPress={() => handleOpenEdit(habit)}
-          hitSlop={8}
-          style={styles.editBtn}
-        >
-          <SolarIcon name="pen-new-square-bold" size={15} color="#B8A9A5" />
-        </Pressable>
-        <Pressable
+          style={[styles.suppRow, isTaken && { backgroundColor: `${color}20` }]}
           onPress={() => handleToggle(habit.id)}
-          hitSlop={6}
-          style={[styles.checkBox, isTaken && { backgroundColor: color, borderColor: color }]}
+          onLongPress={() => handleRemoveSupplement(habit.id, habit.supplementMeta?.supplementInfoId)}
         >
-          {isTaken && <SolarIcon name="check-circle-bold" size={14} color="#FFFAF8" />}
+          <View style={[styles.suppIconBox, { backgroundColor: `${color}30` }]}>
+            <Text style={styles.suppEmoji}>{habit.icon || emoji}</Text>
+          </View>
+          <View style={styles.suppInfo}>
+            <Text style={[styles.suppName, isTaken && styles.suppNameTaken]} numberOfLines={1}>
+              {displayName}
+            </Text>
+            {dose ? <Text style={styles.suppDose}>{dose}</Text> : null}
+            {streak >= 2 && (
+              <Text style={styles.streakRowText}>🔥 {streak}-day streak</Text>
+            )}
+            <Text style={styles.holdHint}>Hold to remove</Text>
+            <View style={styles.weekDots}>
+              {(['M','T','W','T','F','S','S']).map((label, i) => {
+                const dk = weekDates[i];
+                const done = dailySummaries[dk]?.completions[habit.id] !== undefined;
+                const isToday = i === todayDayIdx;
+                return (
+                  <View key={i} style={styles.weekDotCol}>
+                    <View
+                      style={[
+                        styles.weekDot,
+                        done && { backgroundColor: color },
+                        isToday && !done && styles.weekDotToday,
+                      ]}
+                    />
+                    <Text style={[styles.weekDotLabel, isToday && { color: '#C45A82' }]}>{label}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+          <Pressable onPress={() => handleOpenEdit(habit)} hitSlop={8} style={styles.editBtn}>
+            <SolarIcon name="pen-new-square-bold" size={15} color="#B8A9A5" />
+          </Pressable>
+          <Pressable
+            onPress={() => handleToggle(habit.id)}
+            hitSlop={6}
+            style={[styles.checkBox, isTaken && { backgroundColor: color, borderColor: color }]}
+          >
+            {isTaken && <SolarIcon name="check-circle-bold" size={14} color="#FFFAF8" />}
+          </Pressable>
         </Pressable>
-      </Pressable>
+
+        {/* Check-in prompt — appears after 14 days */}
+        {needsCheckIn && (
+          <Pressable
+            onPress={() => { setCheckInHabit(habit); setCheckInRating(null); setCheckInNote(''); }}
+            style={({ pressed }) => [styles.checkInCard, pressed && { opacity: 0.92 }]}
+          >
+            <LinearGradient
+              colors={['#EDE8FF', '#F6E8F5']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              style={styles.checkInCardInner}
+            >
+              <Text style={styles.checkInCardEmoji}>✨</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.checkInCardTitle}>How is {displayName} feeling?</Text>
+                <Text style={styles.checkInCardSub}>{totalDays} days in — time to reflect</Text>
+              </View>
+              <View style={styles.checkInCardBtn}>
+                <Text style={styles.checkInCardBtnText}>Check in</Text>
+              </View>
+            </LinearGradient>
+          </Pressable>
+        )}
+
+        {/* Previous check-in result */}
+        {checkInDone && checkInRatingVal && (
+          <View style={styles.checkInResult}>
+            <Text style={styles.checkInResultText}>
+              {checkInRatingVal === 'positive' ? '🌟 Loving it' : checkInRatingVal === 'neutral' ? '🤷‍♀️ Too early to tell' : '😕 Not feeling it yet'}
+            </Text>
+            <Pressable onPress={() => { setCheckInHabit(habit); setCheckInRating(checkInRatingVal); setCheckInNote(habit.supplementMeta?.checkInNote || ''); }} hitSlop={8}>
+              <Text style={styles.checkInResultEdit}>Edit</Text>
+            </Pressable>
+          </View>
+        )}
+      </View>
     );
   };
 
@@ -238,7 +345,8 @@ export default function GlowStackScreen() {
             style={({ pressed }) => [styles.addButton, pressed && { opacity: 0.8, transform: [{ scale: 0.95 }] }]}
             onPress={handleBrowseSupplements}
           >
-            <SolarIcon name="add-circle-bold" color="#FFFAF8" size={24} />
+            <SolarIcon name="add-circle-bold" color="#FFFFFF" size={16} />
+            <Text style={styles.addButtonText}>Add Supplement</Text>
           </Pressable>
         </View>
 
@@ -275,6 +383,35 @@ export default function GlowStackScreen() {
               </View>
             </View>
           )
+        )}
+
+        {/* Stack health score card */}
+        {total > 0 && healthScore !== null && (
+          <LinearGradient
+            colors={['#9B86D4', '#C45A82']}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+            style={styles.healthCard}
+          >
+            <View style={styles.healthCardLeft}>
+              <Text style={styles.healthCardScore}>{healthScore}%</Text>
+              <Text style={styles.healthCardLabel}>7-DAY CONSISTENCY</Text>
+              <Text style={styles.healthCardDesc}>
+                {healthScore >= 80 ? "You're on a roll 🌿" : healthScore >= 50 ? 'Building momentum ✨' : "Let's get consistent 💪"}
+              </Text>
+            </View>
+            <View style={styles.healthCardDots}>
+              {(['Mo','Tu','We','Th','Fr','Sa','Su']).map((lbl, i) => {
+                const allTaken = supplementHabits.length > 0 &&
+                  supplementHabits.every(h => dailySummaries[weekDates[i]]?.completions[h.id]);
+                return (
+                  <View key={i} style={styles.healthDotCol}>
+                    <View style={[styles.healthDot, allTaken && styles.healthDotFilled]} />
+                    <Text style={styles.healthDotLabel}>{lbl}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </LinearGradient>
         )}
 
         {/* Empty state */}
@@ -331,6 +468,87 @@ export default function GlowStackScreen() {
           />
         </View>
       )}
+
+      {/* Check-in modal */}
+      <Modal
+        visible={!!checkInHabit}
+        animationType="slide"
+        presentationStyle="formSheet"
+        onRequestClose={() => setCheckInHabit(null)}
+      >
+        <KeyboardAvoidingView
+          style={styles.editModal}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <LinearGradient
+            colors={['#FFF0F5', '#F6DFE8', '#EDD5CB']}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            style={styles.checkInModalHeader}
+          >
+            <Pressable onPress={() => setCheckInHabit(null)} hitSlop={8} style={{ alignSelf: 'flex-end' }}>
+              <Text style={styles.editModalCancel}>Cancel</Text>
+            </Pressable>
+            {checkInHabit && (() => {
+              const suppInfo = SUPPLEMENT_CATALOG.find((s: SupplementInfo) => s.id === checkInHabit.supplementMeta?.supplementInfoId);
+              const name = suppInfo?.name ?? checkInHabit.name;
+              const days = getTotalDaysUsed(checkInHabit.id, dailySummaries);
+              return (
+                <>
+                  <Text style={styles.checkInModalEmoji}>{checkInHabit.icon || '💊'}</Text>
+                  <Text style={styles.checkInModalTitle}>{days} days with {name}</Text>
+                  <Text style={styles.checkInModalSub}>Are you noticing a difference?</Text>
+                </>
+              );
+            })()}
+          </LinearGradient>
+
+          <ScrollView
+            style={styles.editModalScroll}
+            contentContainerStyle={[styles.editModalContent, { paddingTop: 28 }]}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.checkInReactions}>
+              {([
+                { id: 'positive', emoji: '🌟', label: 'Yes, I feel it!' },
+                { id: 'neutral',  emoji: '🤷‍♀️', label: 'Too early to tell' },
+                { id: 'negative', emoji: '😕', label: 'Not really...' },
+              ] as const).map(opt => (
+                <Pressable
+                  key={opt.id}
+                  onPress={() => setCheckInRating(opt.id)}
+                  style={[styles.checkInReactionBtn, checkInRating === opt.id && styles.checkInReactionBtnActive]}
+                >
+                  <Text style={styles.checkInReactionEmoji}>{opt.emoji}</Text>
+                  <Text style={[styles.checkInReactionLabel, checkInRating === opt.id && { color: '#C45A82', fontWeight: '600' }]}>
+                    {opt.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <Text style={styles.editLabel}>ADD A NOTE (OPTIONAL)</Text>
+            <TextInput
+              style={[styles.editInput, styles.editNotesInput]}
+              value={checkInNote}
+              onChangeText={setCheckInNote}
+              placeholder="What have you noticed?"
+              placeholderTextColor="#B8A9A5"
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
+
+            <Pressable
+              style={[styles.checkInSaveBtn, !checkInRating && { opacity: 0.4 }]}
+              onPress={handleSaveCheckIn}
+              disabled={!checkInRating}
+            >
+              <Text style={styles.checkInSaveBtnText}>Save my response</Text>
+            </Pressable>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Modal>
 
       {/* Edit supplement modal */}
       <Modal
@@ -414,6 +632,24 @@ export default function GlowStackScreen() {
               textAlignVertical="top"
             />
 
+            {editingHabit && (() => {
+              const adherence = getAdherence30d(editingHabit.id, dailySummaries);
+              const totalDays = getTotalDaysUsed(editingHabit.id, dailySummaries);
+              if (totalDays < 2) return null;
+              return (
+                <View style={styles.adherenceSection}>
+                  <View style={styles.adherenceHeader}>
+                    <Text style={styles.editLabel}>30-DAY ADHERENCE</Text>
+                    <Text style={styles.adherenceScore}>{adherence}%</Text>
+                  </View>
+                  <View style={styles.adherenceTrack}>
+                    <View style={[styles.adherenceFill, { width: `${adherence}%` as any }]} />
+                  </View>
+                  <Text style={styles.adherenceSub}>{totalDays} days logged total</Text>
+                </View>
+              );
+            })()}
+
             <Pressable
               style={styles.editRemoveBtn}
               onPress={() => {
@@ -443,7 +679,7 @@ const styles = StyleSheet.create({
   },
   headerTextBlock: { flex: 1, marginRight: 16 },
   headerLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: 'SpaceMono-Bold',
     color: '#5C3D2E',
     letterSpacing: 1.2,
@@ -458,17 +694,24 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#C45A82',
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 5,
+    backgroundColor: '#C45A82',
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 999,
     shadowColor: '#C45A82',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 8,
     elevation: 6,
+  },
+  addButtonText: {
+    fontFamily: 'DMSans',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 
   progressCard: {
@@ -490,7 +733,7 @@ const styles = StyleSheet.create({
   },
   progressCardLabel: {
     fontFamily: 'SpaceMono-Bold',
-    fontSize: 10,
+    fontSize: 11,
     color: '#5C3D2E',
     letterSpacing: 1.2,
     textTransform: 'uppercase',
@@ -529,12 +772,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 12,
   },
-  emptyButtonText: { fontFamily: 'DMSans', fontSize: 14, fontWeight: '600', color: '#FFFAF8' },
+  emptyButtonText: { fontFamily: 'DMSans', fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
 
   section: { marginBottom: 20 },
   sectionLabel: {
     fontFamily: 'SpaceMono-Bold',
-    fontSize: 10,
+    fontSize: 11,
     color: '#5C3D2E',
     letterSpacing: 1.2,
     textTransform: 'uppercase',
@@ -577,8 +820,8 @@ const styles = StyleSheet.create({
   },
   suppDose: {
     fontFamily: 'SpaceMono-Bold',
-    fontSize: 10,
-    color: '#B8A9A5',
+    fontSize: 11,
+    color: '#7A6560',
     letterSpacing: 0.5,
     marginTop: 2,
   },
@@ -614,8 +857,8 @@ const styles = StyleSheet.create({
   },
   weekDotLabel: {
     fontFamily: 'SpaceMono-Bold',
-    fontSize: 8,
-    color: '#B8A9A5',
+    fontSize: 9,
+    color: '#8C7B76',
   },
 
   celebCard: {
@@ -643,6 +886,208 @@ const styles = StyleSheet.create({
     fontFamily: 'DMSans',
     fontSize: 12,
     color: '#5C3D2E',
+  },
+
+  holdHint: {
+    fontFamily: 'DMSans',
+    fontSize: 11,
+    color: '#8C7B76',
+    marginTop: 3,
+  },
+
+  adherenceSection: { marginTop: 16, marginBottom: 8 },
+  adherenceHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  adherenceScore: { fontFamily: 'Raleway-SemiBold', fontSize: 15, fontWeight: '600', color: '#C45A82' },
+  adherenceTrack: { height: 6, backgroundColor: 'rgba(242,180,204,0.2)', borderRadius: 999, overflow: 'hidden' },
+  adherenceFill: { height: '100%', backgroundColor: '#C45A82', borderRadius: 999 },
+  adherenceSub: { fontFamily: 'DMSans', fontSize: 11, color: '#B8A9A5', marginTop: 5 },
+
+  streakRowText: {
+    fontFamily: 'DMSans',
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#C45A82',
+    marginTop: 3,
+    marginBottom: 4,
+  },
+
+  healthCard: {
+    borderRadius: 24,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+    shadowColor: '#9B86D4',
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  healthCardLeft: { flex: 1 },
+  healthCardScore: {
+    fontFamily: 'Raleway-SemiBold',
+    fontSize: 44,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    lineHeight: 48,
+  },
+  healthCardLabel: {
+    fontFamily: 'SpaceMono-Bold',
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.9)',
+    letterSpacing: 1.2,
+    marginTop: 2,
+  },
+  healthCardDesc: {
+    fontFamily: 'DMSans',
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.9)',
+    marginTop: 6,
+  },
+  healthCardDots: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    width: 120,
+    justifyContent: 'flex-end',
+  },
+  healthDotCol: { alignItems: 'center', gap: 2 },
+  healthDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+  },
+  healthDotFilled: { backgroundColor: '#FFFFFF' },
+  healthDotLabel: {
+    fontFamily: 'SpaceMono-Bold',
+    fontSize: 9,
+    color: 'rgba(255,255,255,0.9)',
+  },
+
+  checkInCard: {
+    marginTop: 8,
+    marginBottom: 4,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  checkInCardInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 14,
+  },
+  checkInCardEmoji: { fontSize: 22 },
+  checkInCardTitle: {
+    fontFamily: 'DMSans',
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1A0A06',
+    marginBottom: 2,
+  },
+  checkInCardSub: {
+    fontFamily: 'DMSans',
+    fontSize: 11,
+    color: '#5C3D2E',
+  },
+  checkInCardBtn: {
+    backgroundColor: '#C45A82',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  checkInCardBtnText: {
+    fontFamily: 'DMSans',
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+
+  checkInResult: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(184,207,177,0.18)',
+    borderRadius: 12,
+  },
+  checkInResultText: {
+    fontFamily: 'DMSans',
+    fontSize: 12,
+    color: '#5C3D2E',
+  },
+  checkInResultEdit: {
+    fontFamily: 'DMSans',
+    fontSize: 12,
+    color: '#C45A82',
+    fontWeight: '600',
+  },
+
+  checkInModalHeader: {
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 28,
+  },
+  checkInModalEmoji: { fontSize: 40, marginTop: 12, marginBottom: 8 },
+  checkInModalTitle: {
+    fontFamily: 'Raleway-SemiBold',
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1A0A06',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  checkInModalSub: {
+    fontFamily: 'DMSans',
+    fontSize: 14,
+    color: '#5C3D2E',
+    textAlign: 'center',
+  },
+
+  checkInReactions: {
+    gap: 10,
+    marginBottom: 24,
+  },
+  checkInReactionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#E0CCBF',
+  },
+  checkInReactionBtnActive: {
+    borderColor: '#C45A82',
+    backgroundColor: '#FFF0F5',
+  },
+  checkInReactionEmoji: { fontSize: 22 },
+  checkInReactionLabel: {
+    fontFamily: 'DMSans',
+    fontSize: 15,
+    color: '#5C3D2E',
+  },
+  checkInSaveBtn: {
+    backgroundColor: '#C45A82',
+    borderRadius: 999,
+    paddingVertical: 15,
+    alignItems: 'center',
+    marginTop: 8,
+    shadowColor: '#C45A82',
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  checkInSaveBtnText: {
+    fontFamily: 'DMSans',
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 
   editBtn: {

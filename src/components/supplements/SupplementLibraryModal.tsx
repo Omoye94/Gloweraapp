@@ -22,6 +22,7 @@ import { SupplementDetailView } from './SupplementDetailView';
 import { HealthDisclaimer } from './HealthDisclaimer';
 import { CreateCustomSupplementModal } from './CreateCustomSupplementModal';
 import { theme, spacing, borderRadius, shadows } from '../../theme';
+import { scheduleSupplementReminder } from '../../lib/notifications';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -99,12 +100,13 @@ export const SupplementLibraryModal: React.FC<SupplementLibraryModalProps> = ({
   const handleAddToHabits = (dosage: string, timing: string, notes: string) => {
     if (!selectedSupplement) return;
 
-    addSupplementHabit(selectedSupplement, {
+    const habitId = addSupplementHabit(selectedSupplement, {
       dosage,
       timingPreference: timing,
       notes,
     });
     markSupplementAdded(selectedSupplement.id);
+    scheduleSupplementReminder(habitId, selectedSupplement.name, timing);
 
     // Let the "Added" animation play before going back to list
     setTimeout(() => {
