@@ -40,3 +40,12 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Claude Code / local agent state
+.agents/
+.claude/
+skills-lock.json
+
+# Local marketing artifacts (uploaded directly to App Store Connect, not stored in repo)
+/glowera-paywall-*.png
+/1/
