@@ -8,7 +8,7 @@ import {
   TextInput,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { ChevronLeft, Check } from 'lucide-react-native';
 import { spacing, shadows } from '../../../src/theme';
@@ -29,13 +29,40 @@ import {
 
 export default function ActiveChallengeScreen() {
   const router = useRouter();
-  const { activeChallenge, todayDay, days, isLoading, userId, refresh } = useChallenges();
+  const { id: paramId } = useLocalSearchParams<{ id?: string }>();
+  const {
+    activeChallenges,
+    getDaysFor,
+    getTodayDayFor,
+    isLoading,
+    userId,
+    refresh,
+  } = useChallenges();
   const { addPoints, recordDailyActivity } = usePlantStore();
 
+  const [selectedIdx, setSelectedIdx] = useState(0);
+
+  // If a specific user_challenge_id was passed in the URL, select that one.
+  useEffect(() => {
+    if (!paramId || activeChallenges.length === 0) return;
+    const idx = activeChallenges.findIndex((a) => a.userChallenge.id === paramId);
+    if (idx >= 0) setSelectedIdx(idx);
+  }, [paramId, activeChallenges]);
   const [localDay, setLocalDay] = useState<UserChallengeDay | null>(null);
   const [reflectionText, setReflectionText] = useState('');
   const [isSavingReflection, setIsSavingReflection] = useState(false);
   const [showReflectionSaved, setShowReflectionSaved] = useState(false);
+
+  // Clamp selection when the actives array shrinks (e.g. one completes).
+  useEffect(() => {
+    if (selectedIdx >= activeChallenges.length && activeChallenges.length > 0) {
+      setSelectedIdx(activeChallenges.length - 1);
+    }
+  }, [activeChallenges.length, selectedIdx]);
+
+  const activeChallenge = activeChallenges[selectedIdx] ?? null;
+  const days = activeChallenge ? getDaysFor(activeChallenge.userChallenge.id) : [];
+  const todayDay = activeChallenge ? getTodayDayFor(activeChallenge.userChallenge.id) : null;
 
   useEffect(() => {
     if (todayDay) {
@@ -45,10 +72,10 @@ export default function ActiveChallengeScreen() {
   }, [todayDay]);
 
   useEffect(() => {
-    if (!isLoading && !activeChallenge) {
+    if (!isLoading && activeChallenges.length === 0) {
       router.replace('/(tabs)/challenges');
     }
-  }, [isLoading, activeChallenge]);
+  }, [isLoading, activeChallenges.length]);
 
   if (isLoading || !activeChallenge) {
     return (
@@ -123,6 +150,42 @@ export default function ActiveChallengeScreen() {
             <Text style={styles.backText}>Challenges</Text>
           </View>
         </Pressable>
+
+        {/* Active-challenge switcher — visible when 2+ active */}
+        {activeChallenges.length > 1 && (
+          <View style={styles.switcherWrap}>
+            <Text style={styles.switcherLabel}>
+              {activeChallenges.length} ACTIVE
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.switcherRow}
+            >
+              {activeChallenges.map((info, i) => {
+                const isSelected = i === selectedIdx;
+                return (
+                  <Pressable
+                    key={info.userChallenge.id}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setSelectedIdx(i);
+                    }}
+                    style={[styles.switcherPill, isSelected && styles.switcherPillActive]}
+                  >
+                    <Text style={styles.switcherEmoji}>{info.catalog.icon}</Text>
+                    <Text
+                      style={[styles.switcherPillText, isSelected && styles.switcherPillTextActive]}
+                      numberOfLines={1}
+                    >
+                      {info.catalog.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
 
         {/* Header */}
         <View style={styles.header}>
@@ -286,6 +349,43 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: spacing.lg, paddingTop: 60 },
 
   backButton: { marginBottom: spacing.md },
+  // Active-challenge switcher
+  switcherWrap: { marginBottom: spacing.md },
+  switcherLabel: {
+    fontSize: 10,
+    fontFamily: 'SpaceMono-Bold',
+    letterSpacing: 1.6,
+    color: '#A89A93',
+    marginBottom: 10,
+    marginLeft: 4,
+  },
+  switcherRow: { gap: 8, paddingRight: 16 },
+  switcherPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(58,46,43,0.08)',
+    maxWidth: 220,
+  },
+  switcherPillActive: {
+    backgroundColor: '#F2B4CC',
+    borderColor: '#F2B4CC',
+  },
+  switcherEmoji: { fontSize: 16 },
+  switcherPillText: {
+    fontSize: 13,
+    fontFamily: 'DMSans',
+    fontWeight: '600',
+    color: '#6B5B52',
+  },
+  switcherPillTextActive: {
+    color: '#FFFFFF',
+  },
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   backText: { fontSize: 15, fontFamily: 'DMSans', color: '#F2B4CC' },
 

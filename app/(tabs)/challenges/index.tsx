@@ -44,7 +44,7 @@ function getChallengeIconMeta(id: string) {
 
 export default function ChallengesCatalogScreen() {
   const router = useRouter();
-  const { activeChallenge, completedIds, days, isLoading } = useChallenges();
+  const { activeChallenges, completedIds, isLoading } = useChallenges();
 
   if (isLoading) {
     return (
@@ -57,16 +57,9 @@ export default function ChallengesCatalogScreen() {
     );
   }
 
-  const dayIndex = activeChallenge ? getCurrentDayIndex(activeChallenge.userChallenge) : 0;
-  const dayNumber = dayIndex + 1;
-  const duration = activeChallenge?.catalog.duration ?? 0;
-  const progress = duration > 0 ? Math.round((dayNumber / duration) * 100) : 0;
-  const daysLeft = duration - dayNumber;
-
-  // Split challenges into active list + discover list
-  const activeChallenges = activeChallenge ? [activeChallenge.catalog] : [];
+  const activeIds = new Set(activeChallenges.map((a) => a.catalog.id));
   const discoverChallenges = CHALLENGES.filter(
-    (c) => activeChallenge?.catalog.id !== c.id && !completedIds.includes(c.id),
+    (c) => !activeIds.has(c.id) && !completedIds.includes(c.id),
   );
 
   return (
@@ -89,63 +82,61 @@ export default function ChallengesCatalogScreen() {
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionTitle}>ACTIVE</Text>
               <View style={styles.countPill}>
-                <Text style={styles.countPillText}>{activeChallenges.length} Ongoing</Text>
+                <Text style={styles.countPillText}>{activeChallenges.length} of 3</Text>
               </View>
             </View>
 
-            <Pressable
-              style={({ pressed }) => [
-                styles.activeCard,
-                pressed && { opacity: 0.92, transform: [{ scale: 0.99 }] },
-              ]}
-              onPress={() => router.push('/(tabs)/challenges/active')}
-            >
-              {/* Banner */}
-              <LinearGradient
-                colors={['#C45A82', '#9B86D4']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.activeBanner}
-              >
-                <View style={styles.bannerOverlay} />
-                <View style={styles.bannerTextBlock}>
-                  <Text style={styles.activeName} numberOfLines={1}>
-                    {activeChallenge!.catalog.name}
-                  </Text>
-                  <Text style={styles.activeDesc} numberOfLines={2}>
-                    {activeChallenge!.catalog.description}
-                  </Text>
-                </View>
-                <Text style={styles.bannerEmoji}>{activeChallenge!.catalog.icon}</Text>
-              </LinearGradient>
-
-              {/* Progress footer */}
-              <View style={styles.activeFooter}>
-                <View style={styles.progressLabelRow}>
-                  <Text style={styles.progressLabel}>
-                    PROGRESS · DAY {dayNumber} OF {duration}
-                  </Text>
-                  <Text style={styles.progressPercent}>{progress}%</Text>
-                </View>
-
-                <View style={styles.progressTrack}>
-                  <View style={[styles.progressFill, { width: `${progress}%` }]} />
-                </View>
-
-                <View style={styles.progressMeta}>
+            <View style={{ gap: 12 }}>
+              {activeChallenges.map((info) => {
+                const dayIdx = getCurrentDayIndex(info.userChallenge);
+                const dayNum = dayIdx + 1;
+                const dur = info.catalog.duration;
+                const prog = dur > 0 ? Math.round((dayNum / dur) * 100) : 0;
+                const left = dur - dayNum;
+                return (
                   <Pressable
-                    style={styles.continueChip}
-                    onPress={() => router.push('/(tabs)/challenges/active')}
+                    key={info.userChallenge.id}
+                    style={({ pressed }) => [
+                      styles.activeCardCompact,
+                      pressed && { opacity: 0.92, transform: [{ scale: 0.99 }] },
+                    ]}
+                    onPress={() =>
+                      router.push(
+                        `/(tabs)/challenges/active?id=${info.userChallenge.id}`,
+                      )
+                    }
                   >
-                    <Text style={styles.continueChipText}>Continue</Text>
-                    <SolarIcon name="alt-arrow-right-linear" size={14} color="#FEFAF9" />
+                    <View style={styles.activeCompactRow}>
+                      <View style={styles.activeCompactIcon}>
+                        <Text style={{ fontSize: 26 }}>{info.catalog.icon}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.activeCompactName} numberOfLines={1}>
+                          {info.catalog.name}
+                        </Text>
+                        <Text style={styles.activeCompactMeta}>
+                          Day {dayNum} of {dur} · {prog}%
+                        </Text>
+                      </View>
+                      <SolarIcon name="alt-arrow-right-linear" size={18} color="#C45A82" />
+                    </View>
+                    <View style={styles.activeCompactTrack}>
+                      <View
+                        style={[
+                          styles.activeCompactFill,
+                          { width: `${prog}%` },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.activeCompactDays}>
+                      {left > 0
+                        ? `Ends in ${left} day${left !== 1 ? 's' : ''}`
+                        : 'Last day!'}
+                    </Text>
                   </Pressable>
-                  <Text style={styles.daysLeft}>
-                    {daysLeft > 0 ? `Ends in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}` : 'Last day!'}
-                  </Text>
-                </View>
-              </View>
-            </Pressable>
+                );
+              })}
+            </View>
           </View>
         )}
 
@@ -243,7 +234,60 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  // ── Active card ──
+  // ── Compact active card (one per active challenge, up to 3) ──
+  activeCardCompact: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 16,
+    ...shadows.sm,
+  },
+  activeCompactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginBottom: 12,
+  },
+  activeCompactIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: 'rgba(212,144,154,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeCompactName: {
+    fontSize: 16,
+    fontFamily: 'Raleway-SemiBold',
+    fontWeight: '600',
+    color: '#1A0A06',
+    letterSpacing: -0.2,
+    marginBottom: 2,
+  },
+  activeCompactMeta: {
+    fontSize: 12,
+    fontFamily: 'DMSans',
+    color: '#5C3D2E',
+  },
+  activeCompactTrack: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(196,90,130,0.10)',
+    marginBottom: 8,
+  },
+  activeCompactFill: {
+    height: '100%',
+    borderRadius: 2,
+    backgroundColor: '#C45A82',
+  },
+  activeCompactDays: {
+    fontSize: 11,
+    fontFamily: 'DMSans',
+    fontStyle: 'italic',
+    color: '#8C7670',
+    letterSpacing: 0.1,
+  },
+
+  // ── Legacy big active card (kept for fallback / future use) ──
   activeCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 24,

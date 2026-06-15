@@ -60,23 +60,59 @@ export function someTasksDone(day: UserChallengeDay): boolean {
   return day.tasks_done.some(Boolean);
 }
 
+// ─── Limits ─────────────────────────────────────────────────
+
+/** Maximum number of challenges a user can have active at once. */
+export const MAX_ACTIVE_CHALLENGES = 3;
+
 // ─── Local (AsyncStorage) fallback ──────────────────────────
 
-const ACTIVE_KEY = 'challenge:active';
+const ACTIVES_KEY = 'challenge:actives';
+const LEGACY_ACTIVE_KEY = 'challenge:active';
 const HISTORY_KEY = 'challenge:history';
 const DAYS_KEY = (id: string) => `challenge_days:${id}`;
 
-async function getLocalActive(): Promise<UserChallenge | null> {
-  const raw = await AsyncStorage.getItem(ACTIVE_KEY);
-  return raw ? (JSON.parse(raw) as UserChallenge) : null;
+/**
+ * Get all active challenges in local storage.
+ * Migrates the legacy single-active key on first read.
+ */
+async function getLocalActives(): Promise<UserChallenge[]> {
+  const raw = await AsyncStorage.getItem(ACTIVES_KEY);
+  if (raw) return JSON.parse(raw) as UserChallenge[];
+
+  // Migration from legacy single-active model
+  const legacy = await AsyncStorage.getItem(LEGACY_ACTIVE_KEY);
+  if (legacy) {
+    const single = JSON.parse(legacy) as UserChallenge;
+    if (single.status === 'active') {
+      await AsyncStorage.setItem(ACTIVES_KEY, JSON.stringify([single]));
+      await AsyncStorage.removeItem(LEGACY_ACTIVE_KEY);
+      return [single];
+    }
+    await AsyncStorage.removeItem(LEGACY_ACTIVE_KEY);
+  }
+
+  return [];
 }
 
-async function setLocalActive(uc: UserChallenge | null): Promise<void> {
-  if (uc) {
-    await AsyncStorage.setItem(ACTIVE_KEY, JSON.stringify(uc));
+async function setLocalActives(actives: UserChallenge[]): Promise<void> {
+  if (actives.length === 0) {
+    await AsyncStorage.removeItem(ACTIVES_KEY);
   } else {
-    await AsyncStorage.removeItem(ACTIVE_KEY);
+    await AsyncStorage.setItem(ACTIVES_KEY, JSON.stringify(actives));
   }
+}
+
+async function addLocalActive(uc: UserChallenge): Promise<void> {
+  const current = await getLocalActives();
+  await setLocalActives([...current, uc]);
+}
+
+async function removeLocalActive(userChallengeId: string): Promise<UserChallenge | null> {
+  const current = await getLocalActives();
+  const removed = current.find((c) => c.id === userChallengeId) ?? null;
+  await setLocalActives(current.filter((c) => c.id !== userChallengeId));
+  return removed;
 }
 
 async function getLocalHistory(): Promise<UserChallenge[]> {
@@ -107,50 +143,70 @@ async function setLocalDays(userChallengeId: string, days: UserChallengeDay[]): 
 // ─── Public API ─────────────────────────────────────────────
 
 /**
- * Get the user's active challenge + catalog data.
+ * Get all active challenges for the user + catalog data, in start-date order.
  */
-export async function getActiveChallenge(
+export async function getActiveChallenges(
   userId: string
-): Promise<ActiveChallengeInfo | null> {
+): Promise<ActiveChallengeInfo[]> {
   try {
+    let rows: UserChallenge[] = [];
     if (isLocalUser(userId)) {
-      const uc = await getLocalActive();
-      if (!uc || uc.status !== 'active') return null;
-      const catalog = getChallengeById(uc.challenge_id);
-      if (!catalog) return null;
-      return { userChallenge: uc, catalog };
+      rows = (await getLocalActives()).filter((uc) => uc.status === 'active');
+    } else {
+      const { data, error } = await supabase
+        .from('user_challenges')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      rows = (data || []) as UserChallenge[];
     }
 
-    const { data, error } = await supabase
-      .from('user_challenges')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('status', 'active')
-      .maybeSingle();
-
-    if (error) throw error;
-    if (!data) return null;
-
-    const uc = data as UserChallenge;
-    const catalog = getChallengeById(uc.challenge_id);
-    if (!catalog) return null;
-    return { userChallenge: uc, catalog };
+    const out: ActiveChallengeInfo[] = [];
+    for (const uc of rows) {
+      const catalog = getChallengeById(uc.challenge_id);
+      if (catalog) out.push({ userChallenge: uc, catalog });
+    }
+    return out;
   } catch (err) {
-    console.error('[Challenges] getActiveChallenge error:', err);
-    return null;
+    console.error('[Challenges] getActiveChallenges error:', err);
+    return [];
   }
 }
 
 /**
- * Abandon the currently active challenge.
+ * Legacy single-active getter — returns the FIRST active or null.
+ * Kept for backward compatibility with screens that haven't been refactored
+ * to handle multiple actives yet.
  */
-export async function abandonActiveChallenge(userId: string): Promise<void> {
+export async function getActiveChallenge(
+  userId: string
+): Promise<ActiveChallengeInfo | null> {
+  const all = await getActiveChallenges(userId);
+  return all[0] ?? null;
+}
+
+/**
+ * Whether the user can start another challenge right now (i.e. not at cap).
+ */
+export async function canStartChallenge(userId: string): Promise<boolean> {
+  const actives = await getActiveChallenges(userId);
+  return actives.length < MAX_ACTIVE_CHALLENGES;
+}
+
+/**
+ * Abandon a specific active challenge by user_challenge id.
+ */
+export async function abandonChallenge(
+  userId: string,
+  userChallengeId: string
+): Promise<void> {
   try {
     if (isLocalUser(userId)) {
-      const uc = await getLocalActive();
-      if (uc && uc.status === 'active') {
-        const abandoned = { ...uc, status: 'abandoned' as const };
-        await setLocalActive(null);
+      const removed = await removeLocalActive(userChallengeId);
+      if (removed) {
+        const abandoned = { ...removed, status: 'abandoned' as const };
         const history = await getLocalHistory();
         history.push(abandoned);
         await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(history));
@@ -161,16 +217,25 @@ export async function abandonActiveChallenge(userId: string): Promise<void> {
     await supabase
       .from('user_challenges')
       .update({ status: 'abandoned' })
-      .eq('user_id', userId)
-      .eq('status', 'active');
+      .eq('id', userChallengeId);
   } catch (err) {
-    console.error('[Challenges] abandonActiveChallenge error:', err);
+    console.error('[Challenges] abandonChallenge error:', err);
   }
 }
 
 /**
- * Start a new challenge. Abandons current active if exists.
- * Returns the new UserChallenge.
+ * @deprecated Use abandonChallenge(userId, userChallengeId) instead.
+ * Abandons the FIRST active challenge (legacy single-active behavior).
+ */
+export async function abandonActiveChallenge(userId: string): Promise<void> {
+  const actives = await getActiveChallenges(userId);
+  if (actives.length === 0) return;
+  await abandonChallenge(userId, actives[0].userChallenge.id);
+}
+
+/**
+ * Start a new challenge. Returns null if at cap or on error.
+ * Use `canStartChallenge(userId)` beforehand to show appropriate UI.
  */
 export async function startChallenge(
   userId: string,
@@ -179,13 +244,22 @@ export async function startChallenge(
   const catalog = getChallengeById(challengeId);
   if (!catalog) return null;
 
+  // Enforce the active-challenge cap. Caller should ideally check
+  // `canStartChallenge()` first to show a friendly "at cap" modal,
+  // but we double-check here as a safety net.
+  const actives = await getActiveChallenges(userId);
+  if (actives.length >= MAX_ACTIVE_CHALLENGES) {
+    return null;
+  }
+  // Prevent starting the same challenge twice concurrently.
+  if (actives.some((a) => a.userChallenge.challenge_id === challengeId)) {
+    return null;
+  }
+
   const today = formatDateISO();
   const endDate = addDays(today, catalog.duration - 1);
 
   try {
-    // Abandon current active challenge first
-    await abandonActiveChallenge(userId);
-
     if (isLocalUser(userId)) {
       const id = `local_${Date.now()}`;
       const uc: UserChallenge = {
@@ -198,7 +272,7 @@ export async function startChallenge(
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-      await setLocalActive(uc);
+      await addLocalActive(uc);
 
       // Seed day rows
       const days: UserChallengeDay[] = [];
@@ -392,17 +466,14 @@ export async function completeChallenge(
 ): Promise<void> {
   try {
     if (isLocalUser(userId)) {
-      const uc = await getLocalActive();
-      if (uc && uc.id === userChallengeId) {
-        const completed = { ...uc, status: 'completed' as const };
-        // Clear active
-        await setLocalActive(null);
-        // Persist to history
+      const removed = await removeLocalActive(userChallengeId);
+      if (removed) {
+        const completed = { ...removed, status: 'completed' as const };
         const history = await getLocalHistory();
         history.push(completed);
         await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(history));
 
-        const catalog = getChallengeById(uc.challenge_id);
+        const catalog = getChallengeById(removed.challenge_id);
         useJourneyStore.getState().addEvent({
           user_id: userId || 'local',
           event_type: 'challenge_completed',

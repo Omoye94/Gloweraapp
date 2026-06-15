@@ -22,11 +22,15 @@ export default function ChallengeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { theme, isDark, gradients } = useTheme();
-  const { activeChallenge, userId, refresh } = useChallenges();
+  const { activeChallenges, isAtCap, userId, refresh } = useChallenges();
 
   const challenge = getChallengeById(id ?? '');
-  const [showSwitchModal, setShowSwitchModal] = useState(false);
+  const [showCapModal, setShowCapModal] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
+
+  const alreadyActive = activeChallenges.some(
+    (a) => a.catalog.id === (challenge?.id ?? '')
+  );
 
   if (!challenge) {
     return (
@@ -43,12 +47,14 @@ export default function ChallengeDetailScreen() {
     );
   }
 
-  const hasActiveOther =
-    activeChallenge !== null && activeChallenge.catalog.id !== challenge.id;
-
   const handleBegin = async () => {
-    if (hasActiveOther) {
-      setShowSwitchModal(true);
+    if (alreadyActive) {
+      // Already in this exact challenge — drop into the active view.
+      router.replace('/(tabs)/challenges/active');
+      return;
+    }
+    if (isAtCap) {
+      setShowCapModal(true);
       return;
     }
     await doStart();
@@ -64,11 +70,6 @@ export default function ChallengeDetailScreen() {
       router.replace('/(tabs)/challenges/active');
     }
     setIsStarting(false);
-  };
-
-  const handleSwitch = async () => {
-    setShowSwitchModal(false);
-    await doStart();
   };
 
   return (
@@ -155,26 +156,20 @@ export default function ChallengeDetailScreen() {
         <View style={styles.bottomSpacer} />
       </ScrollView>
 
-      {/* Switch Modal */}
-      <Modal visible={showSwitchModal} transparent animationType="fade">
+      {/* At-cap modal */}
+      <Modal visible={showCapModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: isDark ? theme.surface : '#FFFFFF' }]}>
-            <Text style={[styles.modalTitle, { color: '#3A2E2B' }]}>Switch challenge?</Text>
+            <Text style={[styles.modalTitle, { color: '#3A2E2B' }]}>Three feels just right.</Text>
             <Text style={[styles.modalBody, { color: '#6B5B52' }]}>
-              You're already in a gentle challenge. Start this one instead?
+              You already have three challenges growing. Finish or pause one before starting another — it'll keep them gentle.
             </Text>
             <View style={styles.modalButtons}>
               <Pressable
-                style={[styles.modalButton, { borderColor: '#EDE4DC', borderWidth: 1 }]}
-                onPress={() => setShowSwitchModal(false)}
-              >
-                <Text style={[styles.modalButtonText, { color: '#6B5B52' }]}>Cancel</Text>
-              </Pressable>
-              <Pressable
                 style={[styles.modalButton, { backgroundColor: '#F2B4CC' }]}
-                onPress={handleSwitch}
+                onPress={() => setShowCapModal(false)}
               >
-                <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>Switch</Text>
+                <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>Got it</Text>
               </Pressable>
             </View>
           </View>
