@@ -5,23 +5,25 @@ import { PrimaryButton } from '../../src/components/onboarding';
 import { useOnboardingStore } from '../../src/stores/onboardingStore';
 
 function getGlowType(focusAreas: string[]) {
-  if (focusAreas.some(area => /supplement|hydration|skin/i.test(area))) {
+  const primary = focusAreas[0] || '';
+
+  if (/supplement|hydration|skin/i.test(primary)) {
     return {
-      name: 'Glow Organizer',
-      line: 'Your scattered glow habits become seeds in one garden you can tend.',
+      name: 'The Tender',
+      line: 'You bring the small, steady care that holds everything together.',
     };
   }
 
-  if (focusAreas.some(area => /movement|sleep|rest/i.test(area))) {
+  if (/movement|sleep|rest/i.test(primary)) {
     return {
-      name: 'Consistency Reset',
-      line: 'Your garden is built for getting back into rhythm without starting from zero.',
+      name: 'The Wildflower',
+      line: 'You return to yourself, no matter how the week goes.',
     };
   }
 
   return {
-    name: 'Soft Accountability',
-    line: 'Your garden gives your glow-up structure while keeping the pressure low.',
+    name: 'The Gentle Builder',
+    line: 'You build with care, not pressure.',
   };
 }
 
@@ -43,7 +45,7 @@ export default function ResultsScreen() {
       <View style={styles.main}>
         <Text style={styles.label}>YOUR GLOW TYPE</Text>
         <View style={styles.revealCard}>
-          <Text style={styles.revealEyebrow}>You are a</Text>
+          <Text style={styles.revealEyebrow}>You&apos;re a</Text>
           <Text style={styles.revealTitle}>{glowType.name}</Text>
           <Text style={styles.revealLine}>{glowType.line}</Text>
         </View>
@@ -53,7 +55,7 @@ export default function ResultsScreen() {
           <Text style={styles.gardenName}>{gardenName}</Text>
           <Text style={styles.planText}>
             Start with {selected_rituals.length || 1} seed{selected_rituals.length === 1 ? '' : 's'}.
-            Every time you tend a glow habit, your garden becomes visible proof that you are taking care of yourself.
+            Every time you tend one, your garden becomes visible proof that you&apos;re taking care of yourself.
           </Text>
         </View>
 
@@ -77,7 +79,7 @@ export default function ResultsScreen() {
 
         <View style={styles.proofStrip}>
           <Text style={styles.proofText}>
-            Your glow-up stops feeling scattered when you can watch it grow.
+            Growth you can actually see.
           </Text>
         </View>
       </View>
@@ -85,7 +87,7 @@ export default function ResultsScreen() {
       <View style={styles.bottom}>
         <PrimaryButton
           title="Enter my glow garden"
-          onPress={() => router.push('/(onboarding)/paywall')}
+          onPress={() => router.push('/(onboarding)/dailyglow')}
         />
       </View>
     </ScrollView>

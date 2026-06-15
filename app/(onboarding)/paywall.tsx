@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, ActivityIndicator, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { PurchasesPackage } from 'react-native-purchases';
@@ -7,14 +7,17 @@ import { useSubscriptionStore } from '../../src/stores';
 import { useOnboardingStore } from '../../src/stores/onboardingStore';
 import { fetchOfferings, purchasePackage, restorePurchases } from '../../src/lib/purchases';
 
-const PREMIUM_FEATURES = [
-  { icon: '🌿', label: 'Unlimited rituals' },
-  { icon: '💊', label: 'Supplement reminders' },
-  { icon: '✍️', label: 'Reflection history' },
-  { icon: '🌙', label: 'Guided evening rituals' },
-  { icon: '🎨', label: 'Garden themes' },
-  { icon: '✨', label: 'Gentle weekly insights' },
+const FEATURES = [
+  { emoji: '🌿', text: 'Unlimited rituals & habits' },
+  { emoji: '💊', text: 'Full supplement tracking' },
+  { emoji: '📓', text: 'Daily journaling & reflections' },
+  { emoji: '🌸', text: 'Garden growth & glow meter' },
+  { emoji: '✨', text: 'Weekly insights & recaps' },
+  { emoji: '🎯', text: 'All challenges unlocked' },
 ];
+
+const PRIVACY_URL =
+  'https://keen-cheshire-158.notion.site/Glowera-App-Privacy-Policy-34324bc53c8c80f0bda8f2f0d0527ed6';
 
 type PlanType = 'yearly' | 'monthly';
 
@@ -28,7 +31,6 @@ export default function PaywallScreen() {
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [isLoadingOfferings, setIsLoadingOfferings] = useState(true);
-  const [showSkipConfirm, setShowSkipConfirm] = useState(false);
 
   const yearlyPackage: PurchasesPackage | null =
     currentOffering?.annual ??
@@ -42,9 +44,14 @@ export default function PaywallScreen() {
       (p) => p.packageType === 'MONTHLY' || p.identifier === 'monthly'
     ) ?? null;
 
+  // Prices are hardcoded during pre-launch — RevenueCat test products return
+  // placeholder prices. Once live products are configured in App Store Connect,
+  // revert to:
+  //   yearlyPackage?.product.priceString ?? '$49.99'
+  //   monthlyPackage?.product.priceString ?? '$12.99'
   const yearlyDisplayPrice = '$49.99';
-  const monthlyPrice = monthlyPackage?.product.priceString ?? '$11.99/mo';
-  const yearlyMonthly = '$4.17/mo';
+  const monthlyPrice = '$12.99';
+  const day7Price = selectedPlan === 'yearly' ? `${yearlyDisplayPrice}/yr` : `${monthlyPrice}/mo`;
   const gardenName = garden_name.trim() || 'Your glow garden';
   const gardenSeeds = selected_rituals.length > 0 ? selected_rituals : focus_areas;
   const visibleSeeds = gardenSeeds.slice(0, 3);
@@ -65,7 +72,7 @@ export default function PaywallScreen() {
 
   const handleStartTrial = async () => {
     if (!selectedPackage) {
-      router.push('/(onboarding)/notifications');
+      router.push('/(onboarding)/invite');
       return;
     }
     setIsPurchasing(true);
@@ -73,7 +80,7 @@ export default function PaywallScreen() {
       const { customerInfo, isPremium } = await purchasePackage(selectedPackage);
       setCustomerInfo(customerInfo);
       setIsPremium(isPremium);
-      if (isPremium) router.push('/(onboarding)/notifications');
+      if (isPremium) router.push('/(onboarding)/invite');
     } catch (e: any) {
       if (e?.code !== 'PURCHASE_CANCELLED') {
         Alert.alert('Purchase failed', e?.message ?? 'Something went wrong. Please try again.');
@@ -91,7 +98,7 @@ export default function PaywallScreen() {
       setIsPremium(isPremium);
       if (isPremium) {
         Alert.alert('Restored!', 'Your premium access has been restored.', [
-          { text: 'Continue', onPress: () => router.push('/(onboarding)/notifications') },
+          { text: 'Continue', onPress: () => router.push('/(onboarding)/invite') },
         ]);
       } else {
         Alert.alert("No purchases found", "We couldn't find any previous purchases for this account.");
@@ -103,208 +110,240 @@ export default function PaywallScreen() {
     }
   };
 
-  const handleSkip = () => setShowSkipConfirm(true);
-
-  const continueFree = () => {
-    setShowSkipConfirm(false);
-    router.push('/(onboarding)/notifications');
-  };
+  const busy = isPurchasing || isRestoring;
 
   return (
-    <>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Hero */}
+      <LinearGradient
+        colors={['#D8C9EC', '#F2B4CC', '#FBD4BF']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
       >
-        {/* Hero gradient header */}
-        <LinearGradient
-          colors={['#D8C9EC', '#F2B4CC', '#FBD4BF']}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          style={styles.header}
-        >
-          <Text style={styles.headerEmoji}>🌸</Text>
-          <Text style={styles.headerTitle}>Stay on top of your glow-up without starting over</Text>
-          <Text style={styles.headerSubtitle}>
-            Premium keeps your glow habits organized as a garden you can actually tend.
+        <Text style={styles.headerEmoji}>🌸</Text>
+        <Text style={styles.headerTitle}>Tend your garden, your way.</Text>
+        <Text style={styles.headerSubtitle}>Premium keeps every seed visible.</Text>
+      </LinearGradient>
+
+      <View style={styles.body}>
+        {/* Personalized recap */}
+        <View style={styles.recapCard}>
+          <Text style={styles.recapEyebrow}>YOUR GARDEN PLAN</Text>
+          <Text style={styles.recapTitle}>{gardenName}</Text>
+          <Text style={styles.recapBody}>
+            Your first seeds are ready. The trial keeps them growing while you build the rhythm.
           </Text>
-        </LinearGradient>
-
-        <View style={styles.body}>
-          <View style={styles.recapCard}>
-            <Text style={styles.recapEyebrow}>YOUR GARDEN PLAN</Text>
-            <Text style={styles.recapTitle}>{gardenName}</Text>
-            <Text style={styles.recapBody}>
-              Your first seeds are ready. Premium keeps them visible with reminders, reflections,
-              garden themes, and weekly glow insights.
-            </Text>
-            {visibleSeeds.length > 0 && (
-              <View style={styles.seedList}>
-                {visibleSeeds.map((seed) => (
-                  <View key={seed} style={styles.seedPill}>
-                    <Text style={styles.seedPillText}>{seed}</Text>
-                  </View>
-                ))}
-                {remainingSeedCount > 0 && (
-                  <View style={styles.seedPill}>
-                    <Text style={styles.seedPillText}>+{remainingSeedCount} more</Text>
-                  </View>
-                )}
-              </View>
-            )}
-          </View>
-
-          {/* Features */}
-          <View style={styles.featuresCard}>
-            {PREMIUM_FEATURES.map((feature, index) => (
-              <View
-                key={feature.label}
-                style={[
-                  styles.featureItem,
-                  index < PREMIUM_FEATURES.length - 1 && styles.featureItemBorder,
-                ]}
-              >
-                <Text style={styles.featureIcon}>{feature.icon}</Text>
-                <Text style={styles.featureLabel}>{feature.label}</Text>
-                <View style={styles.checkCircle}>
-                  <Text style={styles.checkMark}>✓</Text>
+          {visibleSeeds.length > 0 && (
+            <View style={styles.seedList}>
+              {visibleSeeds.map((seed) => (
+                <View key={seed} style={styles.seedPill}>
+                  <Text style={styles.seedPillText}>{seed}</Text>
                 </View>
-              </View>
-            ))}
-          </View>
-
-          {/* Plan selector */}
-          {isLoadingOfferings ? (
-            <ActivityIndicator color="#E87FA6" style={{ marginTop: 24 }} />
-          ) : (
-            <View style={styles.plansContainer}>
-              <Pressable
-                style={[styles.planOption, selectedPlan === 'yearly' && styles.planOptionSelected]}
-                onPress={() => setSelectedPlan('yearly')}
-              >
-                <View style={styles.planBadge}>
-                  <Text style={styles.planBadgeText}>BEST FOR CONSISTENCY</Text>
+              ))}
+              {remainingSeedCount > 0 && (
+                <View style={styles.seedPill}>
+                  <Text style={styles.seedPillText}>+{remainingSeedCount} more</Text>
                 </View>
-                <View style={styles.planDetails}>
-                  <Text style={[styles.planTitle, selectedPlan === 'yearly' && styles.planTitleSelected]}>Yearly</Text>
-                  <Text style={styles.planSubtitle}>{yearlyMonthly}</Text>
-                </View>
-                <Text style={[styles.planPrice, selectedPlan === 'yearly' && styles.planPriceSelected]}>
-                  {yearlyDisplayPrice}
-                </Text>
-                <View style={[styles.radioOuter, selectedPlan === 'yearly' && styles.radioOuterSelected]}>
-                  {selectedPlan === 'yearly' && <View style={styles.radioInner} />}
-                </View>
-              </Pressable>
-
-              <Pressable
-                style={[styles.planOption, selectedPlan === 'monthly' && styles.planOptionSelected]}
-                onPress={() => setSelectedPlan('monthly')}
-              >
-                <View style={styles.planDetails}>
-                  <Text style={[styles.planTitle, selectedPlan === 'monthly' && styles.planTitleSelected]}>Monthly</Text>
-                </View>
-                <Text style={[styles.planPrice, selectedPlan === 'monthly' && styles.planPriceSelected]}>
-                  {monthlyPrice}
-                </Text>
-                <View style={[styles.radioOuter, selectedPlan === 'monthly' && styles.radioOuterSelected]}>
-                  {selectedPlan === 'monthly' && <View style={styles.radioInner} />}
-                </View>
-              </Pressable>
+              )}
             </View>
           )}
+        </View>
 
-          <Text style={styles.trialText}>
-            7-day free trial · then {selectedPlan === 'yearly' ? yearlyDisplayPrice : monthlyPrice}
+        {/* Features */}
+        <View style={styles.featuresCard}>
+          <Text style={styles.featuresTitle}>Everything included</Text>
+          {FEATURES.map((f) => (
+            <View key={f.text} style={styles.featureRow}>
+              <Text style={styles.featureEmoji}>{f.emoji}</Text>
+              <Text style={styles.featureText}>{f.text}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Plan selector */}
+        <View style={styles.planSelector}>
+          <Pressable
+            style={[styles.planPill, selectedPlan === 'yearly' && styles.planPillSelected]}
+            onPress={() => setSelectedPlan('yearly')}
+            disabled={busy}
+          >
+            {selectedPlan === 'yearly' && (
+              <View style={styles.planBestBadge}>
+                <Text style={styles.planBestBadgeText}>BEST VALUE</Text>
+              </View>
+            )}
+            <Text style={[styles.planPillName, selectedPlan === 'yearly' && styles.planPillNameSelected]}>
+              Yearly
+            </Text>
+            <Text style={[styles.planPillPrice, selectedPlan === 'yearly' && styles.planPillPriceSelected]}>
+              {yearlyDisplayPrice}/yr
+            </Text>
+            <Text style={[styles.planPillSub, selectedPlan === 'yearly' && styles.planPillSubSelected]}>
+              Just $4.17/mo · Save 68%
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={[styles.planPill, selectedPlan === 'monthly' && styles.planPillSelected]}
+            onPress={() => setSelectedPlan('monthly')}
+            disabled={busy}
+          >
+            <Text style={[styles.planPillName, selectedPlan === 'monthly' && styles.planPillNameSelected]}>
+              Monthly
+            </Text>
+            <Text style={[styles.planPillPrice, selectedPlan === 'monthly' && styles.planPillPriceSelected]}>
+              {monthlyPrice}/mo
+            </Text>
+            <Text style={[styles.planPillSub, selectedPlan === 'monthly' && styles.planPillSubSelected]}>
+              Billed monthly
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* Offer card — trial timeline */}
+        {isLoadingOfferings ? (
+          <ActivityIndicator color="#E87FA6" style={{ marginVertical: 24 }} />
+        ) : (
+          <View style={styles.offerCard}>
+            <LinearGradient
+              colors={['rgba(232,127,166,0.14)', 'rgba(216,201,236,0.18)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.offerGradient}
+            >
+              {selectedPlan === 'yearly' && (
+                <View style={styles.offerBadge}>
+                  <Text style={styles.offerBadgeText}>SAVE 65% · FREE TRIAL</Text>
+                </View>
+              )}
+
+              <Text style={styles.offerTitle}>How your trial works</Text>
+              <Text style={styles.offerQualifier}>
+                {selectedPlan === 'yearly'
+                  ? 'Free for 7 days, then billed yearly'
+                  : 'Free for 7 days, then billed monthly'}
+              </Text>
+
+              <View style={styles.offerDivider} />
+
+              <View style={styles.trialTimeline}>
+                <View style={styles.timelineStep}>
+                  <Text style={styles.timelineIcon}>🌱</Text>
+                  <View style={styles.timelineBody}>
+                    <Text style={styles.timelineDay}>TODAY</Text>
+                    <Text style={styles.timelineDesc}>Start free — no payment yet</Text>
+                  </View>
+                </View>
+                <View style={styles.timelineStep}>
+                  <Text style={styles.timelineIcon}>🔔</Text>
+                  <View style={styles.timelineBody}>
+                    <Text style={styles.timelineDay}>DAY 5</Text>
+                    <Text style={styles.timelineDesc}>We&apos;ll remind you, 2 days left</Text>
+                  </View>
+                </View>
+                <View style={styles.timelineStep}>
+                  <Text style={styles.timelineIcon}>💳</Text>
+                  <View style={styles.timelineBody}>
+                    <Text style={styles.timelineDay}>DAY 7</Text>
+                    <Text style={styles.timelineDesc}>{day7Price} — or cancel anytime</Text>
+                  </View>
+                </View>
+              </View>
+            </LinearGradient>
+          </View>
+        )}
+
+        {/* Actions */}
+        <View style={styles.actionsSection}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.ctaButton,
+              pressed && { opacity: 0.88 },
+              busy && { opacity: 0.6 },
+            ]}
+            onPress={handleStartTrial}
+            disabled={busy}
+          >
+            {isPurchasing ? (
+              <ActivityIndicator size="small" color="#1A1028" />
+            ) : (
+              <Text style={styles.ctaButtonText}>Start 7-day free trial</Text>
+            )}
+          </Pressable>
+
+          <Text style={styles.trustText}>
+            No clutter, no guilt — just a softer way to stay consistent.
           </Text>
 
-          {/* Actions */}
-          <View style={styles.actionsSection}>
-            <Pressable
-              style={({ pressed }) => [styles.ctaButton, pressed && { opacity: 0.88 }, (isPurchasing || isRestoring) && { opacity: 0.6 }]}
-              onPress={handleStartTrial}
-              disabled={isPurchasing || isRestoring}
-            >
-              {isPurchasing
-                ? <ActivityIndicator size="small" color="#1A1028" />
-                : <Text style={styles.ctaButtonText}>Start your gentle trial</Text>
-              }
-            </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.linkButton, pressed && { opacity: 0.6 }]}
+            onPress={handleRestore}
+            disabled={busy}
+          >
+            {isRestoring ? (
+              <ActivityIndicator size="small" color="#9E8880" />
+            ) : (
+              <Text style={styles.linkButtonText}>Restore purchase</Text>
+            )}
+          </Pressable>
 
-            <Text style={styles.trustText}>Cancel anytime. No clutter, no guilt, just a softer way to stay consistent.</Text>
-
-            <Pressable
-              style={({ pressed }) => [styles.linkButton, pressed && { opacity: 0.6 }]}
-              onPress={handleRestore}
-              disabled={isPurchasing || isRestoring}
-            >
-              {isRestoring
-                ? <ActivityIndicator size="small" color="#9E8880" />
-                : <Text style={styles.linkButtonText}>Restore purchase</Text>
-              }
-            </Pressable>
-
-            <Pressable
-              style={({ pressed }) => [styles.skipButton, pressed && { opacity: 0.6 }]}
-              onPress={handleSkip}
-              disabled={isPurchasing || isRestoring}
-            >
-              <Text style={styles.skipButtonText}>Start with the free garden</Text>
-            </Pressable>
-          </View>
-        </View>
-      </ScrollView>
-
-      <Modal
-        visible={showSkipConfirm}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowSkipConfirm(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalEyebrow}>FREE GARDEN</Text>
-            <Text style={styles.modalTitle}>Begin without Premium?</Text>
-            <Text style={styles.modalBody}>
-              You can still start today. Premium is what keeps the whole glow-up loop tended:
-              reminders, supplements, reflections, themes, and weekly insights in one calm place.
+          {/* Legal footer */}
+          <View style={styles.legalFooter}>
+            <Text style={styles.legalText}>
+              By continuing you agree to our{' '}
+              <Text style={styles.legalLink} onPress={() => Linking.openURL(PRIVACY_URL)}>
+                Privacy Policy
+              </Text>
+              {' '}and{' '}
+              <Text style={styles.legalLink} onPress={() => Linking.openURL(PRIVACY_URL)}>
+                Terms of Service
+              </Text>
+              .{'\n'}Cancel anytime in App Store settings.
             </Text>
-            <Pressable
-              style={({ pressed }) => [styles.modalPrimaryButton, pressed && { opacity: 0.88 }]}
-              onPress={() => setShowSkipConfirm(false)}
-            >
-              <Text style={styles.modalPrimaryText}>Keep my garden fully tended</Text>
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [styles.modalSecondaryButton, pressed && { opacity: 0.6 }]}
-              onPress={continueFree}
-            >
-              <Text style={styles.modalSecondaryText}>Continue free for now</Text>
-            </Pressable>
           </View>
         </View>
-      </Modal>
-    </>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFAF8' },
   contentContainer: { flexGrow: 1 },
+
+  // Header
   header: {
-    paddingTop: 48, paddingBottom: 32,
-    paddingHorizontal: 28, alignItems: 'center',
+    paddingTop: 48,
+    paddingBottom: 32,
+    paddingHorizontal: 28,
+    alignItems: 'center',
   },
   headerEmoji: { fontSize: 48, marginBottom: 16 },
   headerTitle: {
-    fontSize: 28, fontFamily: 'PlayfairDisplay', fontWeight: '600',
-    color: '#3A2E2B', textAlign: 'center', marginBottom: 10, lineHeight: 36,
+    fontSize: 28,
+    fontFamily: 'PlayfairDisplay',
+    fontWeight: '600',
+    color: '#3A2E2B',
+    textAlign: 'center',
+    marginBottom: 10,
+    lineHeight: 36,
   },
   headerSubtitle: {
-    fontSize: 15, fontFamily: 'DMSans', color: 'rgba(58,46,43,0.65)',
-    textAlign: 'center', lineHeight: 22,
+    fontSize: 15,
+    fontFamily: 'DMSans',
+    color: 'rgba(58,46,43,0.65)',
+    textAlign: 'center',
+    lineHeight: 22,
   },
-  body: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 40 },
+
+  body: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 48 },
+
+  // Recap card
   recapCard: {
     backgroundColor: '#FFF7F3',
     borderRadius: 20,
@@ -353,61 +392,189 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#697B5E',
   },
+
+  // Features
   featuresCard: {
-    backgroundColor: '#FFFFFF', borderRadius: 20,
-    borderWidth: 1.5, borderColor: 'rgba(232,127,166,0.15)',
-    paddingHorizontal: 20, marginBottom: 20,
-    shadowColor: '#E87FA6', shadowOpacity: 0.08, shadowRadius: 20, shadowOffset: { width: 0, height: 4 },
+    backgroundColor: '#FFF7F3',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(163,139,106,0.22)',
+    padding: 20,
+    marginBottom: 16,
   },
-  featureItem: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingVertical: 14, gap: 12,
+  featuresTitle: {
+    fontSize: 13,
+    fontFamily: 'SpaceMono-Bold',
+    color: '#A98A79',
+    letterSpacing: 0.8,
+    marginBottom: 14,
   },
-  featureItemBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(232,127,166,0.1)' },
-  featureIcon: { fontSize: 20 },
-  featureLabel: { flex: 1, fontSize: 15, fontFamily: 'DMSans', fontWeight: '500', color: '#3A2E2B' },
-  checkCircle: {
-    width: 22, height: 22, borderRadius: 11,
-    backgroundColor: 'rgba(232,127,166,0.15)', borderWidth: 1.5,
-    borderColor: '#E87FA6', alignItems: 'center', justifyContent: 'center',
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
   },
-  checkMark: { fontSize: 11, fontWeight: '700', color: '#E87FA6' },
-  plansContainer: { gap: 10, marginBottom: 12 },
-  planOption: {
-    flexDirection: 'row', alignItems: 'center',
-    padding: 16, borderRadius: 16, gap: 10,
+  featureEmoji: { fontSize: 18, width: 24, textAlign: 'center' },
+  featureText: {
+    fontSize: 14,
+    fontFamily: 'DMSans',
+    fontWeight: '500',
+    color: '#3A2E2B',
+    flex: 1,
+  },
+
+  // Plan selector
+  planSelector: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 16,
+  },
+  planPill: {
+    flex: 1,
     backgroundColor: 'rgba(255,255,255,0.8)',
-    borderWidth: 2, borderColor: 'rgba(58,46,43,0.1)',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: 'rgba(58,46,43,0.1)',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    gap: 4,
   },
-  planOptionSelected: { borderColor: '#E87FA6', backgroundColor: 'rgba(232,127,166,0.08)' },
-  planBadge: {
-    backgroundColor: '#E87FA6', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6,
+  planPillSelected: {
+    borderColor: '#E87FA6',
+    backgroundColor: 'rgba(232,127,166,0.07)',
   },
-  planBadgeText: { fontSize: 9, fontFamily: 'SpaceMono-Bold', color: '#FFFFFF', letterSpacing: 0.5 },
-  planDetails: { flex: 1 },
-  planTitle: { fontSize: 15, fontFamily: 'DMSans', fontWeight: '600', color: '#3A2E2B' },
-  planTitleSelected: { color: '#C45A82' },
-  planSubtitle: { fontSize: 12, fontFamily: 'DMSans', color: '#9E8880', marginTop: 1 },
-  planPrice: { fontSize: 15, fontFamily: 'DMSans', fontWeight: '700', color: '#9E8880' },
-  planPriceSelected: { color: '#C45A82' },
-  radioOuter: {
-    width: 22, height: 22, borderRadius: 11,
-    borderWidth: 2, borderColor: 'rgba(58,46,43,0.2)',
-    alignItems: 'center', justifyContent: 'center',
+  planBestBadge: {
+    backgroundColor: '#E87FA6',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginBottom: 2,
   },
-  radioOuterSelected: { borderColor: '#E87FA6' },
-  radioInner: { width: 12, height: 12, borderRadius: 6, backgroundColor: '#E87FA6' },
-  trialText: {
-    fontSize: 12, fontFamily: 'DMSans', color: '#9E8880',
-    textAlign: 'center', marginBottom: 24,
+  planBestBadgeText: {
+    fontSize: 8,
+    fontFamily: 'SpaceMono-Bold',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
+  planPillName: {
+    fontSize: 15,
+    fontFamily: 'DMSans',
+    fontWeight: '700',
+    color: '#9E8880',
+  },
+  planPillNameSelected: { color: '#C45A82' },
+  planPillPrice: {
+    fontSize: 14,
+    fontFamily: 'DMSans',
+    fontWeight: '600',
+    color: '#9E8880',
+  },
+  planPillPriceSelected: { color: '#3A2E2B' },
+  planPillSub: {
+    fontSize: 11,
+    fontFamily: 'DMSans',
+    color: 'rgba(58,46,43,0.4)',
+    textAlign: 'center',
+  },
+  planPillSubSelected: { color: 'rgba(58,46,43,0.55)' },
+
+  // Offer card
+  offerCard: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    marginBottom: 20,
+    borderWidth: 1.5,
+    borderColor: 'rgba(232,127,166,0.28)',
+    shadowColor: '#E87FA6',
+    shadowOpacity: 0.1,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  offerGradient: {
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+  },
+  offerBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#E87FA6',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginBottom: 10,
+  },
+  offerBadgeText: {
+    fontSize: 9,
+    fontFamily: 'SpaceMono-Bold',
+    color: '#FFFFFF',
+    letterSpacing: 0.8,
+  },
+  offerTitle: {
+    fontSize: 17,
+    fontFamily: 'PlayfairDisplay',
+    fontWeight: '600',
+    color: '#3A2E2B',
+    marginBottom: 4,
+  },
+  offerQualifier: {
+    fontSize: 13,
+    fontFamily: 'DMSans',
+    color: 'rgba(58,46,43,0.6)',
+    marginBottom: 16,
+  },
+  offerDivider: {
+    height: 1,
+    backgroundColor: 'rgba(232,127,166,0.2)',
+    marginBottom: 16,
+  },
+  trialTimeline: {
+    gap: 14,
+  },
+  timelineStep: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+  },
+  timelineIcon: {
+    fontSize: 22,
+    width: 28,
+    textAlign: 'center',
+  },
+  timelineBody: { flex: 1 },
+  timelineDay: {
+    fontSize: 10,
+    fontFamily: 'SpaceMono-Bold',
+    color: '#C45A82',
+    letterSpacing: 1.2,
+    marginBottom: 3,
+  },
+  timelineDesc: {
+    fontSize: 14,
+    fontFamily: 'DMSans',
+    fontWeight: '500',
+    color: '#3A2E2B',
+    lineHeight: 20,
+  },
+
+  // Actions
   actionsSection: { gap: 12 },
   ctaButton: {
-    backgroundColor: '#E87FA6', borderRadius: 18,
-    paddingVertical: 17, alignItems: 'center',
-    shadowColor: '#E87FA6', shadowOpacity: 0.35, shadowRadius: 24, shadowOffset: { width: 0, height: 6 },
+    backgroundColor: '#E87FA6',
+    borderRadius: 18,
+    paddingVertical: 17,
+    alignItems: 'center',
+    shadowColor: '#E87FA6',
+    shadowOpacity: 0.35,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 6 },
   },
-  ctaButtonText: { fontSize: 16, fontFamily: 'DMSans', fontWeight: '700', color: '#1A1028' },
+  ctaButtonText: {
+    fontSize: 16,
+    fontFamily: 'DMSans',
+    fontWeight: '700',
+    color: '#1A1028',
+  },
   trustText: {
     fontSize: 12,
     fontFamily: 'DMSans',
@@ -417,73 +584,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   linkButton: { paddingVertical: 10, alignItems: 'center' },
-  linkButtonText: { fontSize: 14, fontFamily: 'DMSans', fontWeight: '500', color: '#9E8880' },
-  skipButton: { paddingVertical: 8, alignItems: 'center' },
-  skipButtonText: { fontSize: 12, fontFamily: 'DMSans', color: '#9E8880', textDecorationLine: 'underline' },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(58,46,43,0.34)',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  modalCard: {
-    backgroundColor: '#FFFAF8',
-    borderRadius: 24,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(232,127,166,0.18)',
-    shadowColor: '#3A2E2B',
-    shadowOpacity: 0.16,
-    shadowRadius: 28,
-    shadowOffset: { width: 0, height: 12 },
-  },
-  modalEyebrow: {
-    fontSize: 10,
-    fontFamily: 'SpaceMono-Bold',
-    color: '#A98A79',
-    letterSpacing: 1,
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  modalTitle: {
-    fontSize: 26,
-    fontFamily: 'PlayfairDisplay',
-    fontWeight: '600',
-    color: '#3A2E2B',
-    textAlign: 'center',
-    marginBottom: 10,
-    lineHeight: 32,
-  },
-  modalBody: {
+  linkButtonText: {
     fontSize: 14,
     fontFamily: 'DMSans',
-    color: 'rgba(58,46,43,0.68)',
-    textAlign: 'center',
-    lineHeight: 21,
-    marginBottom: 22,
-  },
-  modalPrimaryButton: {
-    backgroundColor: '#E87FA6',
-    borderRadius: 18,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  modalPrimaryText: {
-    fontSize: 15,
-    fontFamily: 'DMSans',
-    fontWeight: '700',
-    color: '#1A1028',
-  },
-  modalSecondaryButton: {
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  modalSecondaryText: {
-    fontSize: 13,
-    fontFamily: 'DMSans',
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#9E8880',
+  },
+
+  // Legal footer
+  legalFooter: {
+    paddingTop: 4,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+  },
+  legalText: {
+    fontSize: 11,
+    fontFamily: 'DMSans',
+    color: 'rgba(58,46,43,0.4)',
+    textAlign: 'center',
+    lineHeight: 17,
+  },
+  legalLink: {
+    color: 'rgba(58,46,43,0.55)',
     textDecorationLine: 'underline',
   },
 });

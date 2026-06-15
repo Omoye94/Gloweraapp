@@ -9,25 +9,25 @@ import { useOnboardingStore } from '../../src/stores/onboardingStore';
 const OPTIONS = [
   {
     emoji: '🧺',
-    text: 'My glow-up feels scattered everywhere',
-    reply: 'Glowera gathers the little beauty, wellness, and self-care pieces into one garden you can tend.',
+    text: 'My routines live in too many places',
+    reply: 'Glowera gathers the little beauty, wellness, and self-care pieces into one garden you can care for.',
     glow: ['rgba(216,201,236,0.24)', 'rgba(242,180,204,0.10)'],
   },
   {
     emoji: '🌀',
-    text: 'I have a hard time staying on top of my glow',
-    reply: 'Your garden will show what needs tending today without making you feel behind.',
+    text: 'I can\'t seem to keep up with my own routine',
+    reply: 'Your garden will show what needs care today without making you feel behind.',
     glow: ['rgba(155,134,212,0.28)', 'rgba(184,207,177,0.10)'],
   },
   {
     emoji: '🌙',
-    text: 'I am inconsistent on my glow-up journey',
-    reply: 'We will build a garden you can return to after messy days, not a streak you have to protect.',
+    text: 'I start strong, then fall off',
+    reply: 'We\'ll build a garden you can return to after messy days — not a streak you have to protect.',
     glow: ['rgba(242,180,204,0.20)', 'rgba(216,201,236,0.12)'],
   },
   {
     emoji: '🍃',
-    text: 'I forget the small things that make me feel good',
+    text: 'I keep forgetting the small things that make me feel like me',
     reply: 'Every tiny thing becomes a seed: water, supplements, skin, movement, reflection, rest.',
     glow: ['rgba(184,207,177,0.22)', 'rgba(244,168,136,0.12)'],
   },
@@ -54,8 +54,8 @@ export default function ProblemScreen() {
 
       <View style={styles.main}>
         <Text style={styles.kicker}>YOUR GLOW-UP, GROWN</Text>
-        <Text style={styles.headline}>It is hard to glow when everything feels scattered.</Text>
-        <Text style={styles.body}>What gets in the way of staying on top of you?</Text>
+        <Text style={styles.headline}>What&apos;s making your glow up hard right now?</Text>
+        <Text style={styles.body}>Pick the one that&apos;s truest. We&apos;ll build from there.</Text>
 
         <View style={styles.options}>
           {OPTIONS.map((option, index) => {
@@ -87,8 +87,8 @@ export default function ProblemScreen() {
 
       <View style={styles.bottom}>
         <PrimaryButton
-          title={selected ? 'Plant my glow' : 'Choose one to begin'}
-          onPress={() => router.push('/(onboarding)/solution')}
+          title={selected ? 'Plant my glow' : 'Pick the one that fits'}
+          onPress={() => router.push('/(onboarding)/focus')}
           disabled={!selected}
         />
       </View>

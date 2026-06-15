@@ -1,13 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-
-const STEPS = [
-  'Gathering your scattered glow habits...',
-  'Turning each habit into a seed...',
-  'Designing the garden you will tend...',
-  'Preparing your first bloom path...',
-];
+import { useOnboardingStore } from '../../src/stores/onboardingStore';
 
 const STEP_DELAY = 1100;
 
@@ -58,6 +52,15 @@ function AnimatedStep({ label, index }: { label: string; index: number }) {
 
 export default function AnalyzingScreen() {
   const router = useRouter();
+  const { garden_name } = useOnboardingStore();
+  const gardenLabel = garden_name?.trim() || 'your garden';
+
+  const STEPS = [
+    'Gathering your scattered glow habits...',
+    'Turning each habit into a seed...',
+    `Designing ${gardenLabel}...`,
+    'Watering the first seeds...',
+  ];
 
   useEffect(() => {
     const timer = setTimeout(() => {

@@ -7,10 +7,12 @@ interface ChecklistItemProps {
   checked: boolean;
   onPress: () => void;
   sublabel?: string;
+  disabled?: boolean;
 }
 
-export function ChecklistItem({ label, checked, onPress, sublabel }: ChecklistItemProps) {
+export function ChecklistItem({ label, checked, onPress, sublabel, disabled }: ChecklistItemProps) {
   const handlePress = () => {
+    if (disabled) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onPress();
   };
@@ -20,9 +22,11 @@ export function ChecklistItem({ label, checked, onPress, sublabel }: ChecklistIt
       style={({ pressed }) => [
         styles.container,
         checked && styles.containerChecked,
-        pressed && styles.containerPressed,
+        disabled && styles.containerDisabled,
+        pressed && !disabled && styles.containerPressed,
       ]}
       onPress={handlePress}
+      disabled={disabled}
     >
       <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
         {checked && <Text style={styles.checkmark}>✓</Text>}
@@ -57,6 +61,9 @@ const styles = StyleSheet.create({
   containerPressed: {
     opacity: 0.85,
     transform: [{ scale: 0.99 }],
+  },
+  containerDisabled: {
+    opacity: 0.4,
   },
   checkbox: {
     width: 22,

@@ -26,15 +26,15 @@ export default function FirstReflectionScreen() {
         <View style={styles.main}>
           <Text style={styles.emoji}>✦</Text>
           <Text style={styles.label}>SET YOUR WHY</Text>
-          <Text style={styles.headline}>What would bloom if your glow-up finally felt organized?</Text>
+          <Text style={styles.headline}>What do you want this garden to grow into?</Text>
 
           <View style={styles.card}>
-            <Text style={styles.prompt}>Write the feeling you want this garden to grow.</Text>
+            <Text style={styles.prompt}>Write what you want to feel.</Text>
             <TextInput
               style={styles.input}
               value={text}
               onChangeText={handleChange}
-              placeholder="I want to feel on top of myself again..."
+              placeholder="I want to feel like myself again..."
               placeholderTextColor="rgba(255,255,255,0.25)"
               multiline
               maxLength={MAX_CHARS}

@@ -38,34 +38,35 @@ export function PrimaryButton({ title, onPress, disabled, style }: PrimaryButton
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: '#E87FA6',
-    paddingVertical: 17,
+    backgroundColor: '#3A2E2B',
+    paddingVertical: 18,
     paddingHorizontal: 24,
-    borderRadius: 18,
+    borderRadius: 100,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 56,
-    shadowColor: '#E87FA6',
-    shadowOpacity: 0.35,
-    shadowRadius: 24,
+    shadowColor: '#3A2E2B',
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
     shadowOffset: { width: 0, height: 6 },
   },
   buttonPressed: {
-    opacity: 0.92,
+    opacity: 0.88,
     transform: [{ scale: 0.98 }],
   },
   buttonDisabled: {
-    backgroundColor: 'rgba(232,127,166,0.35)',
+    backgroundColor: 'rgba(58,46,43,0.28)',
     shadowOpacity: 0,
   },
   buttonText: {
-    fontSize: 16,
+    fontSize: 12,
     fontFamily: 'DMSans',
-    fontWeight: '600',
-    color: '#1A1028',
-    letterSpacing: -0.2,
+    fontWeight: '500',
+    color: '#FFF6F2',
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
   },
   buttonTextDisabled: {
-    opacity: 0.7,
+    opacity: 0.6,
   },
 });

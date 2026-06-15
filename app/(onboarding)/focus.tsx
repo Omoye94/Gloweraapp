@@ -1,17 +1,125 @@
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { PrimaryButton } from '../../src/components/onboarding';
 import { useOnboardingStore } from '../../src/stores/onboardingStore';
 
 const FOCUS_AREAS = [
-  { label: 'Skincare',        detail: 'routine & glow', color: '#F2B4CC' },
+  { label: 'Skincare',        detail: 'the one you keep', color: '#F2B4CC' },
   { label: 'Supplements',     detail: 'never forget', color: '#D8C9EC' },
-  { label: 'Hydration',       detail: 'daily water', color: '#B8CFB1' },
-  { label: 'Movement',        detail: 'soft body care', color: '#FBD4BF' },
+  { label: 'Hydration',       detail: 'without thinking about it', color: '#B8CFB1' },
+  { label: 'Movement',        detail: 'gentle body care', color: '#FBD4BF' },
   { label: 'Mind & mood',     detail: 'reflection & calm', color: '#9B86D4' },
   { label: 'Sleep & rest',    detail: 'evening reset', color: '#F4A888' },
 ];
+
+type FocusArea = (typeof FOCUS_AREAS)[number];
+
+function FocusTile({
+  area,
+  index,
+  isSelected,
+  onPress,
+}: {
+  area: FocusArea;
+  index: number;
+  isSelected: boolean;
+  onPress: () => void;
+}) {
+  const entrance = useRef(new Animated.Value(0)).current;
+  const pressScale = useRef(new Animated.Value(1)).current;
+  const dotScale = useRef(new Animated.Value(1)).current;
+  const haloOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(entrance, {
+      toValue: 1,
+      duration: 420,
+      delay: index * 60,
+      useNativeDriver: true,
+    }).start();
+  }, [entrance, index]);
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(dotScale, {
+        toValue: isSelected ? 1.4 : 1,
+        useNativeDriver: true,
+        speed: 14,
+        bounciness: 10,
+      }),
+      Animated.timing(haloOpacity, {
+        toValue: isSelected ? 0.45 : 0,
+        duration: 240,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [isSelected, dotScale, haloOpacity]);
+
+  const handlePress = () => {
+    Animated.sequence([
+      Animated.spring(pressScale, {
+        toValue: 0.96,
+        useNativeDriver: true,
+        speed: 50,
+        bounciness: 0,
+      }),
+      Animated.spring(pressScale, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 18,
+        bounciness: 14,
+      }),
+    ]).start();
+    onPress();
+  };
+
+  const entranceTranslateY = entrance.interpolate({
+    inputRange: [0, 1],
+    outputRange: [18, 0],
+  });
+
+  return (
+    <Animated.View
+      style={[
+        styles.tileWrap,
+        {
+          opacity: entrance,
+          transform: [{ translateY: entranceTranslateY }, { scale: pressScale }],
+        },
+      ]}
+    >
+      <Pressable
+        onPress={handlePress}
+        style={[
+          styles.tile,
+          isSelected && { backgroundColor: `${area.color}22`, borderColor: area.color },
+        ]}
+      >
+        <View style={styles.dotWrap}>
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.dotHalo,
+              { backgroundColor: area.color, opacity: haloOpacity },
+            ]}
+          />
+          <Animated.View
+            style={[
+              styles.dot,
+              { backgroundColor: area.color, transform: [{ scale: dotScale }] },
+            ]}
+          />
+        </View>
+        <Text style={[styles.tileText, isSelected && styles.tileTextSelected]}>
+          {area.label}
+        </Text>
+        <Text style={styles.tileDetail}>{area.detail}</Text>
+      </Pressable>
+    </Animated.View>
+  );
+}
 
 export default function FocusScreen() {
   const router = useRouter();
@@ -26,36 +134,25 @@ export default function FocusScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <View style={styles.main}>
         <Text style={styles.label}>WHAT ARE WE PLANTING?</Text>
-        <Text style={styles.headline}>Which parts of your glow-up need a place to grow?</Text>
-        <Text style={styles.body}>Pick the areas you want Glowera to turn into visible garden progress.</Text>
+        <Text style={styles.headline}>What do you want to start showing up for?</Text>
+        <Text style={styles.body}>Pick a few. We&apos;ll start small.</Text>
 
         <View style={styles.grid}>
-          {FOCUS_AREAS.map((area) => {
-            const isSelected = focus_areas.includes(area.label);
-            return (
-              <Pressable
-                key={area.label}
-                onPress={() => handleToggle(area.label)}
-                style={({ pressed }) => [
-                  styles.tile,
-                  isSelected && { backgroundColor: `${area.color}22`, borderColor: area.color },
-                  pressed && { opacity: 0.85 },
-                ]}
-              >
-                <View style={[styles.dot, { backgroundColor: area.color }]} />
-                <Text style={[styles.tileText, isSelected && styles.tileTextSelected]}>
-                  {area.label}
-                </Text>
-                <Text style={styles.tileDetail}>{area.detail}</Text>
-              </Pressable>
-            );
-          })}
+          {FOCUS_AREAS.map((area, index) => (
+            <FocusTile
+              key={area.label}
+              area={area}
+              index={index}
+              isSelected={focus_areas.includes(area.label)}
+              onPress={() => handleToggle(area.label)}
+            />
+          ))}
         </View>
       </View>
 
       <View style={styles.bottom}>
         <PrimaryButton
-          title="Continue"
+          title={focus_areas.length === 0 ? 'Pick at least one' : `Plant these (${focus_areas.length})`}
           onPress={() => router.push('/(onboarding)/rituals')}
           disabled={focus_areas.length === 0}
         />
@@ -72,15 +169,28 @@ const styles = StyleSheet.create({
   headline: { fontSize: 32, fontFamily: 'PlayfairDisplay', fontWeight: '600', color: '#FEFAF9', lineHeight: 39, marginBottom: 10 },
   body: { fontSize: 15, fontFamily: 'DMSans', color: 'rgba(255,255,255,0.50)', lineHeight: 23, marginBottom: 24 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  tileWrap: { width: '47.5%' },
   tile: {
-    width: '47.5%', paddingVertical: 20, paddingHorizontal: 16,
+    paddingVertical: 20, paddingHorizontal: 16,
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.1)',
     borderRadius: 20, gap: 8,
   },
+  dotWrap: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dotHalo: {
+    position: 'absolute',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+  },
   dot: { width: 10, height: 10, borderRadius: 5 },
-  tileText: { fontSize: 14, fontFamily: 'DMSans', fontWeight: '500', color: 'rgba(255,255,255,0.55)' },
-  tileTextSelected: { color: '#FEFAF9', fontWeight: '600' },
-  tileDetail: { fontSize: 12, fontFamily: 'DMSans', color: 'rgba(255,255,255,0.34)', lineHeight: 17 },
+  tileText: { fontSize: 15, fontFamily: 'DMSans', fontWeight: '600', color: 'rgba(255,255,255,0.82)' },
+  tileTextSelected: { color: '#FEFAF9', fontWeight: '700' },
+  tileDetail: { fontSize: 13, fontFamily: 'DMSans', color: 'rgba(255,255,255,0.62)', lineHeight: 18 },
   bottom: { paddingTop: 28 },
 });
