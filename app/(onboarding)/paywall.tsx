@@ -72,7 +72,14 @@ export default function PaywallScreen() {
 
   const handleStartTrial = async () => {
     if (!selectedPackage) {
-      router.push('/(onboarding)/invite');
+      Alert.alert(
+        "We can't reach the store",
+        "Subscription plans haven't loaded yet. Check your connection and try again.",
+        [
+          { text: 'Retry', onPress: () => loadOfferings() },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
       return;
     }
     setIsPurchasing(true);
@@ -264,13 +271,15 @@ export default function PaywallScreen() {
             style={({ pressed }) => [
               styles.ctaButton,
               pressed && { opacity: 0.88 },
-              busy && { opacity: 0.6 },
+              (busy || (!isLoadingOfferings && !selectedPackage)) && { opacity: 0.6 },
             ]}
             onPress={handleStartTrial}
             disabled={busy}
           >
             {isPurchasing ? (
               <ActivityIndicator size="small" color="#1A1028" />
+            ) : !isLoadingOfferings && !selectedPackage ? (
+              <Text style={styles.ctaButtonText}>Plans unavailable — tap to retry</Text>
             ) : (
               <Text style={styles.ctaButtonText}>Start 7-day free trial</Text>
             )}
