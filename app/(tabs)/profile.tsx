@@ -500,14 +500,16 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* ── Preview Onboarding ── */}
-        <Pressable
-          style={({ pressed }) => [styles.previewOnboardingButton, pressed && { opacity: 0.7 }]}
-          onPress={handleResetOnboarding}
-        >
-          <SolarIcon name="walking-bold" size={18} color="#7A6668" />
-          <Text style={styles.previewOnboardingText}>Preview Onboarding</Text>
-        </Pressable>
+        {/* ── Preview Onboarding (dev-only) ── */}
+        {__DEV__ && (
+          <Pressable
+            style={({ pressed }) => [styles.previewOnboardingButton, pressed && { opacity: 0.7 }]}
+            onPress={handleResetOnboarding}
+          >
+            <SolarIcon name="walking-bold" size={18} color="#7A6668" />
+            <Text style={styles.previewOnboardingText}>Preview Onboarding</Text>
+          </Pressable>
+        )}
 
         {/* ── Logout ── */}
         <Pressable
