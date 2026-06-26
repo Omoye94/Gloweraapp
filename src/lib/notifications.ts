@@ -241,10 +241,10 @@ const GARDEN_REENGAGEMENT_KEY = 'notif:garden_reengagement';
 const GARDEN_REENGAGEMENT_DAYS = 2;
 
 const GARDEN_MESSAGES = [
-  { title: 'Your garden misses you 🌱', body: 'It's been a while. Come tend your glow.' },
+  { title: 'Your garden misses you 🌱', body: "It's been a while. Come tend your glow." },
   { title: 'Your plant is waiting 🌿', body: 'A little love goes a long way. Open Glowera.' },
-  { title: 'Your glow needs tending ✨', body: 'Your garden hasn't been watered in a few days.' },
-  { title: 'Something's growing without you 🌸', body: 'Come back and check on your garden.' },
+  { title: 'Your glow needs tending ✨', body: "Your garden hasn't been watered in a few days." },
+  { title: "Something's growing without you 🌸", body: 'Come back and check on your garden.' },
 ];
 
 /**
