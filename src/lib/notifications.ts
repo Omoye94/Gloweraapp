@@ -236,3 +236,61 @@ export async function cancelSupplementReminder(habitId: string): Promise<void> {
     console.error('[Notifications] Failed to cancel supplement reminder:', error);
   }
 }
+
+const GARDEN_REENGAGEMENT_KEY = 'notif:garden_reengagement';
+const GARDEN_REENGAGEMENT_DAYS = 2;
+
+const GARDEN_MESSAGES = [
+  { title: 'Your garden misses you 🌱', body: 'It's been a while. Come tend your glow.' },
+  { title: 'Your plant is waiting 🌿', body: 'A little love goes a long way. Open Glowera.' },
+  { title: 'Your glow needs tending ✨', body: 'Your garden hasn't been watered in a few days.' },
+  { title: 'Something's growing without you 🌸', body: 'Come back and check on your garden.' },
+];
+
+/**
+ * Schedule a one-time "garden misses you" re-engagement notification.
+ * Called on every app open — cancels the previous one and resets the timer.
+ * Fires if the user hasn't opened the app in GARDEN_REENGAGEMENT_DAYS days.
+ */
+export async function scheduleGardenReengagement(): Promise<void> {
+  try {
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') return;
+
+    await cancelGardenReengagement();
+
+    const msg = GARDEN_MESSAGES[Math.floor(Math.random() * GARDEN_MESSAGES.length)];
+
+    const id = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: msg.title,
+        body: msg.body,
+        sound: true,
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        seconds: GARDEN_REENGAGEMENT_DAYS * 24 * 60 * 60,
+        repeats: false,
+      },
+    });
+
+    await AsyncStorage.setItem(GARDEN_REENGAGEMENT_KEY, id);
+  } catch (error) {
+    console.error('[Notifications] Failed to schedule garden re-engagement:', error);
+  }
+}
+
+/**
+ * Cancel any pending garden re-engagement notification.
+ */
+export async function cancelGardenReengagement(): Promise<void> {
+  try {
+    const id = await AsyncStorage.getItem(GARDEN_REENGAGEMENT_KEY);
+    if (id) {
+      await Notifications.cancelScheduledNotificationAsync(id);
+      await AsyncStorage.removeItem(GARDEN_REENGAGEMENT_KEY);
+    }
+  } catch (error) {
+    console.error('[Notifications] Failed to cancel garden re-engagement:', error);
+  }
+}

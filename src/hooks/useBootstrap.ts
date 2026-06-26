@@ -7,7 +7,7 @@ import {
   clearCachedSettings,
   UserSettings,
 } from '../lib/userSettings';
-import { ensureScheduledFromSettings } from '../lib/notifications';
+import { ensureScheduledFromSettings, scheduleGardenReengagement } from '../lib/notifications';
 
 const LOCAL_ONBOARDING_KEY = 'glowera-onboarding-complete';
 
@@ -129,7 +129,8 @@ export function useBootstrap(): UseBootstrapReturn {
         }
       }
 
-      // Step 4: Ready to use the app
+      // Step 4: Ready to use the app — reset the re-engagement countdown
+      scheduleGardenReengagement();
       console.log('[Bootstrap] Ready, authenticated:', !!session);
       setState({
         status: 'ready',
