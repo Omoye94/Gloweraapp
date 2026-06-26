@@ -367,6 +367,14 @@ export default function PaywallScreen() {
             )}
           </Pressable>
 
+          <Pressable
+            style={({ pressed }) => [styles.linkButton, pressed && { opacity: 0.6 }]}
+            onPress={() => router.push('/(onboarding)/invite')}
+            disabled={busy}
+          >
+            <Text style={styles.maybeLaterText}>Maybe later</Text>
+          </Pressable>
+
           {/* Legal footer */}
           <View style={styles.legalFooter}>
             <Text style={styles.legalText}>
@@ -757,6 +765,13 @@ const styles = StyleSheet.create({
     fontFamily: 'DMSans',
     fontWeight: '500',
     color: '#735E56',
+  },
+
+  maybeLaterText: {
+    fontSize: 13,
+    fontFamily: 'DMSans',
+    color: '#9E8880',
+    textDecorationLine: 'underline',
   },
 
   // Legal footer
