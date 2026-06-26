@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { PrimaryButton } from '../../src/components/onboarding';
+import { OnboardingScreen, PrimaryButton } from '../../src/components/onboarding';
 import { useOnboardingStore } from '../../src/stores/onboardingStore';
 
 const FOCUS_AREAS = [
@@ -94,7 +94,16 @@ function FocusTile({
         onPress={handlePress}
         style={[
           styles.tile,
-          isSelected && { backgroundColor: `${area.color}22`, borderColor: area.color },
+          isSelected && {
+            backgroundColor: '#FFFFFF',
+            borderColor: area.color,
+            borderWidth: 3,
+            shadowColor: area.color,
+            shadowOpacity: 0.5,
+            shadowRadius: 32,
+            shadowOffset: { width: 0, height: 16 },
+            elevation: 14,
+          },
         ]}
       >
         <View style={styles.dotWrap}>
@@ -131,8 +140,9 @@ export default function FocusScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <View style={styles.main}>
+    <OnboardingScreen>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.main}>
         <Text style={styles.label}>WHAT ARE WE PLANTING?</Text>
         <Text style={styles.headline}>What do you want to start showing up for?</Text>
         <Text style={styles.body}>Pick a few. We&apos;ll start small.</Text>
@@ -150,14 +160,15 @@ export default function FocusScreen() {
         </View>
       </View>
 
-      <View style={styles.bottom}>
-        <PrimaryButton
-          title={focus_areas.length === 0 ? 'Pick at least one' : `Plant these (${focus_areas.length})`}
-          onPress={() => router.push('/(onboarding)/rituals')}
-          disabled={focus_areas.length === 0}
-        />
-      </View>
-    </ScrollView>
+        <View style={styles.bottom}>
+          <PrimaryButton
+            title={focus_areas.length === 0 ? 'Pick at least one' : `Plant these (${focus_areas.length})`}
+            onPress={() => router.push('/(onboarding)/yourname')}
+            disabled={focus_areas.length === 0}
+          />
+        </View>
+      </ScrollView>
+    </OnboardingScreen>
   );
 }
 
@@ -165,16 +176,21 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 40, justifyContent: 'space-between' },
   main: { flex: 1, paddingTop: 8 },
-  label: { fontSize: 10, fontFamily: 'SpaceMono-Bold', color: 'rgba(242,180,204,0.6)', letterSpacing: 1.2, marginBottom: 12 },
-  headline: { fontSize: 32, fontFamily: 'PlayfairDisplay', fontWeight: '600', color: '#FEFAF9', lineHeight: 39, marginBottom: 10 },
-  body: { fontSize: 15, fontFamily: 'DMSans', color: 'rgba(255,255,255,0.50)', lineHeight: 23, marginBottom: 24 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  label: { fontSize: 11, fontFamily: 'SpaceMono-Bold', color: '#C45A82', letterSpacing: 1.6, marginBottom: 14 },
+  headline: { fontSize: 32, fontFamily: 'PlayfairDisplay', fontWeight: '600', color: '#3A2E2B', lineHeight: 40, letterSpacing: -0.3, marginBottom: 12 },
+  body: { fontSize: 16, fontFamily: 'DMSans', color: 'rgba(58,46,43,0.75)', lineHeight: 24, marginBottom: 24 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   tileWrap: { width: '47.5%' },
   tile: {
     paddingVertical: 20, paddingHorizontal: 16,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2, borderColor: 'rgba(58,46,43,0.28)',
     borderRadius: 20, gap: 8,
+    shadowColor: '#3A2E2B',
+    shadowOpacity: 0.32,
+    shadowRadius: 32,
+    shadowOffset: { width: 0, height: 16 },
+    elevation: 10,
   },
   dotWrap: {
     width: 28,
@@ -189,8 +205,8 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   dot: { width: 10, height: 10, borderRadius: 5 },
-  tileText: { fontSize: 15, fontFamily: 'DMSans', fontWeight: '600', color: 'rgba(255,255,255,0.82)' },
-  tileTextSelected: { color: '#FEFAF9', fontWeight: '700' },
-  tileDetail: { fontSize: 13, fontFamily: 'DMSans', color: 'rgba(255,255,255,0.62)', lineHeight: 18 },
+  tileText: { fontSize: 15, fontFamily: 'DMSans', fontWeight: '600', color: '#3A2E2B' },
+  tileTextSelected: { color: '#3A2E2B', fontWeight: '700' },
+  tileDetail: { fontSize: 13, fontFamily: 'DMSans', color: 'rgba(58,46,43,0.62)', lineHeight: 18 },
   bottom: { paddingTop: 28 },
 });

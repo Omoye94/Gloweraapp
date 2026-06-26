@@ -39,19 +39,30 @@ export function Chip({ label, selected, onPress, disabled, style }: ChipProps) {
 
 const styles = StyleSheet.create({
   chip: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    paddingVertical: 10,
-    paddingHorizontal: 18,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     borderRadius: 999,
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(58,46,43,0.18)',
+    shadowColor: '#3A2E2B',
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
   chipSelected: {
-    backgroundColor: 'rgba(232,127,166,0.18)',
-    borderColor: 'rgba(232,127,166,0.5)',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#C45A82',
+    borderWidth: 2,
+    shadowOpacity: 0.24,
+    shadowColor: '#C45A82',
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 5,
   },
   chipPressed: {
-    opacity: 0.8,
+    opacity: 0.85,
     transform: [{ scale: 0.98 }],
   },
   chipDisabled: {
@@ -61,11 +72,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'DMSans',
     fontWeight: '500',
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(58,46,43,0.65)',
     textAlign: 'center',
   },
   chipTextSelected: {
-    color: '#F2B4CC',
+    color: '#C45A82',
     fontWeight: '600',
   },
 });

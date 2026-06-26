@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import { PrimaryButton } from '../../src/components/onboarding';
+import { OnboardingScreen, PrimaryButton } from '../../src/components/onboarding';
 import { useOnboardingStore } from '../../src/stores/onboardingStore';
 
 function firstWord(text: string): string {
@@ -27,97 +26,101 @@ export default function YourNameScreen() {
 
   const handleContinue = () => {
     setPreferredName(firstWord(inputValue));
-    router.push('/(onboarding)/solution');
+    router.push('/(onboarding)/rituals');
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        <LinearGradient
-          pointerEvents="none"
-          colors={['rgba(242,180,204,0.30)', 'rgba(216,201,236,0.10)']}
-          style={styles.backdrop}
-        />
+    <OnboardingScreen>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.main}>
+            <Text style={styles.kicker}>BEFORE WE BEGIN</Text>
+            <Text style={styles.headline}>What should we call you?</Text>
+            <Text style={styles.subhead}>We&apos;ll greet you here each day.</Text>
 
-        <View style={styles.main}>
-          <Text style={styles.kicker}>BEFORE WE BEGIN</Text>
-          <Text style={styles.headline}>What should we call you?</Text>
-          <Text style={styles.subhead}>We'll greet you here each day.</Text>
+            <TextInput
+              ref={inputRef}
+              style={styles.input}
+              value={inputValue}
+              onChangeText={handleInputChange}
+              placeholder="Your first name"
+              placeholderTextColor="rgba(58,46,43,0.4)"
+              maxLength={24}
+              autoCapitalize="words"
+              autoCorrect={false}
+              returnKeyType="done"
+              onSubmitEditing={handleContinue}
+            />
 
-          <TextInput
-            ref={inputRef}
-            style={styles.input}
-            value={inputValue}
-            onChangeText={handleInputChange}
-            placeholder="Your first name"
-            placeholderTextColor="rgba(255,255,255,0.40)"
-            maxLength={24}
-            autoCapitalize="words"
-            autoCorrect={false}
-            returnKeyType="done"
-            onSubmitEditing={handleContinue}
-          />
+            <Text style={styles.hint}>You can change this anytime in your profile.</Text>
+          </View>
 
-          <Text style={styles.hint}>You can change this anytime in your profile.</Text>
-        </View>
-
-        <View style={styles.bottom}>
-          <PrimaryButton title="Continue" onPress={handleContinue} />
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <View style={styles.bottom}>
+            <PrimaryButton title="Continue" onPress={handleContinue} />
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </OnboardingScreen>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 40, justifyContent: 'space-between' },
-  backdrop: { position: 'absolute', top: 0, left: 0, right: 0, height: 500 },
   main: { flex: 1, paddingTop: 8 },
   kicker: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: 'SpaceMono-Bold',
-    color: 'rgba(242,180,204,0.62)',
-    letterSpacing: 1.4,
+    color: '#C45A82',
+    letterSpacing: 1.6,
     marginBottom: 14,
   },
   headline: {
     fontSize: 33,
     fontFamily: 'PlayfairDisplay',
     fontWeight: '600',
-    color: '#FEFAF9',
+    color: '#3A2E2B',
     lineHeight: 40,
+    letterSpacing: -0.3,
     marginBottom: 12,
   },
   subhead: {
     fontSize: 16,
     fontFamily: 'DMSans',
-    color: 'rgba(255,255,255,0.62)',
+    color: 'rgba(58,46,43,0.75)',
     lineHeight: 24,
     marginBottom: 28,
   },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.09)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(242,180,204,0.24)',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: 'rgba(58,46,43,0.22)',
+    borderLeftWidth: 6,
+    borderLeftColor: '#C45A82',
     borderRadius: 18,
-    paddingHorizontal: 18,
-    paddingVertical: 18,
-    fontSize: 18,
-    fontFamily: 'DMSans',
-    color: '#FEFAF9',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    fontSize: 20,
+    fontFamily: 'PlayfairDisplay',
+    fontWeight: '600',
+    color: '#3A2E2B',
     marginBottom: 14,
+    shadowColor: '#C45A82',
+    shadowOpacity: 0.22,
+    shadowRadius: 26,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 7,
   },
   hint: {
     fontSize: 12,
     fontFamily: 'DMSans',
     fontStyle: 'italic',
-    color: 'rgba(255,255,255,0.42)',
+    color: 'rgba(58,46,43,0.55)',
     letterSpacing: 0.2,
   },
   bottom: { paddingTop: 24 },

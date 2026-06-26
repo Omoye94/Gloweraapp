@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { PrimaryButton } from '../../src/components/onboarding';
+import { OnboardingScreen, PrimaryButton } from '../../src/components/onboarding';
 import { useOnboardingStore } from '../../src/stores/onboardingStore';
 
 const OPTIONS = [
@@ -11,31 +10,27 @@ const OPTIONS = [
     emoji: '🧺',
     text: 'My routines live in too many places',
     reply: 'Glowera gathers the little beauty, wellness, and self-care pieces into one garden you can care for.',
-    glow: ['rgba(216,201,236,0.24)', 'rgba(242,180,204,0.10)'],
   },
   {
     emoji: '🌀',
-    text: 'I can\'t seem to keep up with my own routine',
+    text: "I can't seem to keep up with my own routine",
     reply: 'Your garden will show what needs care today without making you feel behind.',
-    glow: ['rgba(155,134,212,0.28)', 'rgba(184,207,177,0.10)'],
   },
   {
     emoji: '🌙',
     text: 'I start strong, then fall off',
-    reply: 'We\'ll build a garden you can return to after messy days — not a streak you have to protect.',
-    glow: ['rgba(242,180,204,0.20)', 'rgba(216,201,236,0.12)'],
+    reply: "We'll build a garden you can return to after messy days — not a streak you have to protect.",
   },
   {
     emoji: '🍃',
     text: 'I keep forgetting the small things that make me feel like me',
     reply: 'Every tiny thing becomes a seed: water, supplements, skin, movement, reflection, rest.',
-    glow: ['rgba(184,207,177,0.22)', 'rgba(244,168,136,0.12)'],
   },
 ] as const;
 
 export default function ProblemScreen() {
   const router = useRouter();
-  const setValidationItems = useOnboardingStore(s => s.setValidationItems);
+  const setValidationItems = useOnboardingStore((s) => s.setValidationItems);
   const [selected, setSelected] = useState<(typeof OPTIONS)[number] | null>(null);
 
   const handleSelect = (option: (typeof OPTIONS)[number]) => {
@@ -45,141 +40,209 @@ export default function ProblemScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <LinearGradient
-        pointerEvents="none"
-        colors={selected?.glow ?? ['rgba(232,127,166,0.16)', 'rgba(155,134,212,0.08)']}
-        style={styles.backdrop}
-      />
+    <OnboardingScreen>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.main}>
+          <Text style={styles.kicker}>YOUR GLOW-UP, GROWN</Text>
+          <Text style={styles.headline}>
+            What&apos;s making your glow up <Text style={styles.headlineItalic}>hard</Text> right now?
+          </Text>
+          <Text style={styles.body}>
+            Pick the one that&apos;s truest. We&apos;ll build from there.
+          </Text>
 
-      <View style={styles.main}>
-        <Text style={styles.kicker}>YOUR GLOW-UP, GROWN</Text>
-        <Text style={styles.headline}>What&apos;s making your glow up hard right now?</Text>
-        <Text style={styles.body}>Pick the one that&apos;s truest. We&apos;ll build from there.</Text>
+          <View style={styles.options}>
+            {OPTIONS.map((option, index) => {
+              const isSelected = selected?.text === option.text;
+              return (
+                <Pressable
+                  key={option.text}
+                  onPress={() => handleSelect(option)}
+                  style={({ pressed }) => [
+                    styles.option,
+                    isSelected && styles.optionSelected,
+                    pressed && styles.optionPressed,
+                  ]}
+                >
+                  <Text style={styles.optionNumber}>0{index + 1}</Text>
+                  <Text style={styles.optionEmoji}>{option.emoji}</Text>
+                  <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
+                    {option.text}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
 
-        <View style={styles.options}>
-          {OPTIONS.map((option, index) => {
-            const isSelected = selected?.text === option.text;
-            return (
-              <Pressable
-                key={option.text}
-                onPress={() => handleSelect(option)}
-                style={({ pressed }) => [
-                  styles.option,
-                  isSelected && styles.optionSelected,
-                  pressed && styles.optionPressed,
-                ]}
-              >
-                <Text style={styles.optionNumber}>0{index + 1}</Text>
-                <Text style={styles.optionEmoji}>{option.emoji}</Text>
-                <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
-                  {option.text}
-                </Text>
-              </Pressable>
-            );
-          })}
+          <View style={[styles.response, selected && styles.responseVisible]}>
+            <Text style={styles.responseQuote}>“</Text>
+            <Text style={styles.responseText}>
+              {selected?.reply ?? 'Glowera turns your glow-up into a garden you can actually stay with.'}
+            </Text>
+          </View>
         </View>
 
-        <View style={[styles.response, selected && styles.responseVisible]}>
-          <Text style={styles.responseText}>{selected?.reply ?? 'Glowera turns your glow-up into a garden you can actually stay with.'}</Text>
+        <View style={styles.bottom}>
+          <PrimaryButton
+            title={selected ? 'Plant my glow' : 'Pick the one that fits'}
+            onPress={() => router.push('/(onboarding)/focus')}
+            disabled={!selected}
+          />
+          <Pressable
+            onPress={() => router.push('/(auth)/login')}
+            style={({ pressed }) => [styles.signInLink, pressed && { opacity: 0.6 }]}
+            hitSlop={12}
+          >
+            <Text style={styles.signInText}>Already glowing? </Text>
+            <Text style={styles.signInTextBold}>Sign in</Text>
+          </Pressable>
         </View>
-      </View>
-
-      <View style={styles.bottom}>
-        <PrimaryButton
-          title={selected ? 'Plant my glow' : 'Pick the one that fits'}
-          onPress={() => router.push('/(onboarding)/focus')}
-          disabled={!selected}
-        />
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </OnboardingScreen>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 28, justifyContent: 'space-between' },
-  backdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 420,
-    opacity: 0.9,
+  content: {
+    flexGrow: 1,
+    paddingHorizontal: 26,
+    paddingBottom: 28,
+    justifyContent: 'space-between',
   },
-  main: { flex: 1, paddingTop: 8 },
+  main: { flex: 1, paddingTop: 12 },
   kicker: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: 'SpaceMono-Bold',
-    color: 'rgba(242,180,204,0.62)',
-    letterSpacing: 1.4,
-    marginBottom: 12,
+    color: '#C45A82',
+    letterSpacing: 1.8,
+    marginBottom: 14,
   },
   headline: {
-    fontSize: 31,
+    fontSize: 32,
     fontFamily: 'PlayfairDisplay',
     fontWeight: '600',
-    color: '#FEFAF9',
-    lineHeight: 38,
-    marginBottom: 10,
+    color: '#3A2E2B',
+    lineHeight: 40,
+    letterSpacing: -0.3,
+    marginBottom: 12,
+  },
+  headlineItalic: {
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontStyle: 'italic',
+    color: '#C45A82',
   },
   body: {
     fontSize: 16,
     fontFamily: 'DMSans',
-    color: 'rgba(255,255,255,0.55)',
+    color: 'rgba(58,46,43,0.75)',
     lineHeight: 24,
-    marginBottom: 20,
+    marginBottom: 24,
   },
-  options: { gap: 8 },
+  options: { gap: 10 },
   option: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: 'rgba(255,255,255,0.055)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.10)',
-    borderRadius: 18,
+    gap: 14,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: 'rgba(58,46,43,0.24)',
+    borderRadius: 20,
+    shadowColor: '#3A2E2B',
+    shadowOpacity: 0.26,
+    shadowRadius: 32,
+    shadowOffset: { width: 0, height: 16 },
+    elevation: 10,
   },
   optionSelected: {
-    backgroundColor: 'rgba(232,127,166,0.18)',
-    borderColor: 'rgba(242,180,204,0.62)',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#C45A82',
+    borderWidth: 3,
+    shadowColor: '#C45A82',
+    shadowOpacity: 0.45,
+    shadowRadius: 34,
+    shadowOffset: { width: 0, height: 18 },
+    elevation: 14,
   },
-  optionPressed: { opacity: 0.86, transform: [{ scale: 0.99 }] },
+  optionPressed: { opacity: 0.88, transform: [{ scale: 0.995 }] },
   optionNumber: {
     fontSize: 10,
     fontFamily: 'SpaceMono-Bold',
-    color: 'rgba(255,255,255,0.26)',
+    color: 'rgba(58,46,43,0.42)',
     width: 22,
+    letterSpacing: 0.8,
   },
-  optionEmoji: { fontSize: 20 },
+  optionEmoji: { fontSize: 22 },
   optionText: {
     flex: 1,
     fontSize: 15,
     fontFamily: 'DMSans',
-    color: 'rgba(255,255,255,0.70)',
+    fontWeight: '500',
+    color: '#3A2E2B',
     lineHeight: 22,
   },
-  optionTextSelected: { color: '#FEFAF9', fontWeight: '600' },
+  optionTextSelected: { color: '#3A2E2B', fontWeight: '600' },
   response: {
-    marginTop: 12,
-    padding: 15,
-    borderRadius: 18,
-    backgroundColor: 'rgba(20,12,32,0.45)',
-    borderWidth: 1,
-    borderColor: 'rgba(242,180,204,0.16)',
-    opacity: 0.65,
+    marginTop: 18,
+    paddingTop: 22,
+    paddingBottom: 20,
+    paddingHorizontal: 22,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: 'rgba(196,90,130,0.32)',
+    opacity: 0.6,
+    position: 'relative',
+    shadowColor: '#C45A82',
+    shadowOpacity: 0.22,
+    shadowRadius: 30,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 8,
   },
   responseVisible: {
     opacity: 1,
-    borderColor: 'rgba(242,180,204,0.34)',
+    borderColor: 'rgba(196,90,130,0.5)',
+    shadowOpacity: 0.32,
+  },
+  responseQuote: {
+    position: 'absolute',
+    top: 0,
+    left: 16,
+    fontSize: 60,
+    fontFamily: 'PlayfairDisplay-Italic',
+    color: 'rgba(196,90,130,0.18)',
+    lineHeight: 60,
   },
   responseText: {
     fontSize: 16,
     fontFamily: 'PlayfairDisplay-Italic',
-    color: 'rgba(255,255,255,0.78)',
-    lineHeight: 23,
+    fontStyle: 'italic',
+    color: 'rgba(58,46,43,0.78)',
+    lineHeight: 24,
+    paddingLeft: 4,
   },
-  bottom: { paddingTop: 16 },
+  bottom: { paddingTop: 18, gap: 14 },
+  signInLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 4,
+  },
+  signInText: {
+    fontFamily: 'DMSans',
+    fontSize: 13,
+    color: 'rgba(58,46,43,0.45)',
+  },
+  signInTextBold: {
+    fontFamily: 'DMSans',
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#C45A82',
+  },
 });

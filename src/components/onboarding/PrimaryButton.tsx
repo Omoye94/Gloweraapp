@@ -1,7 +1,6 @@
 import React from 'react';
 import { Pressable, Text, StyleSheet, ViewStyle } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { borderRadius } from '../../theme';
 
 interface PrimaryButtonProps {
   title: string;
@@ -38,35 +37,40 @@ export function PrimaryButton({ title, onPress, disabled, style }: PrimaryButton
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: '#3A2E2B',
-    paddingVertical: 18,
+    backgroundColor: '#1A1028',
+    paddingVertical: 19,
     paddingHorizontal: 24,
     borderRadius: 100,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 56,
-    shadowColor: '#3A2E2B',
-    shadowOpacity: 0.18,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 6 },
+    minHeight: 58,
+    shadowColor: '#1A1028',
+    shadowOpacity: 0.32,
+    shadowRadius: 26,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 8,
   },
   buttonPressed: {
-    opacity: 0.88,
+    opacity: 0.92,
     transform: [{ scale: 0.98 }],
   },
   buttonDisabled: {
-    backgroundColor: 'rgba(58,46,43,0.28)',
-    shadowOpacity: 0,
+    backgroundColor: '#A89A93',
+    shadowColor: '#3A2E2B',
+    shadowOpacity: 0.14,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
   buttonText: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: 'DMSans',
-    fontWeight: '500',
-    color: '#FFF6F2',
-    letterSpacing: 1.6,
+    fontWeight: '600',
+    color: '#FEFAF9',
+    letterSpacing: 1.8,
     textTransform: 'uppercase',
   },
   buttonTextDisabled: {
-    opacity: 0.6,
+    color: 'rgba(254,250,249,0.9)',
   },
 });

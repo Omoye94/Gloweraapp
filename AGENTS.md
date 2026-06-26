@@ -1,3 +1,4 @@
+
 # Glowera Product Rules
 
 ## Design Philosophy

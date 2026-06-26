@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing, Image, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { PrimaryButton } from '../../src/components/onboarding';
+import { OnboardingScreen, PrimaryButton } from '../../src/components/onboarding';
 import { useOnboardingStore } from '../../src/stores/onboardingStore';
 import { useHabitStore, useUserStore } from '../../src/stores';
 import { supabase } from '../../lib/supabase';
@@ -148,7 +148,7 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <OnboardingScreen variant="warm" tone="transformation">
       <View style={styles.content}>
         <View style={styles.main}>
           {/* Seed image with glow */}
@@ -186,37 +186,36 @@ export default function WelcomeScreen() {
           )}
         </Animated.View>
       </View>
-    </View>
+    </OnboardingScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   content: { flex: 1, paddingHorizontal: 24, paddingBottom: 40, justifyContent: 'space-between' },
   main: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  seedWrap: { width: 220, height: 220, alignItems: 'center', justifyContent: 'center', marginBottom: 36 },
+  seedWrap: { width: 240, height: 240, alignItems: 'center', justifyContent: 'center', marginBottom: 36 },
   glowRing: {
-    position: 'absolute', width: 180, height: 180, borderRadius: 90,
-    backgroundColor: 'rgba(232,127,166,0.12)',
+    position: 'absolute', width: 200, height: 200, borderRadius: 100,
+    backgroundColor: 'rgba(232,127,166,0.18)',
   },
   glowRingOuter: {
-    position: 'absolute', width: 220, height: 220, borderRadius: 110,
-    backgroundColor: 'rgba(155,134,212,0.06)',
+    position: 'absolute', width: 240, height: 240, borderRadius: 120,
+    backgroundColor: 'rgba(254,201,180,0.22)',
   },
   seedImage: { width: 200, height: 200, borderRadius: 40 },
   label: {
-    fontSize: 10, fontFamily: 'SpaceMono-Bold',
-    color: 'rgba(242,180,204,0.6)', letterSpacing: 1.2, marginBottom: 16,
+    fontSize: 11, fontFamily: 'SpaceMono-Bold',
+    color: '#C45A82', letterSpacing: 1.6, marginBottom: 16,
   },
   title: {
-    fontSize: 30, fontFamily: 'PlayfairDisplay', fontWeight: '600',
-    color: '#FEFAF9', textAlign: 'center', lineHeight: 38, letterSpacing: -0.3, marginBottom: 12,
+    fontSize: 32, fontFamily: 'PlayfairDisplay', fontWeight: '600',
+    color: '#3A2E2B', textAlign: 'center', lineHeight: 40, letterSpacing: -0.3, marginBottom: 12,
   },
   subtitle: {
-    fontSize: 17, fontFamily: 'PlayfairDisplay-Italic',
-    color: 'rgba(255,255,255,0.45)', textAlign: 'center',
+    fontSize: 18, fontFamily: 'PlayfairDisplay-Italic',
+    color: 'rgba(58,46,43,0.72)', textAlign: 'center',
   },
   bottom: { paddingTop: 24 },
   loadingWrap: { alignItems: 'center', paddingVertical: 20 },
-  loadingText: { marginTop: 12, fontSize: 14, fontFamily: 'DMSans', color: 'rgba(255,255,255,0.5)' },
+  loadingText: { marginTop: 12, fontSize: 14, fontFamily: 'DMSans', color: 'rgba(58,46,43,0.7)' },
 });

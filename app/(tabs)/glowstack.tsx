@@ -7,12 +7,12 @@ import {
   Pressable,
   Alert,
   Platform,
-  Animated,
   Modal,
   TextInput,
   KeyboardAvoidingView,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { ChevronDown } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHabitStore, useSupplementStore } from '../../src/stores';
@@ -29,18 +29,6 @@ const SUPP_COLORS = ['#F4A888', '#B8CFB1', '#D8C9EC', '#F2B4CC', '#FBD4BF'];
 
 function toDateKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-}
-
-function getStreak(habitId: string, summaries: Record<string, any>): number {
-  let streak = 0;
-  const cur = new Date();
-  if (summaries[toDateKey(cur)]?.completions[habitId]) streak++;
-  cur.setDate(cur.getDate() - 1);
-  for (let i = 0; i < 365; i++) {
-    if (summaries[toDateKey(cur)]?.completions[habitId]) { streak++; cur.setDate(cur.getDate() - 1); }
-    else break;
-  }
-  return streak;
 }
 
 function getTotalDaysUsed(habitId: string, summaries: Record<string, any>): number {
@@ -70,6 +58,7 @@ export default function GlowStackScreen() {
   const [checkInHabit, setCheckInHabit] = useState<any>(null);
   const [checkInRating, setCheckInRating] = useState<'positive' | 'neutral' | 'negative' | null>(null);
   const [checkInNote, setCheckInNote] = useState('');
+  const [reflectionsExpanded, setReflectionsExpanded] = useState(false);
 
   const { habits, dailySummaries, completeHabit, uncompleteHabit, getCompletionForToday, removeHabit, updateSupplementMeta } = useHabitStore();
   const { markSupplementAdded, markSupplementRemoved } = useSupplementStore();
@@ -114,6 +103,21 @@ export default function GlowStackScreen() {
   }, []);
   const todayDayIdx = useMemo(() => { const d = new Date().getDay(); return d === 0 ? 6 : d - 1; }, []);
 
+  // Supplements due for a check-in reflection
+  const reflectionsDue = useMemo(() => {
+    return supplementHabits
+      .map((habit) => {
+        const totalDays = getTotalDaysUsed(habit.id, dailySummaries);
+        const due = totalDays >= 14 && !habit.supplementMeta?.checkInCompletedAt;
+        if (!due) return null;
+        const suppInfo = habit.supplementMeta?.supplementInfoId
+          ? SUPPLEMENT_CATALOG.find((s: SupplementInfo) => s.id === habit.supplementMeta!.supplementInfoId)
+          : null;
+        return { habit, displayName: suppInfo?.name ?? habit.name, totalDays };
+      })
+      .filter((x): x is { habit: any; displayName: string; totalDays: number } => x !== null);
+  }, [supplementHabits, dailySummaries]);
+
   // 7-day stack health score
   const healthScore = useMemo(() => {
     if (total === 0) return null;
@@ -127,22 +131,13 @@ export default function GlowStackScreen() {
     return possible > 0 ? Math.round((done / possible) * 100) : 0;
   }, [supplementHabits, dailySummaries, weekDates, total]);
 
-  // Completion celebration animation
-  const alreadyComplete = taken === total && total > 0;
-  const celebScale   = useRef(new Animated.Value(alreadyComplete ? 1 : 0.94)).current;
-  const celebOpacity = useRef(new Animated.Value(alreadyComplete ? 1 : 0)).current;
+  // Completion haptic — fires when transitioning to "all taken"
   const prevTakenRef = useRef(taken);
-
   useEffect(() => {
     const justCompleted = taken === total && total > 0 && prevTakenRef.current < total;
     if (justCompleted) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Animated.parallel([
-        Animated.spring(celebScale,   { toValue: 1, useNativeDriver: true, tension: 120, friction: 8 }),
-        Animated.timing(celebOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
-      ]).start();
     }
-    if (taken < total) { celebScale.setValue(0.94); celebOpacity.setValue(0); }
     prevTakenRef.current = taken;
   }, [taken, total]);
 
@@ -232,98 +227,34 @@ export default function GlowStackScreen() {
     const dose = habit.supplementMeta?.dosage || suppInfo?.typicalDosage || '';
     const timing = suppInfo?.timing ?? 'morning';
     const emoji = timing === 'evening' ? '🌙' : '💊';
-    const streak = getStreak(habit.id, dailySummaries);
-    const totalDays = getTotalDaysUsed(habit.id, dailySummaries);
-    const needsCheckIn = totalDays >= 14 && !habit.supplementMeta?.checkInCompletedAt;
-    const checkInDone = !!habit.supplementMeta?.checkInCompletedAt;
-    const checkInRatingVal = habit.supplementMeta?.checkInRating;
 
     return (
-      <View key={habit.id}>
-        <Pressable
-          style={[styles.suppRow, isTaken && { backgroundColor: `${color}20` }]}
-          onPress={() => handleToggle(habit.id)}
-          onLongPress={() => handleRemoveSupplement(habit.id, habit.supplementMeta?.supplementInfoId)}
-        >
-          <View style={[styles.suppIconBox, { backgroundColor: `${color}30` }]}>
-            <Text style={styles.suppEmoji}>{habit.icon || emoji}</Text>
-          </View>
-          <View style={styles.suppInfo}>
-            <Text style={[styles.suppName, isTaken && styles.suppNameTaken]} numberOfLines={1}>
-              {displayName}
-            </Text>
-            {dose ? <Text style={styles.suppDose}>{dose}</Text> : null}
-            {streak >= 2 && (
-              <Text style={styles.streakRowText}>🔥 {streak}-day streak</Text>
-            )}
-            <Text style={styles.holdHint}>Hold to remove</Text>
-            <View style={styles.weekDots}>
-              {(['M','T','W','T','F','S','S']).map((label, i) => {
-                const dk = weekDates[i];
-                const done = dailySummaries[dk]?.completions[habit.id] !== undefined;
-                const isToday = i === todayDayIdx;
-                return (
-                  <View key={i} style={styles.weekDotCol}>
-                    <View
-                      style={[
-                        styles.weekDot,
-                        done && { backgroundColor: color },
-                        isToday && !done && styles.weekDotToday,
-                      ]}
-                    />
-                    <Text style={[styles.weekDotLabel, isToday && { color: '#C45A82' }]}>{label}</Text>
-                  </View>
-                );
-              })}
-            </View>
-          </View>
-          <Pressable onPress={() => handleOpenEdit(habit)} hitSlop={8} style={styles.editBtn}>
-            <SolarIcon name="pen-new-square-bold" size={15} color="#B8A9A5" />
-          </Pressable>
-          <Pressable
-            onPress={() => handleToggle(habit.id)}
-            hitSlop={6}
-            style={[styles.checkBox, isTaken && { backgroundColor: color, borderColor: color }]}
-          >
-            {isTaken && <SolarIcon name="check-circle-bold" size={14} color="#FFFAF8" />}
-          </Pressable>
+      <Pressable
+        key={habit.id}
+        style={[styles.suppRow, isTaken && { backgroundColor: `${color}20` }]}
+        onPress={() => handleToggle(habit.id)}
+        onLongPress={() => handleRemoveSupplement(habit.id, habit.supplementMeta?.supplementInfoId)}
+      >
+        <View style={[styles.suppIconBox, { backgroundColor: `${color}30` }]}>
+          <Text style={styles.suppEmoji}>{habit.icon || emoji}</Text>
+        </View>
+        <View style={styles.suppInfo}>
+          <Text style={[styles.suppName, isTaken && styles.suppNameTaken]} numberOfLines={1}>
+            {displayName}
+          </Text>
+          {dose ? <Text style={styles.suppDose}>{dose}</Text> : null}
+        </View>
+        <Pressable onPress={() => handleOpenEdit(habit)} hitSlop={8} style={styles.editBtn}>
+          <SolarIcon name="pen-new-square-bold" size={15} color="#B8A9A5" />
         </Pressable>
-
-        {/* Check-in prompt — appears after 14 days */}
-        {needsCheckIn && (
-          <Pressable
-            onPress={() => { setCheckInHabit(habit); setCheckInRating(null); setCheckInNote(''); }}
-            style={({ pressed }) => [styles.checkInCard, pressed && { opacity: 0.92 }]}
-          >
-            <LinearGradient
-              colors={['#EDE8FF', '#F6E8F5']}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              style={styles.checkInCardInner}
-            >
-              <Text style={styles.checkInCardEmoji}>✨</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.checkInCardTitle}>How is {displayName} feeling?</Text>
-                <Text style={styles.checkInCardSub}>{totalDays} days in — time to reflect</Text>
-              </View>
-              <View style={styles.checkInCardBtn}>
-                <Text style={styles.checkInCardBtnText}>Check in</Text>
-              </View>
-            </LinearGradient>
-          </Pressable>
-        )}
-
-        {/* Previous check-in result */}
-        {checkInDone && checkInRatingVal && (
-          <View style={styles.checkInResult}>
-            <Text style={styles.checkInResultText}>
-              {checkInRatingVal === 'positive' ? '🌟 Loving it' : checkInRatingVal === 'neutral' ? '🤷‍♀️ Too early to tell' : '😕 Not feeling it yet'}
-            </Text>
-            <Pressable onPress={() => { setCheckInHabit(habit); setCheckInRating(checkInRatingVal); setCheckInNote(habit.supplementMeta?.checkInNote || ''); }} hitSlop={8}>
-              <Text style={styles.checkInResultEdit}>Edit</Text>
-            </Pressable>
-          </View>
-        )}
-      </View>
+        <Pressable
+          onPress={() => handleToggle(habit.id)}
+          hitSlop={6}
+          style={[styles.checkBox, isTaken && { backgroundColor: color, borderColor: color }]}
+        >
+          {isTaken && <SolarIcon name="check-circle-bold" size={14} color="#FFFAF8" />}
+        </Pressable>
+      </Pressable>
     );
   };
 
@@ -338,7 +269,7 @@ export default function GlowStackScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTextBlock}>
-            <Text style={styles.headerLabel}>SUPPLEMENT STACK</Text>
+            <Text style={styles.headerLabel}>your stack</Text>
             <Text style={styles.title}>Nourish from within</Text>
           </View>
           <Pressable
@@ -350,68 +281,102 @@ export default function GlowStackScreen() {
           </Pressable>
         </View>
 
-        {/* TODAY'S STACK progress card / celebration */}
+        {/* Consistency card — replaces both progress bar AND health score card */}
         {total > 0 && (
-          taken === total ? (
-            <Animated.View style={{ opacity: celebOpacity, transform: [{ scale: celebScale }], marginBottom: 20 }}>
-              <LinearGradient
-                colors={['#FFF0F5', '#F6DFE8', '#EDD5CB']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.celebCard}
-              >
-                <Text style={styles.celebEmoji}>✦</Text>
-                <View style={styles.celebBody}>
-                  <Text style={styles.celebTitle}>Stack complete</Text>
-                  <Text style={styles.celebSub}>You nourished yourself today · {total}/{total} taken</Text>
+          <View style={styles.consistencyWrap}>
+            <View style={styles.consistencyEdge} />
+            <View style={styles.consistencyCard}>
+              <View style={styles.consistencyHeader}>
+                <Text style={styles.consistencyEyebrow}>
+                  {taken === total ? 'stack complete ✦' : "today's stack"}
+                </Text>
+                <Text style={styles.consistencyCount}>
+                  {taken} of {total}{taken === total ? '  ✦' : ''}
+                </Text>
+              </View>
+              <View style={styles.consistencyTrack}>
+                <View style={[styles.consistencyFill, { width: `${progress}%` as any }]} />
+              </View>
+              <Text style={styles.consistencyWeekLabel}>this week</Text>
+              <View style={styles.consistencyDotRow}>
+                {(['M','T','W','T','F','S','S']).map((lbl, i) => {
+                  const allTaken = supplementHabits.length > 0 &&
+                    supplementHabits.every(h => dailySummaries[weekDates[i]]?.completions[h.id]);
+                  const isToday = i === todayDayIdx;
+                  return (
+                    <View key={i} style={styles.consistencyDotCol}>
+                      <View
+                        style={[
+                          styles.consistencyDot,
+                          allTaken && styles.consistencyDotFilled,
+                          isToday && styles.consistencyDotToday,
+                        ]}
+                      />
+                      <Text style={[styles.consistencyDotLabel, isToday && { color: '#C45A82' }]}>{lbl}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+              {healthScore !== null && healthScore > 0 && (
+                <View style={styles.consistencyStats}>
+                  <View style={styles.consistencyScorePill}>
+                    <Text style={styles.consistencyScoreNumber}>{healthScore}</Text>
+                    <Text style={styles.consistencyScorePercent}>%</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.consistencyStatsLabel}>weekly streak</Text>
+                    <Text style={styles.consistencyStatsAccent}>
+                      {healthScore >= 80 ? "you're on a roll" : healthScore >= 50 ? 'building momentum' : "let's get consistent"}
+                    </Text>
+                  </View>
                 </View>
-              </LinearGradient>
-            </Animated.View>
-          ) : (
-            <View style={styles.progressCard}>
-              <View style={styles.progressCardHeader}>
-                <Text style={styles.progressCardLabel}>TODAY'S STACK</Text>
-                <Text style={styles.progressCardCount}>{taken}/{total} taken</Text>
-              </View>
-              <View style={styles.progressTrack}>
-                <LinearGradient
-                  colors={['#F2B4CC', '#E87FA6', '#9B86D4']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={[styles.progressFill, { width: `${progress}%` as any }]}
-                />
-              </View>
+              )}
             </View>
-          )
+          </View>
         )}
 
-        {/* Stack health score card */}
-        {total > 0 && healthScore !== null && (
-          <LinearGradient
-            colors={['#9B86D4', '#C45A82']}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-            style={styles.healthCard}
-          >
-            <View style={styles.healthCardLeft}>
-              <Text style={styles.healthCardScore}>{healthScore}%</Text>
-              <Text style={styles.healthCardLabel}>7-DAY CONSISTENCY</Text>
-              <Text style={styles.healthCardDesc}>
-                {healthScore >= 80 ? "You're on a roll 🌿" : healthScore >= 50 ? 'Building momentum ✨' : "Let's get consistent 💪"}
-              </Text>
-            </View>
-            <View style={styles.healthCardDots}>
-              {(['Mo','Tu','We','Th','Fr','Sa','Su']).map((lbl, i) => {
-                const allTaken = supplementHabits.length > 0 &&
-                  supplementHabits.every(h => dailySummaries[weekDates[i]]?.completions[h.id]);
-                return (
-                  <View key={i} style={styles.healthDotCol}>
-                    <View style={[styles.healthDot, allTaken && styles.healthDotFilled]} />
-                    <Text style={styles.healthDotLabel}>{lbl}</Text>
-                  </View>
-                );
-              })}
-            </View>
-          </LinearGradient>
+        {/* Reflections due — grouped check-in section */}
+        {reflectionsDue.length > 0 && (
+          <View style={styles.reflectionsSection}>
+            <Pressable
+              style={styles.reflectionsHeader}
+              onPress={() => setReflectionsExpanded((e) => !e)}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.reflectionsEyebrow}>reflections due</Text>
+                <Text style={styles.reflectionsTitle}>
+                  {reflectionsDue.length} supplement{reflectionsDue.length > 1 ? 's' : ''} ready for a check-in
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.reflectionsChevron,
+                  reflectionsExpanded && styles.reflectionsChevronOpen,
+                ]}
+              >
+                <ChevronDown size={18} color="#C45A82" strokeWidth={2.4} />
+              </View>
+            </Pressable>
+
+            {reflectionsExpanded && (
+              <View style={styles.reflectionsList}>
+                {reflectionsDue.map(({ habit, displayName, totalDays }) => (
+                  <Pressable
+                    key={habit.id}
+                    style={({ pressed }) => [styles.reflectionRow, pressed && { opacity: 0.9 }]}
+                    onPress={() => { setCheckInHabit(habit); setCheckInRating(null); setCheckInNote(''); }}
+                  >
+                    <Text style={styles.reflectionEmoji}>{habit.icon || '✨'}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.reflectionName}>How is {displayName} feeling?</Text>
+                      <Text style={styles.reflectionDays}>{totalDays} days in</Text>
+                    </View>
+                    <Text style={styles.reflectionArrow}>›</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </View>
         )}
 
         {/* Empty state */}
@@ -432,7 +397,7 @@ export default function GlowStackScreen() {
         {/* Morning */}
         {morningSupps.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>MORNING</Text>
+            <Text style={styles.sectionLabel}>☀ morning</Text>
             <View style={styles.suppList}>
               {morningSupps.map((h, i) => renderSupplementRow(h, i))}
             </View>
@@ -442,7 +407,7 @@ export default function GlowStackScreen() {
         {/* Evening */}
         {eveningSupps.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>EVENING</Text>
+            <Text style={styles.sectionLabel}>☾ evening</Text>
             <View style={styles.suppList}>
               {eveningSupps.map((h, i) => renderSupplementRow(h, morningSupps.length + i))}
             </View>
@@ -679,12 +644,12 @@ const styles = StyleSheet.create({
   },
   headerTextBlock: { flex: 1, marginRight: 16 },
   headerLabel: {
-    fontSize: 11,
-    fontFamily: 'SpaceMono-Bold',
-    color: '#5C3D2E',
-    letterSpacing: 1.2,
+    fontSize: 14,
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontStyle: 'italic',
+    color: 'rgba(196,90,130,0.85)',
+    letterSpacing: 0.2,
     marginBottom: 6,
-    textTransform: 'uppercase',
   },
   title: {
     fontSize: 28,
@@ -714,43 +679,232 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 
-  progressCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 20,
+  // Consistency card (deck grammar)
+  consistencyWrap: {
+    flexDirection: 'row',
     marginBottom: 20,
-    shadowColor: '#C4A99A',
-    shadowOpacity: 0.07,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    borderRadius: 22,
+    shadowColor: '#3A2E2B',
+    shadowOpacity: 0.22,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 6 },
   },
-  progressCardHeader: {
+  consistencyEdge: {
+    width: 6,
+    backgroundColor: '#C45A82',
+    borderTopLeftRadius: 22,
+    borderBottomLeftRadius: 22,
+  },
+  consistencyCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopRightRadius: 22,
+    borderBottomRightRadius: 22,
+    borderWidth: 2,
+    borderLeftWidth: 0,
+    borderColor: 'rgba(58,46,43,0.18)',
+    padding: 20,
+  },
+  consistencyHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
   },
-  progressCardLabel: {
-    fontFamily: 'SpaceMono-Bold',
-    fontSize: 11,
-    color: '#5C3D2E',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
+  consistencyEyebrow: {
+    fontSize: 14,
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontStyle: 'italic',
+    color: 'rgba(196,90,130,0.85)',
+    letterSpacing: 0.2,
   },
-  progressCardCount: {
+  consistencyCount: {
     fontFamily: 'DMSans',
     fontSize: 13,
-    color: '#C45A82',
     fontWeight: '600',
+    color: '#1A0A06',
   },
-  progressTrack: {
+  consistencyTrack: {
     height: 6,
-    backgroundColor: 'rgba(242,180,204,0.2)',
+    backgroundColor: 'rgba(58,46,43,0.10)',
     borderRadius: 999,
     overflow: 'hidden',
+    marginBottom: 18,
   },
-  progressFill: { height: '100%', borderRadius: 999 },
+  consistencyFill: {
+    height: '100%',
+    backgroundColor: '#C45A82',
+    borderRadius: 999,
+  },
+  consistencyWeekLabel: {
+    fontSize: 13,
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontStyle: 'italic',
+    color: 'rgba(58,46,43,0.55)',
+    letterSpacing: 0.2,
+    marginBottom: 10,
+  },
+  consistencyDotRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 2,
+    marginBottom: 12,
+  },
+  consistencyDotCol: { alignItems: 'center', gap: 6 },
+  consistencyDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: 'rgba(58,46,43,0.22)',
+  },
+  consistencyDotFilled: {
+    backgroundColor: '#C45A82',
+    borderColor: '#C45A82',
+  },
+  consistencyDotToday: {
+    borderWidth: 2,
+    borderColor: '#C45A82',
+    shadowColor: '#C45A82',
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  consistencyDotLabel: {
+    fontSize: 10,
+    fontFamily: 'SpaceMono-Bold',
+    color: 'rgba(58,46,43,0.55)',
+    letterSpacing: 0.4,
+  },
+  consistencyStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginTop: 8,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(58,46,43,0.10)',
+  },
+  consistencyScorePill: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    backgroundColor: '#C45A82',
+    shadowColor: '#C45A82',
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  consistencyScoreNumber: {
+    fontFamily: 'PlayfairDisplay',
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    lineHeight: 30,
+  },
+  consistencyScorePercent: {
+    fontFamily: 'DMSans',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginLeft: 2,
+  },
+  consistencyStatsLabel: {
+    fontSize: 13,
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontStyle: 'italic',
+    color: 'rgba(58,46,43,0.55)',
+    letterSpacing: 0.2,
+    marginBottom: 4,
+  },
+  consistencyStatsAccent: {
+    fontSize: 14,
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontStyle: 'italic',
+    color: '#C45A82',
+  },
+
+  // Reflections-due section (grouped check-ins)
+  reflectionsSection: {
+    marginBottom: 20,
+  },
+  reflectionsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: 'rgba(196,90,130,0.25)',
+    shadowColor: '#3A2E2B',
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  reflectionsEyebrow: {
+    fontSize: 14,
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontStyle: 'italic',
+    color: 'rgba(196,90,130,0.85)',
+    letterSpacing: 0.2,
+    marginBottom: 4,
+  },
+  reflectionsTitle: {
+    fontSize: 14,
+    fontFamily: 'DMSans',
+    fontWeight: '600',
+    color: '#1A0A06',
+  },
+  reflectionsChevron: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FFF7FA',
+    borderWidth: 1.5,
+    borderColor: 'rgba(196,90,130,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reflectionsChevronOpen: {
+    transform: [{ rotate: '180deg' }],
+  },
+  reflectionsList: {
+    marginTop: 8,
+    gap: 8,
+  },
+  reflectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(58,46,43,0.10)',
+  },
+  reflectionEmoji: { fontSize: 24 },
+  reflectionName: {
+    fontFamily: 'DMSans',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1A0A06',
+    marginBottom: 2,
+  },
+  reflectionDays: {
+    fontFamily: 'SpaceMono-Bold',
+    fontSize: 10,
+    color: 'rgba(58,46,43,0.55)',
+    letterSpacing: 0.6,
+  },
+  reflectionArrow: {
+    fontSize: 22,
+    color: '#C45A82',
+    marginLeft: 4,
+  },
 
   emptyCard: {
     backgroundColor: '#FFFFFF',
@@ -776,11 +930,11 @@ const styles = StyleSheet.create({
 
   section: { marginBottom: 20 },
   sectionLabel: {
-    fontFamily: 'SpaceMono-Bold',
-    fontSize: 11,
-    color: '#5C3D2E',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontStyle: 'italic',
+    fontSize: 16,
+    color: 'rgba(196,90,130,0.85)',
+    letterSpacing: 0.2,
     marginBottom: 12,
   },
   suppList: { gap: 8 },
@@ -835,196 +989,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  weekDots: {
-    flexDirection: 'row',
-    gap: 6,
-    marginTop: 8,
-  },
-  weekDotCol: {
-    alignItems: 'center' as const,
-    gap: 3,
-  },
-  weekDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: 'rgba(0,0,0,0.08)',
-  },
-  weekDotToday: {
-    borderWidth: 1.5,
-    borderColor: '#C45A82',
-    backgroundColor: 'transparent',
-  },
-  weekDotLabel: {
-    fontFamily: 'SpaceMono-Bold',
-    fontSize: 9,
-    color: '#8C7B76',
-  },
-
-  celebCard: {
-    borderRadius: 24,
-    padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    shadowColor: '#C4A99A',
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  celebEmoji: { fontSize: 28 },
-  celebBody: { flex: 1 },
-  celebTitle: {
-    fontFamily: 'Raleway-SemiBold',
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#1A0A06',
-    marginBottom: 2,
-  },
-  celebSub: {
-    fontFamily: 'DMSans',
-    fontSize: 12,
-    color: '#5C3D2E',
-  },
-
-  holdHint: {
-    fontFamily: 'DMSans',
-    fontSize: 11,
-    color: '#8C7B76',
-    marginTop: 3,
-  },
-
   adherenceSection: { marginTop: 16, marginBottom: 8 },
   adherenceHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   adherenceScore: { fontFamily: 'Raleway-SemiBold', fontSize: 15, fontWeight: '600', color: '#C45A82' },
   adherenceTrack: { height: 6, backgroundColor: 'rgba(242,180,204,0.2)', borderRadius: 999, overflow: 'hidden' },
   adherenceFill: { height: '100%', backgroundColor: '#C45A82', borderRadius: 999 },
   adherenceSub: { fontFamily: 'DMSans', fontSize: 11, color: '#B8A9A5', marginTop: 5 },
-
-  streakRowText: {
-    fontFamily: 'DMSans',
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#C45A82',
-    marginTop: 3,
-    marginBottom: 4,
-  },
-
-  healthCard: {
-    borderRadius: 24,
-    padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-    shadowColor: '#9B86D4',
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-  },
-  healthCardLeft: { flex: 1 },
-  healthCardScore: {
-    fontFamily: 'Raleway-SemiBold',
-    fontSize: 44,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    lineHeight: 48,
-  },
-  healthCardLabel: {
-    fontFamily: 'SpaceMono-Bold',
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.9)',
-    letterSpacing: 1.2,
-    marginTop: 2,
-  },
-  healthCardDesc: {
-    fontFamily: 'DMSans',
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.9)',
-    marginTop: 6,
-  },
-  healthCardDots: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    width: 120,
-    justifyContent: 'flex-end',
-  },
-  healthDotCol: { alignItems: 'center', gap: 2 },
-  healthDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-  },
-  healthDotFilled: { backgroundColor: '#FFFFFF' },
-  healthDotLabel: {
-    fontFamily: 'SpaceMono-Bold',
-    fontSize: 9,
-    color: 'rgba(255,255,255,0.9)',
-  },
-
-  checkInCard: {
-    marginTop: 8,
-    marginBottom: 4,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  checkInCardInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    padding: 14,
-  },
-  checkInCardEmoji: { fontSize: 22 },
-  checkInCardTitle: {
-    fontFamily: 'DMSans',
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1A0A06',
-    marginBottom: 2,
-  },
-  checkInCardSub: {
-    fontFamily: 'DMSans',
-    fontSize: 11,
-    color: '#5C3D2E',
-  },
-  checkInCardBtn: {
-    backgroundColor: '#C45A82',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-  },
-  checkInCardBtnText: {
-    fontFamily: 'DMSans',
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-
-  checkInResult: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: 'rgba(184,207,177,0.18)',
-    borderRadius: 12,
-  },
-  checkInResultText: {
-    fontFamily: 'DMSans',
-    fontSize: 12,
-    color: '#5C3D2E',
-  },
-  checkInResultEdit: {
-    fontFamily: 'DMSans',
-    fontSize: 12,
-    color: '#C45A82',
-    fontWeight: '600',
-  },
 
   checkInModalHeader: {
     alignItems: 'center',

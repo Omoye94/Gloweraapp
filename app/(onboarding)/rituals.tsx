@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { PrimaryButton, ChecklistItem } from '../../src/components/onboarding';
+import { OnboardingScreen, PrimaryButton, ChecklistItem } from '../../src/components/onboarding';
 import { useOnboardingStore } from '../../src/stores/onboardingStore';
 
 const MAX_RITUALS = 5;
@@ -29,8 +29,9 @@ export default function RitualsScreen() {
     : `${count} of ${MAX_RITUALS} selected`;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <View style={styles.main}>
+    <OnboardingScreen>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.main}>
         <Text style={styles.label}>PLANT YOUR FIRST SEEDS</Text>
         <Text style={styles.headline}>Which seeds will you plant first?</Text>
         <Text style={styles.body}>Pick one to five. Each becomes a daily ritual.</Text>
@@ -61,14 +62,15 @@ export default function RitualsScreen() {
         </View>
       </View>
 
-      <View style={styles.bottom}>
-        <PrimaryButton
-          title={`Plant my seeds${count > 0 ? ` (${count})` : ''}`}
-          onPress={() => router.push('/(onboarding)/firstgrowth')}
-          disabled={!isValid}
-        />
-      </View>
-    </ScrollView>
+        <View style={styles.bottom}>
+          <PrimaryButton
+            title={`Plant my seeds${count > 0 ? ` (${count})` : ''}`}
+            onPress={() => router.push('/(onboarding)/solution')}
+            disabled={!isValid}
+          />
+        </View>
+      </ScrollView>
+    </OnboardingScreen>
   );
 }
 
@@ -76,39 +78,39 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 40, justifyContent: 'space-between' },
   main: { flex: 1, paddingTop: 8 },
-  label: { fontSize: 10, fontFamily: 'SpaceMono-Bold', color: 'rgba(242,180,204,0.6)', letterSpacing: 1.2, marginBottom: 12 },
-  headline: { fontSize: 31, fontFamily: 'PlayfairDisplay', fontWeight: '600', color: '#FEFAF9', lineHeight: 38, marginBottom: 10 },
-  body: { fontSize: 15, fontFamily: 'DMSans', color: 'rgba(255,255,255,0.50)', lineHeight: 22, marginBottom: 18 },
+  label: { fontSize: 11, fontFamily: 'SpaceMono-Bold', color: '#C45A82', letterSpacing: 1.6, marginBottom: 14 },
+  headline: { fontSize: 32, fontFamily: 'PlayfairDisplay', fontWeight: '600', color: '#3A2E2B', lineHeight: 40, letterSpacing: -0.3, marginBottom: 12 },
+  body: { fontSize: 16, fontFamily: 'DMSans', color: 'rgba(58,46,43,0.75)', lineHeight: 24, marginBottom: 20 },
   quoteWrap: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
     paddingRight: 12,
-    marginBottom: 18,
+    marginBottom: 20,
   },
   quoteRule: {
     width: 2,
     alignSelf: 'stretch',
-    backgroundColor: 'rgba(242,180,204,0.45)',
+    backgroundColor: '#C45A82',
     borderRadius: 1,
   },
   quoteText: {
     flex: 1,
     fontFamily: 'PlayfairDisplay-Italic',
     fontSize: 16,
-    color: 'rgba(255,247,243,0.82)',
+    color: 'rgba(58,46,43,0.78)',
     lineHeight: 24,
     letterSpacing: -0.1,
   },
   counter: {
     fontSize: 11,
     fontFamily: 'SpaceMono-Bold',
-    color: 'rgba(242,180,204,0.55)',
-    letterSpacing: 1.1,
+    color: 'rgba(196,90,130,0.7)',
+    letterSpacing: 1.4,
     marginBottom: 14,
   },
   counterMaxed: {
-    color: 'rgba(242,180,204,0.85)',
+    color: '#C45A82',
   },
   list: { gap: 0 },
   bottom: { paddingTop: 24 },

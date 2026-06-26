@@ -5,6 +5,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { OnboardingScreen } from '../../src/components/onboarding';
 import { useOnboardingStore } from '../../src/stores/onboardingStore';
 
 const STAGES = ['seed', 'sprout', 'bud', 'bloom', 'glow'] as const;
@@ -18,11 +19,11 @@ const STAGE_LABELS: Record<string, string> = {
 };
 
 const STAGE_COLORS: Record<string, [string, string]> = {
-  seed:   ['rgba(155,134,212,0.3)', 'rgba(155,134,212,0.05)'],
-  sprout: ['rgba(184,207,177,0.4)', 'rgba(184,207,177,0.08)'],
-  bud:    ['rgba(242,180,204,0.35)', 'rgba(242,180,204,0.06)'],
-  bloom:  ['rgba(232,127,166,0.4)', 'rgba(232,127,166,0.07)'],
-  glow:   ['rgba(251,212,191,0.5)', 'rgba(251,212,191,0.1)'],
+  seed:   ['rgba(155,134,212,0.55)', 'rgba(155,134,212,0.25)'],
+  sprout: ['rgba(143,168,134,0.55)', 'rgba(143,168,134,0.25)'],
+  bud:    ['rgba(242,180,204,0.55)', 'rgba(242,180,204,0.25)'],
+  bloom:  ['rgba(232,127,166,0.6)',  'rgba(232,127,166,0.28)'],
+  glow:   ['rgba(244,168,136,0.65)', 'rgba(244,168,136,0.32)'],
 };
 
 const FALLBACK_HABITS = ['Drink water', 'Morning skincare', 'Reflect & journal', 'Gratitude practice'];
@@ -128,14 +129,8 @@ export default function FirstGrowthScreen() {
   const glowColors = STAGE_COLORS[currentStage];
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom + 24 }]}>
-
-      {/* Ambient background gradient shifts with stage */}
-      <LinearGradient
-        colors={['#1A1028', '#1A1028', glowColors[0]]}
-        locations={[0, 0.5, 1]}
-        style={StyleSheet.absoluteFill}
-      />
+    <OnboardingScreen variant="warm" tone="transformation">
+      <View style={[styles.container, { paddingBottom: insets.bottom + 24 }]}>
 
       {/* Title */}
       <Animated.View style={[styles.titleBlock, { opacity: titleOpacity, transform: [{ translateY: titleTransY }] }]}>
@@ -192,9 +187,9 @@ export default function FirstGrowthScreen() {
 
       {/* CTA */}
       <Animated.View style={[styles.ctaBlock, { opacity: ctaOpacity }]}>
-        <Text style={styles.ctaCaption}>Your garden is ready to grow 🌿</Text>
+        <Text style={styles.ctaCaption}>This is just the beginning 🌿</Text>
         <Pressable
-          onPress={() => router.push('/(onboarding)/yourname')}
+          onPress={() => router.push('/(onboarding)/vision')}
           style={({ pressed }) => [styles.ctaBtn, pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] }]}
         >
           <LinearGradient
@@ -202,12 +197,13 @@ export default function FirstGrowthScreen() {
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
             style={styles.ctaBtnGradient}
           >
-            <Text style={styles.ctaBtnText}>Make it yours</Text>
+            <Text style={styles.ctaBtnText}>See 30 days from now</Text>
           </LinearGradient>
         </Pressable>
       </Animated.View>
 
-    </View>
+      </View>
+    </OnboardingScreen>
   );
 }
 
@@ -225,25 +221,25 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     fontFamily: 'SpaceMono-Bold',
-    fontSize: 10,
-    letterSpacing: 1.4,
-    color: 'rgba(242,180,204,0.55)',
+    fontSize: 11,
+    letterSpacing: 1.6,
+    color: '#C45A82',
     marginBottom: 10,
   },
   title: {
     fontFamily: 'PlayfairDisplay',
-    fontSize: 30,
+    fontSize: 32,
     fontWeight: '600',
-    color: '#FEFAF9',
+    color: '#3A2E2B',
     textAlign: 'center',
-    lineHeight: 36,
+    lineHeight: 40,
     letterSpacing: -0.4,
     marginBottom: 10,
   },
   subtitle: {
     fontFamily: 'DMSans',
     fontSize: 15,
-    color: 'rgba(255,255,255,0.50)',
+    color: 'rgba(58,46,43,0.7)',
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -259,19 +255,21 @@ const styles = StyleSheet.create({
   },
   glowRingOuter: {
     position: 'absolute',
-    width: 280,
-    height: 280,
-    borderRadius: 140,
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    opacity: 0.55,
   },
   glowRing: {
     position: 'absolute',
-    width: 240,
-    height: 240,
-    borderRadius: 120,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
     shadowColor: '#E87FA6',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 40,
+    shadowOpacity: 0.8,
+    shadowRadius: 50,
+    elevation: 12,
   },
   plantBox: {
     width: 220,
@@ -306,14 +304,14 @@ const styles = StyleSheet.create({
     fontFamily: 'DMSans',
     fontSize: 14,
     fontWeight: '600',
-    color: '#F2B4CC',
+    color: '#C45A82',
   },
 
   // Stage label
   stageLabel: {
     fontFamily: 'PlayfairDisplay-Italic',
-    fontSize: 20,
-    color: 'rgba(255,255,255,0.6)',
+    fontSize: 22,
+    color: '#3A2E2B',
     marginBottom: 20,
     letterSpacing: 0.2,
   },
@@ -328,14 +326,14 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(58,46,43,0.18)',
   },
   dotActive: {
     width: 20,
-    backgroundColor: '#E87FA6',
+    backgroundColor: '#C45A82',
   },
   dotDone: {
-    backgroundColor: 'rgba(242,180,204,0.45)',
+    backgroundColor: 'rgba(196,90,130,0.45)',
   },
 
   // CTA
@@ -347,17 +345,18 @@ const styles = StyleSheet.create({
   ctaCaption: {
     fontFamily: 'DMSans',
     fontSize: 14,
-    color: 'rgba(255,255,255,0.45)',
+    color: 'rgba(58,46,43,0.7)',
     marginBottom: 14,
   },
   ctaBtn: {
     width: '100%',
     borderRadius: 18,
     overflow: 'hidden',
-    shadowColor: '#E87FA6',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.45,
-    shadowRadius: 20,
+    shadowColor: '#C45A82',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.32,
+    shadowRadius: 22,
+    elevation: 8,
   },
   ctaBtnGradient: {
     paddingVertical: 17,
@@ -367,8 +366,8 @@ const styles = StyleSheet.create({
   ctaBtnText: {
     fontFamily: 'DMSans',
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1A1028',
+    fontWeight: '700',
+    color: '#FFFFFF',
     letterSpacing: 0.2,
   },
 });

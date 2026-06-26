@@ -6,7 +6,8 @@ import { theme } from '../src/theme';
  * determines which route group to display based on auth state.
  *
  * The actual routing logic is in _layout.tsx via useBootstrap hook:
- * - Unauthenticated → /(auth)/welcome
+ * - Unauthenticated / new user → /(onboarding)/problem
+ *   (returning users tap "Sign in" link on that screen → /(auth)/login)
  * - Needs onboarding → /(onboarding)/problem
  * - Ready → /(tabs)
  */

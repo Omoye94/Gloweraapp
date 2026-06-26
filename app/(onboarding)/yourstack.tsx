@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { PrimaryButton } from '../../src/components/onboarding';
+import { OnboardingScreen, PrimaryButton } from '../../src/components/onboarding';
 import { useOnboardingStore } from '../../src/stores/onboardingStore';
 
 const SUPP_FALLBACKS = [
@@ -44,14 +43,9 @@ export default function YourStackScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <LinearGradient
-        pointerEvents="none"
-        colors={['rgba(184,207,177,0.30)', 'rgba(216,201,236,0.10)']}
-        style={styles.backdrop}
-      />
-
-      <View style={styles.main}>
+    <OnboardingScreen>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <View style={styles.main}>
         <Text style={styles.kicker}>DAILY SUPPLEMENTS</Text>
         <Text style={styles.headline}>Track your supplements, every day.</Text>
         <Text style={styles.subhead}>Tap one to check it off. Stay on top of your health.</Text>
@@ -94,35 +88,36 @@ export default function YourStackScreen() {
         </View>
       </View>
 
-      <View style={styles.bottom}>
-        <PrimaryButton title="Continue" onPress={() => router.push('/(onboarding)/gentlechallenges')} />
-      </View>
-    </ScrollView>
+        <View style={styles.bottom}>
+          <PrimaryButton title="Continue" onPress={() => router.push('/(onboarding)/honestevening')} />
+        </View>
+      </ScrollView>
+    </OnboardingScreen>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 40, justifyContent: 'space-between' },
-  backdrop: { position: 'absolute', top: 0, left: 0, right: 0, height: 500 },
   main: { flex: 1, paddingTop: 8 },
   kicker: {
-    fontSize: 10, fontFamily: 'SpaceMono-Bold',
-    color: 'rgba(184,207,177,0.85)', letterSpacing: 1.4, marginBottom: 14,
+    fontSize: 11, fontFamily: 'SpaceMono-Bold',
+    color: '#C45A82', letterSpacing: 1.6, marginBottom: 14,
   },
   headline: {
-    fontSize: 30, fontFamily: 'PlayfairDisplay', fontWeight: '600',
-    color: '#FEFAF9', lineHeight: 38, marginBottom: 12, letterSpacing: -0.4,
+    fontSize: 32, fontFamily: 'PlayfairDisplay', fontWeight: '600',
+    color: '#3A2E2B', lineHeight: 40, marginBottom: 12, letterSpacing: -0.3,
   },
   subhead: {
-    fontSize: 15, fontFamily: 'DMSans', color: 'rgba(255,255,255,0.62)',
-    lineHeight: 22, marginBottom: 24,
+    fontSize: 16, fontFamily: 'DMSans', color: 'rgba(58,46,43,0.75)',
+    lineHeight: 24, marginBottom: 24,
   },
   mockupCard: {
-    backgroundColor: '#FFF7F2', borderRadius: 28,
+    backgroundColor: '#FFFFFF', borderRadius: 28,
     paddingVertical: 22, paddingHorizontal: 20,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.30, shadowRadius: 28,
+    borderWidth: 1.5, borderColor: 'rgba(58,46,43,0.12)',
+    shadowColor: '#3A2E2B', shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.22, shadowRadius: 30, elevation: 9,
   },
   mockHeader: {
     flexDirection: 'row', justifyContent: 'space-between',

@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams } from 'expo-router';
-import { Sparkles } from 'lucide-react-native';
+import { Sparkles, ChevronDown } from 'lucide-react-native';
 import { useJournalStore, usePlantStore, useHabitStore } from '../../src/stores';
 import { spacing, shadows } from '../../src/theme';
 import { getDailyPrompt, getMoodPrompt, REFLECTION_PROMPTS } from '../../src/constants/reflectionPrompts';
@@ -24,9 +24,6 @@ import { formatDateKey } from '../../src/utils/dateUtils';
 const TODAY = formatDateKey();
 type EntryMode = 'one-line' | 'voice' | 'guided';
 
-const MOOD_LEVEL: Record<Mood, number> = {
-  radiant: 5, calm: 4, neutral: 3, low: 2, struggling: 1,
-};
 const MOOD_DESCRIPTIONS: Record<Mood, string> = {
   radiant: "You're glowing today",
   calm: "A gentle, peaceful energy",
@@ -76,6 +73,7 @@ export default function JournalScreen() {
   // View-all / search state
   const [showAllEntries, setShowAllEntries] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [entriesExpanded, setEntriesExpanded] = useState(true);
 
   // Edit entry state
   const [editingEntry, setEditingEntry] = useState<ReturnType<typeof getRecentEntries>[number] | null>(null);
@@ -189,7 +187,10 @@ export default function JournalScreen() {
   const handleMoodSelect = (mood: Mood) => {
     setTodayMoodState(mood);
     setMoodForDate(TODAY, mood);
+    setSelectedMood(mood);
     setCurrentPrompt(getMoodPrompt(mood));
+    setEntryMode('guided');
+    setIsModalVisible(true);
   };
 
   const handleOpenEdit = (entry: ReturnType<typeof getRecentEntries>[number]) => {
@@ -218,54 +219,6 @@ export default function JournalScreen() {
   const formatRecordingTime = (ms: number) => {
     const s = Math.floor(ms / 1000);
     return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
-  };
-
-  const renderHeroEntryCard = (entry: ReturnType<typeof getRecentEntries>[number]) => {
-    const d = new Date(entry.date);
-    const isToday = entry.date === TODAY;
-    const dateLabel = isToday ? 'Today' : d.toLocaleString('en-US', { weekday: 'long' });
-    const dayNum = `${d.toLocaleString('en-US', { month: 'short' }).toUpperCase()} ${d.getDate()}`;
-    const savedPrompt = REFLECTION_PROMPTS.find(p => p.id === entry.promptUsed);
-    return (
-      <Pressable
-        key={entry.id}
-        style={({ pressed }) => [styles.heroEntryCard, pressed && { opacity: 0.95 }]}
-        onPress={() => handleOpenEdit(entry)}
-      >
-        <LinearGradient
-          colors={entry.mood ? [MOOD_CARD_BG[entry.mood], '#FFFFFF'] : ['#FFFFFF', '#FFFFFF']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 0.8 }}
-          style={styles.heroEntryInner}
-        >
-          <View style={styles.heroEntryHeader}>
-            <View>
-              <Text style={styles.heroEntryDateLabel}>{dateLabel}</Text>
-              <Text style={styles.heroEntryDayNum}>{dayNum}</Text>
-            </View>
-            {entry.mood && (
-              <View style={[styles.heroEntryMoodChip, { backgroundColor: MOOD_PILL_BG[entry.mood] }]}>
-                <Text style={styles.heroEntryMoodText}>
-                  {MOOD_INFO[entry.mood].emoji} {MOOD_INFO[entry.mood].label}
-                </Text>
-              </View>
-            )}
-          </View>
-          {savedPrompt ? (
-            <Text style={styles.heroEntryPrompt} numberOfLines={2}>{savedPrompt.text}</Text>
-          ) : null}
-          {entry.content ? (
-            <Text style={styles.heroEntryContent} numberOfLines={3}>{entry.content}</Text>
-          ) : null}
-          {entry.audioUri ? (
-            <View style={{ marginTop: 8, marginBottom: 4 }}>
-              <AudioMemoPlayer uri={entry.audioUri} />
-            </View>
-          ) : null}
-          <Text style={styles.heroEntryEditHint}>Edit ›</Text>
-        </LinearGradient>
-      </Pressable>
-    );
   };
 
   const renderEntryCard = (entry: ReturnType<typeof getRecentEntries>[number]) => {
@@ -330,55 +283,44 @@ export default function JournalScreen() {
         showsVerticalScrollIndicator={false}
         bounces
       >
-        {/* Hero: Daily check-in + action buttons */}
-        <View style={styles.promptCardWrap}>
-          <LinearGradient
-            colors={['#D8C9EC', '#F2B4CC', '#FBD4BF']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.promptCard}
-          >
-            <Text style={styles.heroJournalEyebrow}>JOURNAL RITUAL</Text>
-            <Text style={styles.heroJournalTitle}>Let your garden{'\n'}hear you</Text>
-            <Text style={styles.heroJournalSub}>
-              {todayMood
-                ? `Feeling ${MOOD_INFO[todayMood].label.toLowerCase()}. Your next prompt will meet you there.`
-                : 'One line, one voice note, or one honest page.'}
+        {/* Hero: Daily check-in + primary CTA */}
+        <View style={styles.heroCardWrap}>
+          <View style={styles.heroCardEdge} />
+          <View style={styles.heroCard}>
+            <Text style={styles.heroEyebrow}>journal</Text>
+            <Text style={styles.heroTitle}>
+              Let your garden{'\n'}
+              <Text style={styles.heroTitleItalic}>hear you</Text>
             </Text>
-            <View style={styles.actionRow}>
-              <Pressable
-                style={({ pressed }) => [styles.actionButton, pressed && { opacity: 0.85 }]}
-                onPress={() => openEntryFlow('one-line')}
-              >
-                <Text style={styles.actionButtonIcon}>✦</Text>
-                <Text style={styles.actionButtonText}>One line</Text>
-              </Pressable>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.actionButton,
-                  styles.actionButtonRecord,
-                  recordingState === 'recording' && styles.actionButtonRecording,
-                  pressed && { opacity: 0.85 },
-                ]}
-                onPress={handleMicPress}
-              >
-                <Text style={styles.actionButtonIcon}>
-                  {recordingState === 'recording' ? '⏹' : '🎙'}
-                </Text>
-                <Text style={[styles.actionButtonText, styles.actionButtonTextRecord]}>
-                  {recordingState === 'recording'
-                    ? `Stop  ${formatRecordingTime(durationMs)}`
-                    : 'Record'}
-                </Text>
-              </Pressable>
-            </View>
+            <Text style={styles.heroSub}>
+              {todayMood
+                ? `Feeling ${MOOD_INFO[todayMood].label.toLowerCase()}. Your prompt will meet you there.`
+                : "One honest line. That's all today needs."}
+            </Text>
             <Pressable
-              style={({ pressed }) => [styles.guidedButton, pressed && { opacity: 0.82 }]}
+              style={({ pressed }) => [styles.primaryCTA, pressed && { transform: [{ scale: 0.98 }] }]}
               onPress={() => openEntryFlow('guided')}
             >
-              <Text style={styles.guidedButtonText}>Open a guided prompt</Text>
+              <Text style={styles.primaryCTAText}>WRITE TODAY</Text>
             </Pressable>
-          </LinearGradient>
+            <Pressable
+              style={({ pressed }) => [
+                styles.secondaryCTA,
+                recordingState === 'recording' && styles.secondaryCTARecording,
+                pressed && { opacity: 0.85 },
+              ]}
+              onPress={handleMicPress}
+            >
+              <Text style={styles.secondaryCTAIcon}>
+                {recordingState === 'recording' ? '⏹' : '🎙'}
+              </Text>
+              <Text style={styles.secondaryCTAText}>
+                {recordingState === 'recording'
+                  ? `Stop  ${formatRecordingTime(durationMs)}`
+                  : 'Or talk it out'}
+              </Text>
+            </Pressable>
+          </View>
         </View>
 
         {/* Recording preview — shown on main screen after stopping */}
@@ -405,77 +347,73 @@ export default function JournalScreen() {
           </View>
         )}
 
-        {/* Mood Ritual Card */}
-        <View style={styles.moodRitualCard}>
-          <LinearGradient
-            colors={todayMood ? [MOOD_CARD_BG[todayMood], '#FFFFFF'] : ['#FEFCFB', '#FEFCFB']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 0.65 }}
-            style={styles.moodRitualInner}
-          >
-            <Text style={styles.moodRitualLabel}>MOOD RITUAL</Text>
+        {/* How You Feel Card */}
+        <View style={styles.feelCardWrap}>
+          <View style={styles.feelCardEdge} />
+          <View style={styles.feelCard}>
+            <Text style={styles.feelEyebrow}>how you feel</Text>
 
             {/* Mood display */}
-            <View style={styles.moodDisplayArea}>
-              {todayMood ? (
-                <View style={styles.moodDisplayInner}>
-                  <View style={[styles.moodDisplayOrb, { shadowColor: MOOD_INFO[todayMood].color }]}>
-                    <View style={[StyleSheet.absoluteFillObject, { backgroundColor: MOOD_INFO[todayMood].color, opacity: 0.5, borderRadius: 40 }]} />
-                    <Text style={styles.moodDisplayEmoji}>{MOOD_INFO[todayMood].emoji}</Text>
-                  </View>
-                  <View style={styles.moodDisplayText}>
-                    <Text style={styles.moodDisplayName}>{MOOD_INFO[todayMood].label}</Text>
-                    <Text style={styles.moodDisplayDesc}>{MOOD_DESCRIPTIONS[todayMood]}</Text>
-                  </View>
+            {todayMood ? (
+              <View style={styles.feelDisplayRow}>
+                <View style={[styles.feelDisplayOrb, { backgroundColor: MOOD_INFO[todayMood].color, shadowColor: MOOD_INFO[todayMood].color }]}>
+                  <Text style={styles.feelDisplayEmoji}>{MOOD_INFO[todayMood].emoji}</Text>
                 </View>
-              ) : (
-                <View style={styles.moodEmptyArea}>
-                  <Text style={styles.moodEmptyEmoji}>🌸</Text>
-                  <Text style={styles.moodEmptyTitle}>How are you today?</Text>
-                  <Text style={styles.moodEmptyHint}>Select a mood below to begin</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.feelDisplayName}>{MOOD_INFO[todayMood].label}</Text>
+                  <Text style={styles.feelDisplayDesc}>{MOOD_DESCRIPTIONS[todayMood]}</Text>
                 </View>
-              )}
-            </View>
+              </View>
+            ) : (
+              <Text style={styles.feelPrompt}>How are you today?</Text>
+            )}
 
-            {/* 7-day bar chart */}
-            <View style={styles.moodChartHeader}>
-              <Text style={styles.moodChartLabel}>THIS WEEK</Text>
-            </View>
-            <View style={styles.moodBarChart}>
-              {moodTrend.map(({ key, dayLabel, mood, isToday }) => {
-                const barHeight = mood ? Math.max(10, (MOOD_LEVEL[mood] / 5) * 52) : 0;
-                return (
-                  <View key={key} style={styles.moodBarCol}>
-                    <View style={[styles.moodBarTrack, isToday && styles.moodBarTrackToday]}>
-                      {mood && (
-                        <View style={[styles.moodBarFill, { height: barHeight, backgroundColor: MOOD_INFO[mood].color }]} />
-                      )}
-                    </View>
-                    <Text style={[styles.moodBarDayLabel, isToday && { color: '#C45A82' }]}>
-                      {dayLabel}
-                    </Text>
-                  </View>
-                );
-              })}
+            {/* 7-day mood dots */}
+            <Text style={styles.feelWeekLabel}>this week</Text>
+            <View style={styles.feelDotRow}>
+              {moodTrend.map(({ key, dayLabel, mood, isToday }) => (
+                <View key={key} style={styles.feelDotCol}>
+                  <View
+                    style={[
+                      styles.feelDot,
+                      mood ? { backgroundColor: MOOD_INFO[mood].color } : styles.feelDotEmpty,
+                      isToday && styles.feelDotToday,
+                    ]}
+                  />
+                  <Text style={[styles.feelDotLabel, isToday && { color: '#C45A82' }]}>
+                    {dayLabel}
+                  </Text>
+                </View>
+              ))}
             </View>
 
             {/* Mood selector */}
-            <View style={styles.moodSelectorRow}>
+            <Text style={styles.feelSelectorHint}>
+              Tap how you feel — <Text style={styles.feelSelectorHintAccent}>a prompt will meet you there</Text>
+            </Text>
+            <View style={styles.feelSelectorRow}>
               {(Object.keys(MOOD_INFO) as Mood[]).map((mood) => (
                 <Pressable
                   key={mood}
-                  style={[styles.moodSelectorPill, todayMood === mood && { backgroundColor: MOOD_PILL_BG[mood] }]}
+                  style={[
+                    styles.feelSelectorPill,
+                    todayMood === mood && styles.feelSelectorPillActive,
+                  ]}
                   onPress={() => handleMoodSelect(mood)}
                 >
-                  <View style={[styles.moodIndicatorDot, { backgroundColor: todayMood === mood ? MOOD_INFO[mood].color : 'transparent' }]} />
-                  <Text style={styles.moodSelectorEmoji}>{MOOD_INFO[mood].emoji}</Text>
-                  <Text style={[styles.moodSelectorLabel, todayMood === mood && styles.moodSelectorLabelSelected]}>
+                  <Text style={styles.feelSelectorEmoji}>{MOOD_INFO[mood].emoji}</Text>
+                  <Text
+                    style={[
+                      styles.feelSelectorLabel,
+                      todayMood === mood && styles.feelSelectorLabelActive,
+                    ]}
+                  >
                     {MOOD_INFO[mood].label}
                   </Text>
                 </Pressable>
               ))}
             </View>
-          </LinearGradient>
+          </View>
         </View>
 
         {/* Journal × GlowStack cross-prompt */}
@@ -511,15 +449,26 @@ export default function JournalScreen() {
 
         {/* Entries List */}
         <View style={styles.entriesSection}>
-          <View style={styles.sectionHeaderRow}>
+          <Pressable
+            style={styles.sectionHeaderRow}
+            onPress={() => recentEntries.length > 0 && setEntriesExpanded((e) => !e)}
+            disabled={recentEntries.length === 0}
+          >
             <View style={styles.sectionTitleBlock}>
               <Text style={styles.sectionTitle}>Your Journey</Text>
               {weekStats ? <Text style={styles.sectionSubtitle}>{weekStats}</Text> : null}
             </View>
-            <Pressable onPress={() => setShowAllEntries(true)}>
-              <Text style={styles.viewAllLink}>View all</Text>
-            </Pressable>
-          </View>
+            {recentEntries.length > 0 && (
+              <View
+                style={[
+                  styles.sectionChevron,
+                  entriesExpanded && styles.sectionChevronOpen,
+                ]}
+              >
+                <ChevronDown size={18} color="#C45A82" strokeWidth={2.4} />
+              </View>
+            )}
+          </Pressable>
 
           {recentEntries.length === 0 ? (
             <View style={styles.emptyState}>
@@ -527,12 +476,17 @@ export default function JournalScreen() {
               <Text style={styles.emptyTitle}>Your garden is listening</Text>
               <Text style={styles.emptySubtext}>Begin with one honest line or a quiet voice note</Text>
             </View>
-          ) : (
+          ) : entriesExpanded ? (
             <>
-              {renderHeroEntryCard(recentEntries[0])}
-              {recentEntries.slice(1).map(renderEntryCard)}
+              {recentEntries.map(renderEntryCard)}
+              <Pressable
+                onPress={() => setShowAllEntries(true)}
+                style={({ pressed }) => [styles.viewAllInline, pressed && { opacity: 0.85 }]}
+              >
+                <Text style={styles.viewAllInlineText}>View all entries  ›</Text>
+              </Pressable>
             </>
-          )}
+          ) : null}
         </View>
 
         <View style={{ height: 120 }} />
@@ -797,10 +751,102 @@ const styles = StyleSheet.create({
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: spacing.lg, paddingTop: 70 },
 
-  // Hero journal title (inside prompt card)
-  heroJournalEyebrow: { fontSize: 10, fontFamily: 'SpaceMono-Bold', color: 'rgba(58,46,43,0.6)', letterSpacing: 1.4, marginBottom: 10 },
-  heroJournalTitle: { fontSize: 30, fontFamily: 'Raleway-SemiBold', color: '#1A0A06', lineHeight: 36, letterSpacing: -0.4, marginBottom: 8 },
-  heroJournalSub: { fontSize: 13, fontFamily: 'DMSans', color: 'rgba(58,26,16,0.66)', lineHeight: 19, marginBottom: 4 },
+  // Hero card (deck grammar: white + rose edge + plum shadow)
+  heroCardWrap: {
+    flexDirection: 'row',
+    marginBottom: spacing.xl,
+    borderRadius: 22,
+    shadowColor: '#3A2E2B',
+    shadowOpacity: 0.24,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+  },
+  heroCardEdge: {
+    width: 6,
+    backgroundColor: '#C45A82',
+    borderTopLeftRadius: 22,
+    borderBottomLeftRadius: 22,
+  },
+  heroCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopRightRadius: 22,
+    borderBottomRightRadius: 22,
+    borderWidth: 2,
+    borderLeftWidth: 0,
+    borderColor: 'rgba(58,46,43,0.18)',
+    padding: 24,
+  },
+  heroEyebrow: {
+    fontSize: 14,
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontStyle: 'italic',
+    color: 'rgba(196,90,130,0.85)',
+    letterSpacing: 0.2,
+    marginBottom: 14,
+  },
+  heroTitle: {
+    fontSize: 30,
+    fontFamily: 'PlayfairDisplay',
+    fontWeight: '600',
+    color: '#1A0A06',
+    lineHeight: 36,
+    marginBottom: 12,
+  },
+  heroTitleItalic: {
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontStyle: 'italic',
+    color: '#C45A82',
+  },
+  heroSub: {
+    fontSize: 14,
+    fontFamily: 'DMSans',
+    color: 'rgba(58,46,43,0.7)',
+    lineHeight: 21,
+    marginBottom: 22,
+  },
+  primaryCTA: {
+    backgroundColor: '#1A1028',
+    borderRadius: 100,
+    paddingVertical: 16,
+    alignItems: 'center',
+    shadowColor: '#1A1028',
+    shadowOpacity: 0.32,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  primaryCTAText: {
+    fontSize: 14,
+    fontFamily: 'DMSans',
+    fontWeight: '600',
+    color: '#FEFAF9',
+    letterSpacing: 1.8,
+    textTransform: 'uppercase' as const,
+  },
+  secondaryCTA: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 100,
+    paddingVertical: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: 'rgba(58,46,43,0.22)',
+  },
+  secondaryCTARecording: {
+    backgroundColor: 'rgba(196,90,130,0.10)',
+    borderColor: '#C45A82',
+  },
+  secondaryCTAIcon: { fontSize: 15 },
+  secondaryCTAText: {
+    fontSize: 13,
+    fontFamily: 'DMSans',
+    fontWeight: '600',
+    color: '#3A2E2B',
+    letterSpacing: 0.4,
+  },
 
   // Floating write button
   fab: {
@@ -821,49 +867,6 @@ const styles = StyleSheet.create({
   },
   fabIcon: { fontSize: 14, color: '#FEFAF9' },
   fabLabel: { fontSize: 15, fontFamily: 'DMSans', fontWeight: '600', color: '#FEFAF9' },
-
-  // Action buttons row (inside prompt hero card)
-  actionRow: {
-    flexDirection: 'row', gap: 10, marginTop: 16,
-  },
-  actionButton: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, backgroundColor: '#C45A82', borderRadius: 14,
-    paddingVertical: 13,
-    shadowColor: '#C45A82',
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  actionButtonRecord: {
-    backgroundColor: 'rgba(58,46,43,0.07)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(58,46,43,0.18)',
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    shadowOffset: { width: 0, height: 0 },
-  },
-  actionButtonRecording: {
-    backgroundColor: 'rgba(212,144,154,0.15)', borderWidth: 1.5, borderColor: '#C45A82',
-  },
-  actionButtonIcon: { fontSize: 16 },
-  actionButtonText: { fontSize: 15, fontFamily: 'DMSans', fontWeight: '600', color: '#FEFAF9' },
-  actionButtonTextRecord: { color: '#1A0A06' },
-  guidedButton: {
-    marginTop: 10,
-    borderRadius: 14,
-    paddingVertical: 13,
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.36)',
-    borderWidth: 1,
-    borderColor: 'rgba(58,46,43,0.10)',
-  },
-  guidedButtonText: {
-    fontSize: 14,
-    fontFamily: 'DMSans',
-    fontWeight: '600',
-    color: '#5C3D2E',
-  },
 
   // Recording preview
   recordingPreview: {
@@ -923,13 +926,7 @@ const styles = StyleSheet.create({
     fontSize: 10, fontFamily: 'SpaceMono-Bold', color: '#B8A9A5',
   },
 
-  // Prompt — gradient hero
-  promptCardWrap: {
-    borderRadius: 28, marginBottom: spacing.xl,
-    shadowColor: 'rgba(155,134,212,1)', shadowOpacity: 0.2,
-    shadowRadius: 24, shadowOffset: { width: 0, height: 4 },
-  },
-  promptCard: { borderRadius: 28, padding: 28, overflow: 'hidden' },
+  // Prompt label (still used by edit modal)
   promptLabel: { fontSize: 11, fontFamily: 'SpaceMono-Bold', color: '#6B5B52', letterSpacing: 0.8, marginBottom: 8 },
   promptText: { fontSize: 15, fontFamily: 'DMSans', color: '#1A0A06', fontStyle: 'italic', lineHeight: 22 },
 
@@ -939,19 +936,39 @@ const styles = StyleSheet.create({
   sectionTitleBlock: { flex: 1 },
   sectionTitle: { fontSize: 20, fontFamily: 'Raleway-SemiBold', fontWeight: '600', color: '#1A0A06' },
   sectionSubtitle: { fontSize: 12, fontFamily: 'DMSans', color: '#B8A9A5', marginTop: 3 },
-  viewAllLink: { fontSize: 13, fontFamily: 'DMSans', color: '#C45A82', paddingTop: 4 },
-
-  // Hero entry card
-  heroEntryCard: { borderRadius: 20, marginBottom: 10, overflow: 'hidden', ...shadows.md },
-  heroEntryInner: { borderRadius: 20, padding: 20 },
-  heroEntryHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
-  heroEntryDateLabel: { fontSize: 11, fontFamily: 'SpaceMono-Bold', color: '#5C3D2E', letterSpacing: 0.8, marginBottom: 2, textTransform: 'uppercase' },
-  heroEntryDayNum: { fontSize: 13, fontFamily: 'DMSans', fontWeight: '600', color: '#1A0A06' },
-  heroEntryMoodChip: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
-  heroEntryMoodText: { fontSize: 12, fontFamily: 'DMSans', fontWeight: '600', color: '#3A2E2B' },
-  heroEntryPrompt: { fontFamily: 'DMSans', fontStyle: 'italic', fontSize: 13, color: '#5C3D2E', lineHeight: 19, marginBottom: 8 },
-  heroEntryContent: { fontSize: 15, fontFamily: 'DMSans', color: '#1A0A06', lineHeight: 22, marginBottom: 10 },
-  heroEntryEditHint: { fontSize: 12, fontFamily: 'DMSans', color: '#C45A82', textAlign: 'right' },
+  sectionChevron: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: 'rgba(196,90,130,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#C45A82',
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  sectionChevronOpen: {
+    transform: [{ rotate: '180deg' }],
+  },
+  viewAllInline: {
+    marginTop: 8,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderRadius: 100,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: 'rgba(58,46,43,0.18)',
+  },
+  viewAllInlineText: {
+    fontSize: 13,
+    fontFamily: 'DMSans',
+    fontWeight: '600',
+    color: '#C45A82',
+    letterSpacing: 0.4,
+  },
 
   entryCard: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: spacing.lg, marginBottom: 8, ...shadows.sm },
   entryHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 14 },
@@ -1061,140 +1078,166 @@ const styles = StyleSheet.create({
   allEntriesScroll: { flex: 1 },
   allEntriesContent: { paddingHorizontal: spacing.lg, paddingTop: spacing.md },
 
-  // Mood Ritual Card
-  moodRitualCard: {
-    borderRadius: 24,
-    marginBottom: spacing.lg,
-    overflow: 'hidden',
-    ...shadows.md,
-  },
-  moodRitualInner: {
-    borderRadius: 24,
-    padding: 22,
-  },
-  moodRitualLabel: {
-    fontSize: 10,
-    fontFamily: 'SpaceMono-Bold',
-    color: '#5C3D2E',
-    letterSpacing: 1.2,
-    marginBottom: 18,
-  },
-  moodDisplayArea: {
-    marginBottom: 20,
-  },
-  moodDisplayInner: {
+  // "How You Feel" Card (deck grammar)
+  feelCardWrap: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  moodDisplayOrb: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowOpacity: 0.55,
-    shadowRadius: 14,
+    marginBottom: spacing.lg,
+    borderRadius: 22,
+    shadowColor: '#3A2E2B',
+    shadowOpacity: 0.22,
+    shadowRadius: 18,
     shadowOffset: { width: 0, height: 6 },
   },
-  moodDisplayEmoji: { fontSize: 38 },
-  moodDisplayText: { flex: 1 },
-  moodDisplayName: {
+  feelCardEdge: {
+    width: 6,
+    backgroundColor: '#C45A82',
+    borderTopLeftRadius: 22,
+    borderBottomLeftRadius: 22,
+  },
+  feelCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopRightRadius: 22,
+    borderBottomRightRadius: 22,
+    borderWidth: 2,
+    borderLeftWidth: 0,
+    borderColor: 'rgba(58,46,43,0.18)',
+    padding: 22,
+  },
+  feelEyebrow: {
+    fontSize: 14,
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontStyle: 'italic',
+    color: 'rgba(196,90,130,0.85)',
+    letterSpacing: 0.2,
+    marginBottom: 16,
+  },
+  feelDisplayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginBottom: 22,
+  },
+  feelDisplayOrb: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  feelDisplayEmoji: { fontSize: 28 },
+  feelDisplayName: {
     fontSize: 22,
-    fontFamily: 'Raleway-SemiBold',
+    fontFamily: 'PlayfairDisplay',
     fontWeight: '600',
     color: '#1A0A06',
-    marginBottom: 4,
+    marginBottom: 2,
   },
-  moodDisplayDesc: {
+  feelDisplayDesc: {
     fontSize: 13,
     fontFamily: 'DMSans',
-    color: '#6B5B52',
+    color: 'rgba(58,46,43,0.66)',
     lineHeight: 18,
+  },
+  feelPrompt: {
+    fontSize: 22,
+    fontFamily: 'PlayfairDisplay-Italic',
     fontStyle: 'italic',
-  },
-  moodEmptyArea: {
-    alignItems: 'center',
-    paddingVertical: 10,
-  },
-  moodEmptyEmoji: { fontSize: 40, marginBottom: 8 },
-  moodEmptyTitle: {
-    fontFamily: 'Raleway-SemiBold',
-    fontSize: 18,
     color: '#1A0A06',
-    marginBottom: 3,
+    marginBottom: 22,
+    lineHeight: 28,
   },
-  moodEmptyHint: {
-    fontFamily: 'DMSans',
+  feelWeekLabel: {
     fontSize: 13,
-    color: '#B8A9A5',
+    fontFamily: 'PlayfairDisplay-Italic',
     fontStyle: 'italic',
+    color: 'rgba(58,46,43,0.55)',
+    letterSpacing: 0.2,
+    marginBottom: 10,
   },
-  moodChartHeader: { marginBottom: 10 },
-  moodChartLabel: {
+  feelDotRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 22,
+    paddingHorizontal: 2,
+  },
+  feelDotCol: { alignItems: 'center', gap: 6 },
+  feelDot: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+  },
+  feelDotEmpty: {
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: 'rgba(58,46,43,0.22)',
+  },
+  feelDotToday: {
+    borderWidth: 2,
+    borderColor: '#C45A82',
+    shadowColor: '#C45A82',
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  feelDotLabel: {
     fontSize: 10,
     fontFamily: 'SpaceMono-Bold',
-    color: '#B8A9A5',
-    letterSpacing: 0.8,
+    color: 'rgba(58,46,43,0.5)',
+    letterSpacing: 0.4,
   },
-  moodBarChart: {
+  feelSelectorHint: {
+    fontSize: 13,
+    fontFamily: 'DMSans',
+    color: 'rgba(58,46,43,0.62)',
+    lineHeight: 19,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  feelSelectorHintAccent: {
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontStyle: 'italic',
+    color: '#C45A82',
+  },
+  feelSelectorRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  moodBarCol: {
-    flex: 1,
-    alignItems: 'center',
     gap: 6,
   },
-  moodBarTrack: {
-    height: 56,
-    width: 22,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0,0,0,0.07)',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-  },
-  moodBarTrackToday: {
-    borderWidth: 1.5,
-    borderColor: '#C45A82',
-  },
-  moodBarFill: {
-    width: 22,
-    borderRadius: 8,
-  },
-  moodBarDayLabel: {
-    fontSize: 9,
-    fontFamily: 'SpaceMono-Bold',
-    color: '#B8A9A5',
-  },
-  moodSelectorRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  moodSelectorPill: {
+  feelSelectorPill: {
     flex: 1,
     flexDirection: 'column',
     alignItems: 'center',
     gap: 4,
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 2,
+    borderRadius: 14,
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: 'rgba(58,46,43,0.12)',
   },
-  moodIndicatorDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
+  feelSelectorPillActive: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#C45A82',
+    borderWidth: 2,
+    shadowColor: '#C45A82',
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
   },
-  moodSelectorEmoji: { fontSize: 24 },
-  moodSelectorLabel: {
+  feelSelectorEmoji: { fontSize: 22 },
+  feelSelectorLabel: {
     fontSize: 9,
     fontFamily: 'DMSans',
     fontWeight: '500',
-    color: '#B8A9A5',
+    color: 'rgba(58,46,43,0.55)',
+    letterSpacing: 0.3,
   },
-  moodSelectorLabelSelected: {
+  feelSelectorLabelActive: {
     color: '#C45A82',
+    fontWeight: '700',
   },
 
   // Garden saved modal

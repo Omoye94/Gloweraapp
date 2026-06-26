@@ -37,7 +37,7 @@ export const BeautyCard: React.FC = () => {
       Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, friction: 10 }),
       Animated.spring(scale, { toValue: 1, useNativeDriver: true, friction: 6 }),
     ]).start(() => {
-      router.push('/(tabs)/beauty');
+      router.push('/beauty' as any);
     });
   };
 

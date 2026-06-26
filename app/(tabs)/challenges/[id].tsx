@@ -107,7 +107,7 @@ export default function ChallengeDetailScreen() {
 
         {/* Description */}
         <View style={[styles.card, { backgroundColor: isDark ? theme.surface : '#FFFFFF' }]}>
-          <Text style={[styles.cardLabel, { color: '#6B5B52' }]}>About this challenge</Text>
+          <Text style={[styles.cardLabel, { color: '#6B5B52' }]}>about this challenge</Text>
           <Text style={[styles.descriptionText, { color: '#3A2E2B' }]}>
             {challenge.description}
           </Text>
@@ -115,7 +115,7 @@ export default function ChallengeDetailScreen() {
 
         {/* Daily Tasks Preview */}
         <View style={[styles.card, { backgroundColor: isDark ? theme.surface : '#FFFFFF' }]}>
-          <Text style={[styles.cardLabel, { color: '#6B5B52' }]}>Daily rituals</Text>
+          <Text style={[styles.cardLabel, { color: '#6B5B52' }]}>daily rituals</Text>
           {challenge.tasks.map((task, i) => (
             <View key={i} style={styles.taskRow}>
               <View style={[styles.taskBullet, { backgroundColor: '#F2B4CC' }]} />
@@ -129,7 +129,7 @@ export default function ChallengeDetailScreen() {
           backgroundColor: isDark ? 'rgba(244, 198, 204, 0.08)' : 'rgba(244, 198, 204, 0.08)',
           borderColor: isDark ? 'rgba(244, 198, 204, 0.2)' : 'rgba(244, 198, 204, 0.2)',
         }]}>
-          <Text style={[styles.promptLabel, { color: '#F2B4CC' }]}>Daily Reflection</Text>
+          <Text style={[styles.promptLabel, { color: '#F2B4CC' }]}>daily reflection</Text>
           <Text style={[styles.promptText, { color: '#3A2E2B' }]}>
             {challenge.reflectionPrompt}
           </Text>
@@ -139,8 +139,8 @@ export default function ChallengeDetailScreen() {
         <Pressable
           style={({ pressed }) => [
             styles.beginButton,
-            { backgroundColor: '#F2B4CC' },
-            pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+            { backgroundColor: '#1A1028' },
+            pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] },
             isStarting && { opacity: 0.7 },
           ]}
           onPress={handleBegin}
@@ -202,24 +202,108 @@ const styles = StyleSheet.create({
   heroDuration: { fontSize: 14, marginTop: spacing.xs },
   // Cards
   card: {
-    borderRadius: 12, padding: spacing.lg,
-    marginBottom: spacing.md, ...shadows.sm,
+    borderRadius: 22,
+    padding: spacing.lg + 2,
+    marginBottom: spacing.md,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: 'rgba(58,46,43,0.18)',
+    borderLeftWidth: 6,
+    borderLeftColor: '#C45A82',
+    shadowColor: '#3A2E2B',
+    shadowOpacity: 0.22,
+    shadowRadius: 28,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 8,
   },
-  cardLabel: { fontSize: 12, fontWeight: '600', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: spacing.sm },
-  descriptionText: { fontSize: 16, lineHeight: 24 },
-  taskRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: spacing.sm, gap: spacing.sm },
-  taskBullet: { width: 8, height: 8, borderRadius: 4, marginTop: 6 },
-  taskText: { fontSize: 15, lineHeight: 22, flex: 1 },
-  // Prompt
-  promptCard: { borderRadius: 12, padding: spacing.lg, marginBottom: spacing.xl, borderWidth: 1 },
-  promptLabel: { fontSize: 12, fontWeight: '600', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: spacing.sm },
-  promptText: { fontSize: 16, fontStyle: 'italic', lineHeight: 24 },
+  cardLabel: {
+    fontSize: 14,
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontStyle: 'italic',
+    color: 'rgba(196,90,130,0.85)',
+    letterSpacing: 0.2,
+    marginBottom: 12,
+  },
+  descriptionText: {
+    fontSize: 16,
+    fontFamily: 'DMSans',
+    color: '#3A2E2B',
+    lineHeight: 24,
+    fontWeight: '500',
+  },
+  taskRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 12,
+    paddingVertical: 6,
+  },
+  taskBullet: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#C45A82',
+  },
+  taskText: {
+    fontSize: 15,
+    fontFamily: 'DMSans',
+    fontWeight: '500',
+    color: '#3A2E2B',
+    lineHeight: 22,
+    flex: 1,
+  },
+  // Prompt — sage accent
+  promptCard: {
+    borderRadius: 22,
+    padding: spacing.lg + 2,
+    marginBottom: spacing.xl,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: 'rgba(58,46,43,0.16)',
+    borderLeftWidth: 6,
+    borderLeftColor: '#6F8B6A',
+    shadowColor: '#6F8B6A',
+    shadowOpacity: 0.22,
+    shadowRadius: 28,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 8,
+  },
+  promptLabel: {
+    fontSize: 14,
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontStyle: 'italic',
+    color: '#6F8B6A',
+    letterSpacing: 0.2,
+    marginBottom: 12,
+  },
+  promptText: {
+    fontSize: 16,
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontStyle: 'italic',
+    color: '#3A2E2B',
+    lineHeight: 24,
+  },
   // Button
   beginButton: {
-    paddingVertical: spacing.md + 2, borderRadius: borderRadius.button,
-    alignItems: 'center', justifyContent: 'center', ...shadows.glow,
+    paddingVertical: 19,
+    borderRadius: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 58,
+    shadowColor: '#1A1028',
+    shadowOpacity: 0.32,
+    shadowRadius: 26,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 8,
   },
-  beginButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+  beginButtonText: {
+    fontSize: 13,
+    fontFamily: 'DMSans',
+    fontWeight: '600',
+    color: '#FEFAF9',
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
+  },
   bottomSpacer: { height: 120 },
   // Modal
   modalOverlay: {

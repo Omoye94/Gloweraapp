@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { PrimaryButton } from '../../src/components/onboarding';
+import { OnboardingScreen, PrimaryButton } from '../../src/components/onboarding';
 
 const SAMPLE = [
   { text: 'I tend to myself the way I tend to what I love.', category: 'glow', dot: '#F2B4CC' },
@@ -38,14 +37,9 @@ export default function DailyGlowScreen() {
   const cur = SAMPLE[idx];
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <LinearGradient
-        pointerEvents="none"
-        colors={['rgba(242,180,204,0.30)', 'rgba(216,201,236,0.10)']}
-        style={styles.backdrop}
-      />
-
-      <View style={styles.main}>
+    <OnboardingScreen>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <View style={styles.main}>
         <Text style={styles.kicker}>DAILY AFFIRMATION</Text>
         <Text style={styles.headline}>A new affirmation every day.</Text>
         <Text style={styles.subhead}>Tap to read another. Always free, always for you.</Text>
@@ -65,35 +59,36 @@ export default function DailyGlowScreen() {
         </Pressable>
       </View>
 
-      <View style={styles.bottom}>
-        <PrimaryButton title="Continue" onPress={() => router.push('/(onboarding)/yourstack')} />
-      </View>
-    </ScrollView>
+        <View style={styles.bottom}>
+          <PrimaryButton title="Continue" onPress={() => router.push('/(onboarding)/yourstack')} />
+        </View>
+      </ScrollView>
+    </OnboardingScreen>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 40, justifyContent: 'space-between' },
-  backdrop: { position: 'absolute', top: 0, left: 0, right: 0, height: 500 },
   main: { flex: 1, paddingTop: 8 },
   kicker: {
-    fontSize: 10, fontFamily: 'SpaceMono-Bold',
-    color: 'rgba(242,180,204,0.62)', letterSpacing: 1.4, marginBottom: 14,
+    fontSize: 11, fontFamily: 'SpaceMono-Bold',
+    color: '#C45A82', letterSpacing: 1.6, marginBottom: 14,
   },
   headline: {
-    fontSize: 30, fontFamily: 'PlayfairDisplay', fontWeight: '600',
-    color: '#FEFAF9', lineHeight: 38, marginBottom: 12, letterSpacing: -0.4,
+    fontSize: 32, fontFamily: 'PlayfairDisplay', fontWeight: '600',
+    color: '#3A2E2B', lineHeight: 40, marginBottom: 12, letterSpacing: -0.3,
   },
   subhead: {
-    fontSize: 15, fontFamily: 'DMSans', color: 'rgba(255,255,255,0.62)',
-    lineHeight: 22, marginBottom: 32,
+    fontSize: 16, fontFamily: 'DMSans', color: 'rgba(58,46,43,0.75)',
+    lineHeight: 24, marginBottom: 32,
   },
   mockupCard: {
-    backgroundColor: '#FFF7F2', borderRadius: 28,
-    paddingVertical: 28, paddingHorizontal: 24,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.30, shadowRadius: 28,
+    backgroundColor: '#FFFFFF', borderRadius: 28,
+    paddingVertical: 32, paddingHorizontal: 24,
+    borderWidth: 1.5, borderColor: 'rgba(58,46,43,0.12)',
+    shadowColor: '#3A2E2B', shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.24, shadowRadius: 32, elevation: 10,
   },
   mockEyebrow: {
     fontFamily: 'SpaceMono-Bold', fontSize: 10,

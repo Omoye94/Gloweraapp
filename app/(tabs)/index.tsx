@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
   Animated, Image, Easing, Modal, TextInput, KeyboardAvoidingView, Platform,
-  Share,
+  Share, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Swipeable } from 'react-native-gesture-handler';
@@ -16,16 +16,16 @@ import { DailyAffirmation } from '../../src/components/home/DailyAffirmation';
 
 function getGreeting(): string {
   const h = new Date().getHours();
-  if (h < 12) return 'Good morning,';
-  if (h < 18) return 'Good afternoon,';
-  return 'Good evening,';
+  if (h < 12) return 'good morning,';
+  if (h < 18) return 'good afternoon,';
+  return 'good evening,';
 }
 
 function formatHeaderDate(): string {
   const d = new Date();
   const day = d.toLocaleDateString('en-US', { weekday: 'long' });
   const month = d.toLocaleDateString('en-US', { month: 'long' });
-  return `${day} · ${month} ${d.getDate()}`.toUpperCase();
+  return `${day} · ${month} ${d.getDate()}`.toLowerCase();
 }
 
 const PLANT_STAGE_ASSETS: Record<string, any> = {
@@ -66,6 +66,25 @@ const CAT_LABELS: Record<string, string> = {
   beauty: 'Beauty', mind: 'Mind',
 };
 
+const RITUAL_SUGGESTIONS: { name: string; icon: string; category: string }[] = [
+  { name: 'Morning walk',       icon: '🚶‍♀️', category: 'movement' },
+  { name: 'Drink water',        icon: '💧',  category: 'nutrition' },
+  { name: 'Skincare routine',   icon: '🧖‍♀️', category: 'beauty' },
+  { name: 'Stretch session',    icon: '🧘‍♀️', category: 'movement' },
+  { name: 'Gratitude moment',   icon: '🌷',  category: 'reflection' },
+  { name: 'Meditate',           icon: '✨',  category: 'mind' },
+  { name: 'Read 10 pages',      icon: '📖',  category: 'mind' },
+  { name: 'Journal',            icon: '📓',  category: 'reflection' },
+  { name: 'Tea ritual',         icon: '🍵',  category: 'self-care' },
+  { name: 'Deep breaths',       icon: '🌬️', category: 'mind' },
+  { name: 'Light a candle',     icon: '🕯️', category: 'self-care' },
+  { name: 'Bath ritual',        icon: '🛁',  category: 'self-care' },
+  { name: 'Eat breakfast',      icon: '🥣',  category: 'nutrition' },
+  { name: 'No phone in bed',    icon: '📵',  category: 'mind' },
+  { name: 'Sleep by 11',        icon: '🌙',  category: 'mind' },
+  { name: 'Make my bed',        icon: '🛏️', category: 'self-care' },
+];
+
 const MOODS = [
   { id: 'low',      journalMood: 'low',       emoji: '🌙', label: 'Tired'   },
   { id: 'heavy',    journalMood: 'struggling', emoji: '🌧️', label: 'Heavy'   },
@@ -97,7 +116,7 @@ const EXPLORE_CARDS = [
     title: 'Beauty Rituals',
     sub: 'Glow from the outside in',
     colors: ['#EDBBCA', '#F5D4C4'] as const,
-    route: '/(tabs)/beauty' as const,
+    route: '/beauty' as const,
   },
 ];
 
@@ -213,11 +232,12 @@ function BubbleParticle({ color, offsetX, delay, size = 9 }: {
 }
 
 function HabitSwipeRow({
-  habit, done, catColor, reordering, isFirst, isLast, onTap, onMoveUp, onMoveDown,
+  habit, done, catColor, reordering, isFirst, isLast, onTap, onMoveUp, onMoveDown, onRemove,
 }: {
   habit: any; done: boolean; catColor: string; reordering: boolean;
   isFirst: boolean; isLast: boolean;
   onTap: () => void; onMoveUp: () => void; onMoveDown: () => void;
+  onRemove: () => void;
 }) {
   const swipeRef    = useRef<any>(null);
   const prevDoneRef = useRef(done);
@@ -246,13 +266,25 @@ function HabitSwipeRow({
     </Pressable>
   );
 
+  const renderRightAction = () => (
+    <Pressable
+      style={[styles.swipeAction, styles.swipeActionRemove]}
+      onPress={() => { swipeRef.current?.close(); onRemove(); }}
+    >
+      <Text style={styles.swipeActionIcon}>🗑</Text>
+    </Pressable>
+  );
+
   return (
     <Swipeable
       ref={swipeRef}
       renderLeftActions={renderLeftAction}
+      renderRightActions={renderRightAction}
       overshootLeft={false}
+      overshootRight={false}
       friction={2}
       leftThreshold={60}
+      rightThreshold={60}
     >
       <View style={{ overflow: 'visible' }}>
         <Pressable
@@ -271,6 +303,9 @@ function HabitSwipeRow({
           </Text>
           {reordering ? (
             <View style={styles.reorderControls}>
+              <Pressable onPress={onRemove} style={[styles.reorderArrow, styles.reorderRemove]}>
+                <Text style={styles.reorderRemoveText}>×</Text>
+              </Pressable>
               <Pressable onPress={onMoveUp} style={styles.reorderArrow} disabled={isFirst}>
                 <Text style={[styles.reorderArrowText, isFirst && { opacity: 0.25 }]}>↑</Text>
               </Pressable>
@@ -447,6 +482,7 @@ export default function HomeScreen() {
   const uncompleteHabit = useHabitStore(s => s.uncompleteHabit);
   const getCompletion   = useHabitStore(s => s.getCompletionForDate);
   const addHabit        = useHabitStore(s => s.addHabit);
+  const removeHabit     = useHabitStore(s => s.removeHabit);
   const reorderHabits   = useHabitStore(s => s.reorderHabits);
 
   const [userName, setUserName]           = useState('');
@@ -498,10 +534,6 @@ export default function HomeScreen() {
     () => activeHabits.filter(h => !!getCompletion(h.id, dateKey)).length,
     [activeHabits, dailySummaries, dateKey]
   );
-  const glowPct = activeHabits.length > 0
-    ? Math.round((completedCount / activeHabits.length) * 100)
-    : 0;
-
   const groupedHabits = useMemo(() => {
     const groups: Record<string, typeof activeHabits> = {};
     activeHabits.forEach(h => {
@@ -519,6 +551,25 @@ export default function HomeScreen() {
     if (swapIdx < 0 || swapIdx >= activeHabits.length) return;
     reorderHabits(habitId, activeHabits[swapIdx].id);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const handleRemoveHabit = (habitId: string, name: string) => {
+    Alert.alert(
+      'Remove ritual?',
+      `${name} will be removed from your garden.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => {
+            removeHabit(habitId);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            showToast('Ritual removed');
+          },
+        },
+      ],
+    );
   };
 
   const handleHabitTap = (habitId: string) => {
@@ -542,6 +593,23 @@ export default function HomeScreen() {
     setNewHabitName('');
     setShowAddModal(false);
   };
+
+  const handleQuickAddRitual = (suggestion: typeof RITUAL_SUGGESTIONS[number]) => {
+    addHabit({
+      name: suggestion.name,
+      icon: suggestion.icon,
+      category: suggestion.category as any,
+      isCustom: false,
+    });
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    showToast(`${suggestion.name} added ✦`);
+    setShowAddModal(false);
+  };
+
+  const availableSuggestions = useMemo(() => {
+    const existing = new Set(habits.map(h => h.name.trim().toLowerCase()));
+    return RITUAL_SUGGESTIONS.filter(s => !existing.has(s.name.toLowerCase()));
+  }, [habits]);
 
   const handleExploreCard = (card: typeof EXPLORE_CARDS[number]) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -603,56 +671,36 @@ export default function HomeScreen() {
 
         {/* ── Header ── */}
         <View style={[styles.headerSection, { paddingTop: insets.top + 18 }]}>
-          <View style={styles.headerTopRow}>
-            <Text style={styles.dateLine}>{formatHeaderDate()}</Text>
-            {streak > 0 && (
-              <View style={styles.streakPill}>
-                <View style={styles.streakDot} />
-                <Text style={styles.streakPillText}>Day {streak}</Text>
-              </View>
-            )}
-          </View>
+          <Text style={styles.dateLine}>{formatHeaderDate()}</Text>
 
           <Text style={styles.greetingLine}>
             {getGreeting()}{' '}
-            <Text style={styles.greetingLineItalic}>{storedFirstName || userName || 'friend'}</Text>.
+            <Text style={styles.greetingLineItalic}>{(storedFirstName || userName || 'friend').toLowerCase()}</Text>
           </Text>
           <Text style={styles.welcomeLine}>
-            Welcome back to your{' '}
-            <Text style={styles.welcomeLineItalic}>{gardenName || 'garden'}</Text>.
+            welcome back to your{' '}
+            <Text style={styles.welcomeLineItalic}>{(gardenName || 'garden').toLowerCase()}</Text>
           </Text>
         </View>
 
         {/* ── Daily Affirmation ── */}
         <DailyAffirmation />
 
-        {/* ── Plant Hero ── */}
-        <View style={styles.plantSection}>
-          <View style={styles.plantCard}>
-            {/* Plant illustration */}
-            <View style={styles.plantImageHero}>
-              <AnimatedPlant stage={stage} />
-            </View>
-
-            {/* Stage label */}
-            <Text style={styles.plantStageLabel}>{STAGE_LABELS[stage]}</Text>
-
-            {/* Glow meter */}
-            <View style={styles.glowSection}>
-              <View style={styles.glowRow}>
-                <Text style={styles.glowMono}>GLOW METER</Text>
-                <Text style={styles.glowPct}>{glowPct}%</Text>
-              </View>
-              <View style={styles.glowTrack}>
-                <LinearGradient
-                  colors={['#E8A0B8', '#C45A82']}
-                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                  style={[styles.glowFill, { width: `${glowPct}%` as any }]}
-                />
-              </View>
-              <Text style={styles.glowComplete}>{completedCount} of {activeHabits.length} rituals complete</Text>
-            </View>
+        {/* ── Plant Scene (no card chrome) ── */}
+        <View style={styles.plantScene}>
+          <View style={styles.plantBlob} />
+          <View style={styles.plantImageHero}>
+            <AnimatedPlant stage={stage} />
           </View>
+          <Text style={styles.plantStageLine}>
+            {activeHabits.length === 0
+              ? <Text style={styles.plantStageLineItalic}>your garden awaits</Text>
+              : completedCount === activeHabits.length
+                ? <>all rituals tended today ✦ your garden is <Text style={styles.plantStageLineItalic}>{STAGE_LABELS[stage].toLowerCase()}</Text></>
+                : completedCount === 0
+                  ? <>ready when you are · your garden is <Text style={styles.plantStageLineItalic}>{STAGE_LABELS[stage].toLowerCase()}</Text></>
+                  : <>{completedCount} {completedCount === 1 ? 'ritual' : 'rituals'} tended today · your garden is <Text style={styles.plantStageLineItalic}>{STAGE_LABELS[stage].toLowerCase()}</Text></>}
+          </Text>
         </View>
 
         {/* ── Mood ── */}
@@ -676,31 +724,31 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* ── Week Strip ── */}
-        <View style={styles.weekStrip}>
-          {weekDays.map(day => {
-            const completions = dailySummaries[day.dateKey]
-              ? Object.keys(dailySummaries[day.dateKey].completions).length
-              : 0;
-            const pct = activeHabits.length > 0 ? completions / activeHabits.length : 0;
-            return (
-              <View key={day.dateKey} style={styles.weekDayCol}>
-                <Text style={[styles.weekDayLabel, day.isToday && styles.weekDayLabelToday]}>
-                  {day.label}
-                </Text>
-                <View style={[styles.weekDayBubble, day.isToday && styles.weekDayBubbleToday]}>
-                  <Text style={[styles.weekDayNum, day.isToday && styles.weekDayNumToday]}>
-                    {day.date}
+        {/* ── Week Strip (mood dots only) ── */}
+        <View style={styles.weekWrap}>
+          <Text style={styles.weekEyebrow}>this week</Text>
+          <View style={styles.weekStrip}>
+            {weekDays.map(day => {
+              const completions = dailySummaries[day.dateKey]
+                ? Object.keys(dailySummaries[day.dateKey].completions).length
+                : 0;
+              const pct = activeHabits.length > 0 ? completions / activeHabits.length : 0;
+              return (
+                <View key={day.dateKey} style={styles.weekDayCol}>
+                  <Text style={[styles.weekDayLabel, day.isToday && styles.weekDayLabelToday]}>
+                    {day.label.toLowerCase()}
                   </Text>
+                  <View style={[
+                    styles.weekDot,
+                    day.isFuture && styles.weekDotFuture,
+                    !day.isFuture && pct >= 1 && styles.weekDotComplete,
+                    !day.isFuture && pct > 0 && pct < 1 && styles.weekDotPartial,
+                    day.isToday && styles.weekDotToday,
+                  ]} />
                 </View>
-                <View style={[
-                  styles.weekDot,
-                  !day.isFuture && pct >= 1 && { backgroundColor: '#C45A82' },
-                  !day.isFuture && pct > 0 && pct < 1 && { backgroundColor: '#F2B4CC' },
-                ]} />
-              </View>
-            );
-          })}
+              );
+            })}
+          </View>
         </View>
 
         {/* ── Today's Rituals ── */}
@@ -714,7 +762,7 @@ export default function HomeScreen() {
                   style={({ pressed }) => [styles.reorderBtn, reordering && styles.reorderBtnActive, pressed && { opacity: 0.75 }]}
                 >
                   <Text style={[styles.reorderBtnText, reordering && styles.reorderBtnTextActive]}>
-                    {reordering ? 'Done' : '⇅'}
+                    {reordering ? 'done' : 'edit'}
                   </Text>
                 </Pressable>
               )}
@@ -768,6 +816,7 @@ export default function HomeScreen() {
                           onTap={() => handleHabitTap(habit.id)}
                           onMoveUp={() => moveHabit(habit.id, 'up')}
                           onMoveDown={() => moveHabit(habit.id, 'down')}
+                          onRemove={() => handleRemoveHabit(habit.id, habit.name)}
                         />
                       </FadeUpRow>
                     );
@@ -788,7 +837,10 @@ export default function HomeScreen() {
 
         {/* ── Explore ── */}
         <View style={styles.exploreSection}>
-          <Text style={styles.exploreTitle}>Explore</Text>
+          <View style={styles.exploreHeader}>
+            <Text style={styles.exploreEyebrow}>more to try</Text>
+            <Text style={styles.exploreTitle}>Explore</Text>
+          </View>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -823,20 +875,52 @@ export default function HomeScreen() {
             <Pressable style={styles.modalSheet} onPress={e => e.stopPropagation()}>
               <View style={styles.modalHandle} />
               <Text style={styles.modalTitle}>Add a ritual</Text>
+
+              {availableSuggestions.length > 0 && (
+                <>
+                  <Text style={styles.suggestionsLabel}>tap to add ✦</Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.suggestionsRow}
+                  >
+                    {availableSuggestions.map(s => (
+                      <Pressable
+                        key={s.name}
+                        onPress={() => handleQuickAddRitual(s)}
+                        style={({ pressed }) => [
+                          styles.suggestionChip,
+                          { borderLeftColor: CAT_COLORS[s.category] || CAT_COLORS.default },
+                          pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
+                        ]}
+                      >
+                        <Text style={styles.suggestionChipEmoji}>{s.icon}</Text>
+                        <Text style={styles.suggestionChipText} numberOfLines={1}>{s.name}</Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                  <Text style={styles.suggestionsDivider}>or write your own</Text>
+                </>
+              )}
+
               <TextInput
                 style={styles.modalInput}
                 value={newHabitName}
                 onChangeText={setNewHabitName}
                 placeholder="e.g. Morning walk"
                 placeholderTextColor="#B8A9A5"
-                autoFocus
                 returnKeyType="done"
                 onSubmitEditing={handleAddRitual}
               />
               <View style={styles.modalButtons}>
                 <Pressable
                   onPress={handleAddRitual}
-                  style={({ pressed }) => [styles.modalPrimaryBtn, pressed && { opacity: 0.85 }]}
+                  disabled={!newHabitName.trim()}
+                  style={({ pressed }) => [
+                    styles.modalPrimaryBtn,
+                    !newHabitName.trim() && { opacity: 0.4 },
+                    pressed && { opacity: 0.85 },
+                  ]}
                 >
                   <Text style={styles.modalPrimaryBtnText}>Add ritual</Text>
                 </Pressable>
@@ -923,139 +1007,277 @@ const styles = StyleSheet.create({
 
   // Header
   headerSection: { paddingHorizontal: 28 },
-  headerTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 22,
-  },
   dateLine: {
-    fontFamily: 'SpaceMono-Bold',
-    fontSize: 10,
-    letterSpacing: 1.6,
-    color: '#A89A93',
-  },
-  streakPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(196,90,130,0.10)',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  streakDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: '#C45A82',
-  },
-  streakPillText: {
-    fontFamily: 'SpaceMono-Bold',
-    fontSize: 10,
-    letterSpacing: 1.2,
-    color: '#C45A82',
-    textTransform: 'uppercase',
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontStyle: 'italic',
+    fontSize: 13,
+    letterSpacing: 0.2,
+    color: 'rgba(196,90,130,0.85)',
+    marginBottom: 14,
   },
   greetingLine: {
-    fontFamily: 'PlayfairDisplay', fontSize: 30,
-    color: '#3A2E2B', letterSpacing: -0.5, lineHeight: 38,
+    fontFamily: 'PlayfairDisplay',
+    fontWeight: '500',
+    fontSize: 22,
+    color: 'rgba(58,46,43,0.85)',
+    letterSpacing: -0.2,
+    lineHeight: 28,
   },
   greetingLineItalic: {
     fontFamily: 'PlayfairDisplay-Italic',
+    color: '#C45A82',
   },
   welcomeLine: {
-    fontFamily: 'PlayfairDisplay', fontSize: 16,
-    color: '#9A857C', letterSpacing: 0.1, lineHeight: 22, marginTop: 8,
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontStyle: 'italic',
+    fontSize: 14,
+    color: 'rgba(58,46,43,0.6)',
+    letterSpacing: 0.1,
+    lineHeight: 24,
+    marginTop: 8,
   },
   welcomeLineItalic: {
     fontFamily: 'PlayfairDisplay-Italic',
-    color: '#7A6258',
+    color: '#C45A82',
   },
 
-  // Plant card
-  plantSection: { marginTop: 24, paddingHorizontal: 20 },
-  plantCard: {
-    backgroundColor: '#FFFFFF', borderRadius: 28, overflow: 'hidden',
-    shadowColor: '#3A1A10', shadowOpacity: 0.10, shadowRadius: 20, shadowOffset: { width: 0, height: 4 },
+  // Plant scene (no card chrome — plant breathes on the warm peach bg)
+  plantScene: {
+    marginTop: 24,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    position: 'relative',
   },
-  plantImageHero: { width: '100%', height: 220, overflow: 'hidden', backgroundColor: '#E8CABA' },
-  plantStageLabel: {
-    fontFamily: 'Raleway-SemiBold', fontSize: 18,
-    color: '#1A0A06', textAlign: 'center', marginTop: 14, letterSpacing: 0.2,
+  plantBlob: {
+    position: 'absolute',
+    top: 10,
+    left: '18%',
+    right: '18%',
+    height: 220,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,228,213,0.55)',
+    opacity: 0.9,
   },
-  glowSection:  { paddingTop: 10, paddingHorizontal: 20, paddingBottom: 20 },
-  glowRow:      { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  glowMono:     { fontFamily: 'SpaceMono-Bold', fontSize: 10, letterSpacing: 1.2, color: '#5C3D2E' },
-  glowPct:      { fontFamily: 'SpaceMono-Bold', fontSize: 10, color: '#C45A82' },
-  glowTrack:    { height: 5, borderRadius: 999, backgroundColor: 'rgba(196,90,130,0.12)', overflow: 'hidden' },
-  glowFill:     { height: '100%', borderRadius: 999 },
-  glowComplete: { fontFamily: 'DMSans', fontSize: 12, color: '#5C3D2E', marginTop: 8 },
+  plantImageHero: {
+    width: '100%',
+    height: 240,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  plantStageLine: {
+    fontFamily: 'PlayfairDisplay',
+    fontWeight: '500',
+    fontSize: 16,
+    color: 'rgba(58,46,43,0.78)',
+    textAlign: 'center',
+    marginTop: 14,
+    letterSpacing: -0.1,
+    lineHeight: 24,
+    paddingHorizontal: 24,
+  },
+  plantStageLineItalic: {
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontStyle: 'italic',
+    color: '#C45A82',
+  },
 
   // Mood
-  moodSection: { marginTop: 28, paddingHorizontal: 28 },
+  moodSection: { marginTop: 28, paddingHorizontal: 24 },
   moodQuestion: {
-    fontFamily: 'DMSans', fontSize: 14, color: '#5C3D2E', marginBottom: 14,
+    fontFamily: 'PlayfairDisplay',
+    fontWeight: '600',
+    fontSize: 22,
+    color: '#3A2E2B',
+    letterSpacing: -0.3,
+    marginBottom: 14,
   },
-  moodRow:           { flexDirection: 'row', justifyContent: 'space-between' },
-  moodItem:          { alignItems: 'center', flex: 1, paddingVertical: 8, borderRadius: 14, gap: 5 },
-  moodItemSelected:  { backgroundColor: 'rgba(196,90,130,0.12)' },
-  moodEmoji:         { fontSize: 28 },
-  moodLabel:         { fontFamily: 'DMSans', fontSize: 10, fontWeight: '500', color: '#6B4A38' },
-  moodLabelSelected: { color: '#C45A82' },
+  moodRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  moodItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    borderRadius: 18,
+    gap: 6,
+    backgroundColor: 'rgba(247,232,218,0.55)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(58,46,43,0.1)',
+  },
+  moodItemSelected: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#C45A82',
+    borderWidth: 2,
+    shadowColor: '#C45A82',
+    shadowOpacity: 0.32,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+    transform: [{ scale: 1.04 }],
+  },
+  moodEmoji: { fontSize: 28 },
+  moodLabel: {
+    fontFamily: 'DMSans',
+    fontSize: 11,
+    fontWeight: '600',
+    color: 'rgba(58,46,43,0.7)',
+    letterSpacing: 0.2,
+  },
+  moodLabelSelected: {
+    color: '#C45A82',
+    fontWeight: '700',
+  },
 
-  // Week strip
+  // Week strip (mood dots only — no calendar bubbles)
+  weekWrap: {
+    marginHorizontal: 24,
+    marginTop: 28,
+    paddingVertical: 4,
+  },
+  weekEyebrow: {
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontStyle: 'italic',
+    fontSize: 14,
+    color: 'rgba(196,90,130,0.85)',
+    letterSpacing: 0.2,
+    marginBottom: 14,
+    marginLeft: 2,
+  },
   weekStrip: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginHorizontal: 20,
-    marginTop: 24,
-    paddingHorizontal: 10,
-    paddingVertical: 14,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    shadowColor: '#C4A99A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.14,
-    shadowRadius: 8,
+    paddingHorizontal: 4,
   },
-  weekDayCol: { flex: 1, alignItems: 'center', gap: 5 },
-  weekDayLabel: { fontFamily: 'DMSans', fontSize: 11, fontWeight: '500', color: '#9A8278', letterSpacing: 0.2 },
-  weekDayLabelToday: { color: '#C45A82', fontWeight: '700' },
-  weekDayBubble: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
-  weekDayBubbleToday: { backgroundColor: '#C45A82' },
-  weekDayNum: { fontFamily: 'DMSans', fontSize: 13, fontWeight: '500', color: '#3A1A10' },
-  weekDayNumToday: { color: '#FFFFFF', fontWeight: '700' },
-  weekDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: 'rgba(0,0,0,0.1)' },
+  weekDayCol: { flex: 1, alignItems: 'center', gap: 10 },
+  weekDayLabel: {
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontStyle: 'italic',
+    fontSize: 13,
+    color: 'rgba(58,46,43,0.5)',
+    letterSpacing: 0.2,
+  },
+  weekDayLabelToday: { color: '#C45A82' },
+  weekDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: 'rgba(58,46,43,0.22)',
+  },
+  weekDotFuture: {
+    borderColor: 'rgba(58,46,43,0.12)',
+  },
+  weekDotPartial: {
+    backgroundColor: '#F2B4CC',
+    borderColor: '#F2B4CC',
+  },
+  weekDotComplete: {
+    backgroundColor: '#C45A82',
+    borderColor: '#C45A82',
+  },
+  weekDotToday: {
+    borderColor: '#C45A82',
+    borderWidth: 2,
+    shadowColor: '#C45A82',
+    shadowOpacity: 0.55,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 0 },
+  },
 
   // Rituals
-  ritualsSection: { marginTop: 20, paddingHorizontal: 24 },
+  ritualsSection: { marginTop: 24, paddingHorizontal: 24 },
   ritualsHeader: {
     flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between', marginBottom: 16,
+    justifyContent: 'space-between', marginBottom: 14,
   },
-  ritualsTitle: { fontFamily: 'PlayfairDisplay', fontSize: 22, color: '#3A2E2B', letterSpacing: -0.3 },
+  ritualsTitle: {
+    fontFamily: 'PlayfairDisplay',
+    fontWeight: '600',
+    fontSize: 28,
+    color: '#3A2E2B',
+    letterSpacing: -0.4,
+  },
   ritualsHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  addBtn:       { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, backgroundColor: 'rgba(196,90,130,0.10)' },
-  addBtnText:   { fontFamily: 'DMSans', fontSize: 13, fontWeight: '600', color: '#C45A82' },
-  reorderBtn:   { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: 'rgba(196,90,130,0.08)' },
-  reorderBtnActive: { backgroundColor: '#C45A82' },
-  reorderBtnText:   { fontFamily: 'DMSans', fontSize: 14, fontWeight: '600', color: '#C45A82' },
+  addBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: 'rgba(196,90,130,0.32)',
+    shadowColor: '#C45A82',
+    shadowOpacity: 0.16,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  addBtnText: {
+    fontFamily: 'DMSans',
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#C45A82',
+    letterSpacing: 0.2,
+  },
+  reorderBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: 'rgba(58,46,43,0.16)',
+    minWidth: 40,
+    alignItems: 'center',
+  },
+  reorderBtnActive: {
+    backgroundColor: '#1A1028',
+    borderColor: '#1A1028',
+  },
+  reorderBtnText: {
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontStyle: 'italic',
+    fontSize: 14,
+    color: '#C45A82',
+    letterSpacing: 0.2,
+  },
   reorderBtnTextActive: { color: '#FFFFFF' },
 
   // Progress pill
   progressPill: {
-    backgroundColor: 'rgba(196,90,130,0.08)', borderRadius: 999,
-    paddingHorizontal: 14, paddingVertical: 7,
-    alignSelf: 'flex-start', marginBottom: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    alignSelf: 'flex-start',
+    marginBottom: 18,
+    borderWidth: 1.5,
+    borderColor: 'rgba(196,90,130,0.32)',
+    shadowColor: '#C45A82',
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 3,
   },
-  progressPillText: { fontFamily: 'DMSans', fontSize: 13, fontWeight: '500', color: '#C45A82' },
+  progressPillText: {
+    fontFamily: 'DMSans',
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#C45A82',
+    letterSpacing: 0.2,
+  },
 
   // Category divider
   catDivider: {
-    fontFamily: 'DMSans', fontSize: 10, fontWeight: '400',
-    color: '#A89A93', letterSpacing: 2, textTransform: 'uppercase',
-    marginBottom: 10, marginTop: 20,
+    fontFamily: 'SpaceMono-Bold',
+    fontSize: 11,
+    color: '#C45A82',
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
+    marginBottom: 12,
+    marginTop: 22,
   },
 
   // Swipe action
@@ -1063,46 +1285,122 @@ const styles = StyleSheet.create({
     width: 70, borderRadius: 18, marginBottom: 8,
     alignItems: 'center', justifyContent: 'center',
   },
+  swipeActionRemove: {
+    backgroundColor: '#C45A82',
+    marginLeft: 8,
+  },
   swipeActionIcon: { fontSize: 20, color: '#FFFFFF', fontWeight: '700' },
 
   // Reorder controls
   reorderControls: { flexDirection: 'row', gap: 4, marginLeft: 'auto' as any },
   reorderArrow:    { width: 30, height: 30, borderRadius: 999, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(196,90,130,0.08)' },
   reorderArrowText: { fontSize: 14, color: '#C45A82', fontWeight: '700' },
+  reorderRemove: { backgroundColor: 'rgba(196,90,130,0.95)' },
+  reorderRemoveText: { fontSize: 18, color: '#FFFFFF', fontWeight: '700', lineHeight: 20 },
 
   // Habit rows
-  habitsList: { gap: 0 },
+  habitsList: { gap: 12 },
   habitRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    paddingVertical: 16, paddingHorizontal: 16,
-    backgroundColor: 'rgba(255,246,242,0.75)', borderRadius: 22, marginBottom: 10,
-    borderWidth: 1, borderColor: 'rgba(58,46,43,0.07)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: 'rgba(58,46,43,0.18)',
+    shadowColor: '#3A2E2B',
+    shadowOpacity: 0.22,
+    shadowRadius: 26,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 7,
   },
-  habitRowDone: { opacity: 0.45 },
+  habitRowDone: {
+    opacity: 0.7,
+    backgroundColor: 'rgba(255,250,247,0.95)',
+    shadowOpacity: 0.12,
+  },
   habitIconCircle: {
-    width: 44, height: 44, borderRadius: 22,
-    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 1.5,
+    borderColor: 'rgba(58,46,43,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
-  habitEmoji: { fontSize: 20 },
+  habitEmoji: { fontSize: 22 },
   habitCheck: {
-    width: 24, height: 24, borderRadius: 12,
-    borderWidth: 1.5, borderColor: '#C9BDB6',
-    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2.5,
+    borderColor: 'rgba(58,46,43,0.28)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    backgroundColor: '#FFFFFF',
   },
-  habitCheckFilled: { backgroundColor: '#9CBFA0', borderColor: '#9CBFA0' },
-  habitCheckmark: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
-  habitName:      { fontFamily: 'PlayfairDisplay', fontSize: 16, color: '#3A2E2B', flex: 1 },
-  habitNameDone:  { color: '#A89A93' },
+  habitCheckFilled: {
+    backgroundColor: '#C45A82',
+    borderColor: '#C45A82',
+    shadowColor: '#C45A82',
+    shadowOpacity: 0.36,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  habitCheckmark: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  habitName: {
+    fontFamily: 'PlayfairDisplay',
+    fontWeight: '600',
+    fontSize: 17,
+    color: '#3A2E2B',
+    flex: 1,
+    letterSpacing: -0.2,
+  },
+  habitNameDone: {
+    color: 'rgba(58,46,43,0.5)',
+    textDecorationLine: 'line-through',
+    textDecorationColor: 'rgba(196,90,130,0.55)',
+  },
 
   // Empty state
   emptyCard: {
-    alignItems: 'center', paddingVertical: 36,
-    backgroundColor: '#FFFFFF', borderRadius: 20,
-    shadowColor: '#3A1A10', shadowOpacity: 0.06, shadowRadius: 10, shadowOffset: { width: 0, height: 2 },
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 24,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: 'rgba(58,46,43,0.18)',
+    borderLeftWidth: 6,
+    borderLeftColor: '#C45A82',
+    shadowColor: '#C45A82',
+    shadowOpacity: 0.22,
+    shadowRadius: 28,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 7,
   },
-  emptyEmoji: { fontSize: 36, marginBottom: 10 },
-  emptyTitle: { fontFamily: 'Raleway-SemiBold', fontSize: 17, color: '#1A0A06', marginBottom: 6 },
-  emptySub:   { fontFamily: 'DMSans', fontSize: 13, color: '#C45A82', textAlign: 'center', paddingHorizontal: 24 },
+  emptyEmoji: { fontSize: 44, marginBottom: 14 },
+  emptyTitle: {
+    fontFamily: 'PlayfairDisplay',
+    fontWeight: '600',
+    fontSize: 22,
+    color: '#3A2E2B',
+    letterSpacing: -0.3,
+    marginBottom: 6,
+  },
+  emptySub: {
+    fontFamily: 'DMSans',
+    fontWeight: '500',
+    fontSize: 14,
+    color: 'rgba(58,46,43,0.75)',
+    textAlign: 'center',
+    paddingHorizontal: 24,
+  },
 
   // Share glow banner
   shareBanner: {
@@ -1110,10 +1408,13 @@ const styles = StyleSheet.create({
     marginTop: 28,
     borderRadius: 28,
     overflow: 'hidden',
-    shadowColor: '#C4A99A',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.22,
-    shadowRadius: 18,
+    borderLeftWidth: 6,
+    borderLeftColor: '#C45A82',
+    shadowColor: '#C45A82',
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.32,
+    shadowRadius: 32,
+    elevation: 10,
   },
   shareBannerGradient: {
     alignItems: 'center',
@@ -1125,77 +1426,124 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: 'rgba(255,255,255,0.52)',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: 'rgba(196,90,130,0.32)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
+    shadowColor: '#C45A82',
+    shadowOpacity: 0.28,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 5,
   },
   shareBannerPlant: { width: 84, height: 84 },
   shareBannerBadge: {
-    backgroundColor: 'rgba(255,255,255,0.60)',
+    backgroundColor: '#FFFFFF',
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 5,
     marginBottom: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(196,90,130,0.32)',
   },
   shareBannerBadgeText: {
     fontFamily: 'SpaceMono-Bold',
     fontSize: 10,
     letterSpacing: 1.4,
-    color: '#5C3D2E',
+    color: '#C45A82',
     textTransform: 'uppercase',
   },
   shareBannerTitle: {
     fontFamily: 'PlayfairDisplay',
-    fontSize: 22,
-    color: '#3A1A10',
+    fontWeight: '600',
+    fontSize: 24,
+    color: '#3A2E2B',
     textAlign: 'center',
     lineHeight: 30,
+    letterSpacing: -0.3,
     marginBottom: 8,
   },
   shareBannerSub: {
-    fontFamily: 'DMSans',
-    fontSize: 13,
-    color: '#6B4A38',
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontStyle: 'italic',
+    fontSize: 14,
+    color: 'rgba(58,46,43,0.72)',
     textAlign: 'center',
     marginBottom: 22,
   },
   shareBannerBtn: {
-    backgroundColor: '#3A2E2B',
+    backgroundColor: '#1A1028',
     borderRadius: 100,
     paddingHorizontal: 32,
-    paddingVertical: 14,
-    shadowColor: '#3A2E2B',
-    shadowOpacity: 0.18,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 6 },
+    paddingVertical: 16,
+    shadowColor: '#1A1028',
+    shadowOpacity: 0.32,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 7,
   },
   shareBannerBtnText: {
     fontFamily: 'DMSans',
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#FFF6F2',
-    letterSpacing: 1.6,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FEFAF9',
+    letterSpacing: 1.8,
     textTransform: 'uppercase',
   },
 
   // Explore
-  exploreSection: { marginTop: 28, paddingBottom: 8 },
-  exploreTitle: {
-    fontFamily: 'Raleway-SemiBold', fontSize: 22,
-    color: '#1A0A06', letterSpacing: -0.2, marginBottom: 14, paddingHorizontal: 24,
+  exploreSection: { marginTop: 32, paddingBottom: 8 },
+  exploreHeader: {
+    paddingHorizontal: 24,
+    marginBottom: 14,
   },
-  exploreScroll:       { paddingHorizontal: 24, gap: 12 },
-  exploreCard:         { borderRadius: 24, overflow: 'hidden', width: 148 },
-  exploreCardGradient: { padding: 18, height: 158, justifyContent: 'flex-end' },
-  exploreEmoji:        { fontSize: 30, marginBottom: 'auto' as any },
+  exploreEyebrow: {
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontStyle: 'italic',
+    fontSize: 14,
+    color: 'rgba(196,90,130,0.85)',
+    letterSpacing: 0.2,
+    marginBottom: 4,
+  },
+  exploreTitle: {
+    fontFamily: 'PlayfairDisplay',
+    fontWeight: '600',
+    fontSize: 28,
+    color: '#3A2E2B',
+    letterSpacing: -0.4,
+  },
+  exploreScroll: { paddingHorizontal: 24, gap: 12 },
+  exploreCard: {
+    borderRadius: 22,
+    overflow: 'hidden',
+    width: 158,
+    borderWidth: 2,
+    borderColor: 'rgba(58,46,43,0.16)',
+    shadowColor: '#3A2E2B',
+    shadowOpacity: 0.26,
+    shadowRadius: 26,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 8,
+  },
+  exploreCardGradient: { padding: 18, height: 168, justifyContent: 'flex-end' },
+  exploreEmoji: { fontSize: 32, marginBottom: 'auto' as any },
   exploreCardTitle: {
-    fontFamily: 'Raleway-SemiBold', fontSize: 14,
-    color: '#1A0A06', marginBottom: 3,
+    fontFamily: 'PlayfairDisplay',
+    fontWeight: '600',
+    fontSize: 15,
+    color: '#1A0A06',
+    letterSpacing: -0.2,
+    marginBottom: 4,
   },
   exploreCardSub: {
-    fontFamily: 'DMSans', fontSize: 11, color: '#4A2E1E',
-    fontStyle: 'italic', lineHeight: 15,
+    fontFamily: 'DMSans',
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#4A2E1E',
+    fontStyle: 'italic',
+    lineHeight: 15,
   },
 
   // Modals (shared)
@@ -1209,6 +1557,54 @@ const styles = StyleSheet.create({
     alignSelf: 'center', marginBottom: 20,
   },
   modalTitle: { fontFamily: 'Raleway-SemiBold', fontSize: 22, color: '#1A0A06', marginBottom: 16 },
+  // Suggestion chips inside the add-ritual modal
+  suggestionsLabel: {
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontStyle: 'italic',
+    fontSize: 14,
+    color: 'rgba(196,90,130,0.85)',
+    letterSpacing: 0.2,
+    marginBottom: 12,
+  },
+  suggestionsRow: {
+    gap: 8,
+    paddingBottom: 6,
+    paddingRight: 4,
+  },
+  suggestionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(58,46,43,0.12)',
+    borderLeftWidth: 5,
+    shadowColor: '#3A2E2B',
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  suggestionChipEmoji: { fontSize: 18 },
+  suggestionChipText: {
+    fontFamily: 'DMSans',
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#3A2E2B',
+    letterSpacing: 0.2,
+  },
+  suggestionsDivider: {
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontStyle: 'italic',
+    fontSize: 13,
+    color: 'rgba(58,46,43,0.5)',
+    textAlign: 'center',
+    marginTop: 14,
+    marginBottom: 10,
+  },
+
   modalInput: {
     backgroundColor: '#F5EAE5', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14,
     fontFamily: 'DMSans', fontSize: 15, color: '#1A0A06',

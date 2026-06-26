@@ -11,6 +11,23 @@ export interface Challenge {
 
 export const CHALLENGES: Challenge[] = [
   {
+    id: 'glow-up-7',
+    name: '7-Day Glow Up',
+    icon: '💫',
+    duration: 7,
+    description:
+      "A week to feel like yourself again. Four small rituals, every day. Nothing radical — just enough to remember you are worth tending to.",
+    tasks: [
+      'Drink water before coffee',
+      'Move your body for 10 minutes',
+      'Skincare morning and night',
+      'Honest evening check-in: how did today feel?',
+    ],
+    reflectionPrompt: 'What is one small thing you noticed about yourself today?',
+    completionMessage:
+      "Seven days of choosing yourself. This is the start — keep going with 30, 60, or 90 if you want to deepen it.",
+  },
+  {
     id: 'soft-reset',
     name: 'The Soft Reset',
     icon: '🌿',
@@ -334,6 +351,63 @@ export const CHALLENGES: Challenge[] = [
     reflectionPrompt: 'What did you do today that made you feel powerful?',
     completionMessage:
       'Seven days of owning who you are. The confidence was always inside you — you just let it out.',
+  },
+  {
+    id: 'glow-up-30',
+    name: '30-Day Glow Up',
+    icon: '✨',
+    duration: 30,
+    description:
+      "A month of small, kind choices for your body, mind, and skin. Not a transformation — a return to yourself. Soft, steady, doable.",
+    tasks: [
+      'Drink water before coffee',
+      'Move your body for 10 minutes',
+      'Take care of your skin morning and night',
+      'Step outside for sunlight',
+      'Write down one thing you noticed today',
+    ],
+    reflectionPrompt: 'What is one small thing you did today that future you will thank you for?',
+    completionMessage:
+      "30 days of showing up softly for yourself. You are not the same person who started — and that is the whole point.",
+  },
+  {
+    id: 'glow-up-60',
+    name: '60-Day Glow Up',
+    icon: '🌸',
+    duration: 60,
+    description:
+      'Two months of building rhythm. The first 30 days plant seeds — the next 30 root them. By day 60, the small things have become who you are.',
+    tasks: [
+      'Drink water before coffee',
+      'Move your body — even gently — for 15 minutes',
+      'Skincare morning and night',
+      'Read or learn for 10 minutes',
+      'Honest evening check-in: how did today feel?',
+      'One act of self-kindness',
+    ],
+    reflectionPrompt: 'What has changed in you since you started — even quietly?',
+    completionMessage:
+      "60 days. You did not just glow up — you became someone who tends to herself. That is the real shift.",
+  },
+  {
+    id: 'glow-up-90',
+    name: '90-Day Glow Up',
+    icon: '🌟',
+    duration: 90,
+    description:
+      'Research says it takes 66 days for a habit to become automatic. Ninety days takes you past the threshold — into who you are. This is the deep one.',
+    tasks: [
+      'Drink water before anything else',
+      'Move your body — walk, stretch, dance, swim',
+      'Skincare morning and night',
+      'Take supplements with intention',
+      'Honest evening reflection',
+      'Read, learn, or create for 15 minutes',
+      'One act of gratitude or care toward someone else',
+    ],
+    reflectionPrompt: 'Who are you becoming through this season of care?',
+    completionMessage:
+      "90 days. You did not change overnight — you changed in a thousand small, quiet decisions. This is your glow now.",
   },
 ];
 

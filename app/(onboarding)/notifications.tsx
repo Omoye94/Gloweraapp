@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Switch, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { PrimaryButton } from '../../src/components/onboarding';
+import { OnboardingScreen, PrimaryButton } from '../../src/components/onboarding';
 import { useOnboardingStore } from '../../src/stores/onboardingStore';
 import { requestPermission, scheduleDaily } from '../../src/lib/notifications';
 
@@ -34,8 +34,9 @@ export default function NotificationsScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <View style={styles.main}>
+    <OnboardingScreen>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.main}>
         <Text style={styles.label}>GENTLE NUDGES</Text>
         <Text style={styles.headline}>Stay on track{'\n'}your way</Text>
         <Text style={styles.body}>
@@ -55,8 +56,8 @@ export default function NotificationsScreen() {
             <Switch
               value={morning_reminder}
               onValueChange={setMorningReminder}
-              trackColor={{ false: 'rgba(255,255,255,0.1)', true: 'rgba(232,127,166,0.4)' }}
-              thumbColor={morning_reminder ? '#E87FA6' : 'rgba(255,255,255,0.4)'}
+              trackColor={{ false: 'rgba(58,46,43,0.18)', true: 'rgba(232,127,166,0.55)' }}
+              thumbColor={morning_reminder ? '#E87FA6' : '#FFFAF5'}
             />
           </View>
 
@@ -99,8 +100,8 @@ export default function NotificationsScreen() {
             <Switch
               value={evening_reminder}
               onValueChange={setEveningReminder}
-              trackColor={{ false: 'rgba(255,255,255,0.1)', true: 'rgba(232,127,166,0.4)' }}
-              thumbColor={evening_reminder ? '#E87FA6' : 'rgba(255,255,255,0.4)'}
+              trackColor={{ false: 'rgba(58,46,43,0.18)', true: 'rgba(232,127,166,0.55)' }}
+              thumbColor={evening_reminder ? '#E87FA6' : '#FFFAF5'}
             />
           </View>
 
@@ -131,30 +132,31 @@ export default function NotificationsScreen() {
         </View>
       </View>
 
-      <View style={styles.bottom}>
-        {isLoading ? (
-          <View style={styles.loadingWrap}>
-            <ActivityIndicator size="large" color="#E87FA6" />
-            <Text style={styles.loadingText}>Setting up your garden...</Text>
-          </View>
-        ) : (
-          <>
-            <PrimaryButton
-              title={hasAnyReminder ? 'Enable reminders' : 'Continue without reminders'}
-              onPress={hasAnyReminder ? handleEnable : () => router.push('/(onboarding)/welcome')}
-            />
-            {hasAnyReminder && (
-              <Pressable
-                style={({ pressed }) => [styles.notNowBtn, pressed && { opacity: 0.6 }]}
-                onPress={() => router.push('/(onboarding)/welcome')}
-              >
-                <Text style={styles.notNowText}>Not now</Text>
-              </Pressable>
-            )}
-          </>
-        )}
-      </View>
-    </ScrollView>
+        <View style={styles.bottom}>
+          {isLoading ? (
+            <View style={styles.loadingWrap}>
+              <ActivityIndicator size="large" color="#C45A82" />
+              <Text style={styles.loadingText}>Setting up your garden...</Text>
+            </View>
+          ) : (
+            <>
+              <PrimaryButton
+                title={hasAnyReminder ? 'Enable reminders' : 'Continue without reminders'}
+                onPress={hasAnyReminder ? handleEnable : () => router.push('/(onboarding)/welcome')}
+              />
+              {hasAnyReminder && (
+                <Pressable
+                  style={({ pressed }) => [styles.notNowBtn, pressed && { opacity: 0.6 }]}
+                  onPress={() => router.push('/(onboarding)/welcome')}
+                >
+                  <Text style={styles.notNowText}>Not now</Text>
+                </Pressable>
+              )}
+            </>
+          )}
+        </View>
+      </ScrollView>
+    </OnboardingScreen>
   );
 }
 
@@ -162,43 +164,44 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 40, justifyContent: 'space-between' },
   main: { flex: 1, paddingTop: 8 },
-  label: { fontSize: 10, fontFamily: 'SpaceMono-Bold', color: 'rgba(242,180,204,0.6)', letterSpacing: 1.2, marginBottom: 12 },
-  headline: { fontSize: 28, fontFamily: 'PlayfairDisplay', fontWeight: '600', color: '#FEFAF9', lineHeight: 36, letterSpacing: -0.3, marginBottom: 10 },
-  body: { fontSize: 15, fontFamily: 'DMSans', color: 'rgba(255,255,255,0.5)', lineHeight: 22, marginBottom: 24 },
+  label: { fontSize: 11, fontFamily: 'SpaceMono-Bold', color: '#C45A82', letterSpacing: 1.6, marginBottom: 12 },
+  headline: { fontSize: 30, fontFamily: 'PlayfairDisplay', fontWeight: '600', color: '#3A2E2B', lineHeight: 38, letterSpacing: -0.3, marginBottom: 10 },
+  body: { fontSize: 16, fontFamily: 'DMSans', color: 'rgba(58,46,43,0.75)', lineHeight: 24, marginBottom: 24 },
   card: {
-    backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 20,
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: '#FFFFFF', borderRadius: 22,
+    borderWidth: 2, borderColor: 'rgba(58,46,43,0.16)',
     padding: 20, marginBottom: 12,
+    shadowColor: '#3A2E2B', shadowOpacity: 0.18, shadowRadius: 24, shadowOffset: { width: 0, height: 10 }, elevation: 6,
   },
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   cardEmoji: { fontSize: 22 },
-  cardTitle: { fontSize: 15, fontFamily: 'DMSans', fontWeight: '600', color: '#FEFAF9' },
-  cardSubtitle: { fontSize: 12, fontFamily: 'DMSans', color: 'rgba(255,255,255,0.4)', marginTop: 2 },
+  cardTitle: { fontSize: 16, fontFamily: 'DMSans', fontWeight: '700', color: '#3A2E2B' },
+  cardSubtitle: { fontSize: 12, fontFamily: 'DMSans', color: 'rgba(58,46,43,0.6)', marginTop: 2 },
   timePillsScroll: { marginTop: 14 },
-  timePillsRow: { gap: 8 },
+  timePillsRow: { gap: 8, paddingVertical: 4 },
   timePill: {
-    paddingHorizontal: 14, paddingVertical: 7,
+    paddingHorizontal: 16, paddingVertical: 9,
     borderRadius: 999, borderWidth: 1.5,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(247,232,218,0.6)',
+    borderColor: 'rgba(58,46,43,0.14)',
   },
-  timePillSelected: { backgroundColor: 'rgba(232,127,166,0.18)', borderColor: 'rgba(232,127,166,0.5)' },
-  timePillText: { fontSize: 13, fontFamily: 'DMSans', color: 'rgba(255,255,255,0.5)' },
-  timePillTextSelected: { color: '#F2B4CC', fontWeight: '600' },
+  timePillSelected: { backgroundColor: '#FFFFFF', borderColor: '#C45A82', borderWidth: 2 },
+  timePillText: { fontSize: 13, fontFamily: 'DMSans', fontWeight: '500', color: 'rgba(58,46,43,0.65)' },
+  timePillTextSelected: { color: '#C45A82', fontWeight: '700' },
   previewCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 14,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(247,232,218,0.65)', borderRadius: 14,
+    borderWidth: 1, borderColor: 'rgba(58,46,43,0.1)',
     padding: 14, marginTop: 14,
   },
   previewRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-  previewApp: { fontSize: 10, fontFamily: 'SpaceMono-Bold', color: 'rgba(255,255,255,0.35)', letterSpacing: 0.5 },
-  previewTime: { fontSize: 10, fontFamily: 'DMSans', color: 'rgba(255,255,255,0.25)' },
-  previewTitle: { fontSize: 14, fontFamily: 'DMSans', fontWeight: '600', color: '#FEFAF9', marginBottom: 2 },
-  previewBody: { fontSize: 13, fontFamily: 'DMSans', color: 'rgba(255,255,255,0.5)', lineHeight: 19 },
+  previewApp: { fontSize: 10, fontFamily: 'SpaceMono-Bold', color: '#C45A82', letterSpacing: 0.8 },
+  previewTime: { fontSize: 10, fontFamily: 'DMSans', color: 'rgba(58,46,43,0.5)' },
+  previewTitle: { fontSize: 14, fontFamily: 'DMSans', fontWeight: '700', color: '#3A2E2B', marginBottom: 2 },
+  previewBody: { fontSize: 13, fontFamily: 'DMSans', color: 'rgba(58,46,43,0.65)', lineHeight: 19 },
   bottom: { paddingTop: 8 },
   loadingWrap: { alignItems: 'center', paddingVertical: 20 },
-  loadingText: { marginTop: 12, fontSize: 14, fontFamily: 'DMSans', color: 'rgba(255,255,255,0.5)' },
+  loadingText: { marginTop: 12, fontSize: 14, fontFamily: 'DMSans', color: 'rgba(58,46,43,0.7)' },
   notNowBtn: { paddingVertical: 14, alignItems: 'center' },
-  notNowText: { fontSize: 15, fontFamily: 'DMSans', fontWeight: '500', color: 'rgba(255,255,255,0.45)' },
+  notNowText: { fontSize: 15, fontFamily: 'DMSans', fontWeight: '600', color: '#C45A82' },
 });

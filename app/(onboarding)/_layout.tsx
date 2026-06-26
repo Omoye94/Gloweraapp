@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { spacing } from '../../src/theme';
 
-const STEPS = ['problem', 'focus', 'rituals', 'firstgrowth', 'yourname', 'solution', 'firstreflection', 'analyzing', 'results', 'dailyglow', 'yourstack', 'gentlechallenges', 'honestevening', 'extras', 'vision', 'socialproof', 'review', 'paywall', 'invite', 'notifications', 'welcome'];
+const STEPS = ['problem', 'focus', 'yourname', 'rituals', 'solution', 'firstreflection', 'analyzing', 'results', 'firstgrowth', 'vision', 'dailyglow', 'yourstack', 'honestevening', 'glowwithfriends', 'socialproof', 'congrats', 'paywall', 'invite', 'notifications', 'welcome'];
 
 function ProgressBar({ currentStep }: { currentStep: number }) {
   const progress = (currentStep + 1) / STEPS.length;
@@ -69,26 +69,21 @@ export default function OnboardingLayout() {
         }}
       >
         <Stack.Screen name="problem" />
-        <Stack.Screen name="reframe" />
-        <Stack.Screen name="solution" />
-        <Stack.Screen name="garden" />
         <Stack.Screen name="focus" />
-        <Stack.Screen name="rituals" />
-        <Stack.Screen name="supplements" />
-        <Stack.Screen name="challenges" />
-        <Stack.Screen name="firstreflection" />
-        <Stack.Screen name="firstgrowth" />
         <Stack.Screen name="yourname" />
+        <Stack.Screen name="rituals" />
+        <Stack.Screen name="solution" />
+        <Stack.Screen name="firstreflection" />
         <Stack.Screen name="analyzing" />
         <Stack.Screen name="results" />
+        <Stack.Screen name="firstgrowth" />
+        <Stack.Screen name="vision" />
         <Stack.Screen name="dailyglow" />
         <Stack.Screen name="yourstack" />
-        <Stack.Screen name="gentlechallenges" />
         <Stack.Screen name="honestevening" />
-        <Stack.Screen name="extras" />
-        <Stack.Screen name="vision" />
+        <Stack.Screen name="glowwithfriends" />
         <Stack.Screen name="socialproof" />
-        <Stack.Screen name="review" />
+        <Stack.Screen name="congrats" />
         <Stack.Screen name="paywall" />
         <Stack.Screen name="invite" />
         <Stack.Screen name="notifications" />
@@ -101,7 +96,7 @@ export default function OnboardingLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1A1028',
+    backgroundColor: '#EDD5CB',
   },
   header: {
     paddingHorizontal: spacing.lg,
@@ -109,10 +104,11 @@ const styles = StyleSheet.create({
   },
   wordmark: {
     fontSize: 22,
-    fontFamily: 'Raleway-Regular',
-    color: '#E87FA6',
+    fontFamily: 'PlayfairDisplay-Italic',
+    color: '#3A2E2B',
     textAlign: 'center',
     marginBottom: spacing.sm,
+    letterSpacing: 0.3,
   },
   headerRow: {
     flexDirection: 'row',
@@ -123,7 +119,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(58,46,43,0.06)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -133,7 +129,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 20,
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(58,46,43,0.55)',
     fontWeight: '300',
   },
   backButtonPlaceholder: {
@@ -146,7 +142,7 @@ const styles = StyleSheet.create({
   progressTrack: {
     height: 3,
     borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(58,46,43,0.08)',
     overflow: 'hidden',
   },
   progressFill: {

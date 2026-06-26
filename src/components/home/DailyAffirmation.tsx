@@ -39,23 +39,25 @@ export function DailyAffirmation() {
 
   return (
     <Pressable onPress={handlePress} style={styles.wrap}>
-      <View style={styles.card}>
-        <View style={[styles.topAccent, { backgroundColor: categoryColor }]} />
-        <Animated.View style={[styles.inner, { opacity }]}>
-          <Text style={styles.eyebrow}>AFFIRMATION OF THE DAY</Text>
+      <View style={styles.cardRow}>
+        <View style={[styles.cardEdge, { backgroundColor: categoryColor }]} />
+        <View style={styles.card}>
+          <Animated.View style={[styles.inner, { opacity }]}>
+            <Text style={styles.eyebrow}>today's affirmation</Text>
 
-          <Text style={styles.glyph}>❝</Text>
+            <Text style={styles.glyph}>❝</Text>
 
-          <Text style={styles.quote}>{current.text}</Text>
+            <Text style={styles.quote}>{current.text}</Text>
 
-          <View style={styles.categoryRow}>
-            <View style={[styles.categoryDot, { backgroundColor: categoryColor }]} />
-            <Text style={styles.categoryLabel}>{current.category}</Text>
-            <View style={[styles.categoryDot, { backgroundColor: categoryColor }]} />
-          </View>
+            <View style={styles.categoryRow}>
+              <View style={[styles.categoryDot, { backgroundColor: categoryColor }]} />
+              <Text style={[styles.categoryLabel, { color: categoryColor }]}>{current.category}</Text>
+              <View style={[styles.categoryDot, { backgroundColor: categoryColor }]} />
+            </View>
 
-          <Text style={styles.hint}>tap for another</Text>
-        </Animated.View>
+            <Text style={styles.hint}>tap for another</Text>
+          </Animated.View>
+        </View>
       </View>
     </Pressable>
   );
@@ -63,57 +65,63 @@ export function DailyAffirmation() {
 
 const styles = StyleSheet.create({
   wrap: {
-    marginTop: 28,
+    marginTop: 20,
     paddingHorizontal: 20,
   },
-  card: {
-    backgroundColor: '#FCF1EB',
-    borderRadius: 24,
-    paddingTop: 20,
-    paddingBottom: 16,
-    paddingHorizontal: 22,
-    overflow: 'hidden',
-    shadowColor: '#3A1A10',
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 },
+  cardRow: {
+    flexDirection: 'row',
+    borderRadius: 26,
+    shadowColor: '#3A2E2B',
+    shadowOpacity: 0.26,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 10 },
   },
-  topAccent: {
-    position: 'absolute',
-    top: 0,
-    left: '42%',
-    right: '42%',
-    height: 2,
-    borderRadius: 1,
-    opacity: 0.6,
+  cardEdge: {
+    width: 6,
+    borderTopLeftRadius: 26,
+    borderBottomLeftRadius: 26,
+  },
+  card: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopRightRadius: 26,
+    borderBottomRightRadius: 26,
+    borderWidth: 2,
+    borderLeftWidth: 0,
+    borderColor: 'rgba(58,46,43,0.18)',
+    paddingTop: 26,
+    paddingBottom: 22,
+    paddingHorizontal: 26,
+    overflow: 'hidden',
   },
   inner: {
     alignItems: 'center',
   },
   eyebrow: {
-    fontFamily: 'SpaceMono-Bold',
-    fontSize: 10,
-    letterSpacing: 1.6,
-    color: '#A89A93',
-    marginBottom: 12,
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontStyle: 'italic',
+    fontSize: 14,
+    letterSpacing: 0.2,
+    color: 'rgba(196,90,130,0.85)',
+    marginBottom: 14,
   },
   glyph: {
     fontFamily: 'PlayfairDisplay',
-    fontSize: 44,
+    fontSize: 56,
     color: '#C45A82',
-    opacity: 0.32,
-    height: 28,
-    lineHeight: 44,
-    marginBottom: 6,
+    opacity: 0.45,
+    height: 36,
+    lineHeight: 56,
+    marginBottom: 8,
   },
   quote: {
     fontFamily: 'PlayfairDisplay-Italic',
-    fontSize: 19,
-    color: '#3A2E2B',
-    lineHeight: 28,
-    letterSpacing: -0.2,
+    fontSize: 26,
+    color: '#1A0A06',
+    lineHeight: 36,
+    letterSpacing: -0.3,
     textAlign: 'center',
-    marginBottom: 14,
+    marginBottom: 18,
   },
   categoryRow: {
     flexDirection: 'row',
@@ -122,22 +130,21 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   categoryDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
   },
   categoryLabel: {
-    fontFamily: 'DMSans',
-    fontStyle: 'italic',
-    fontSize: 11,
-    color: '#8C7670',
-    letterSpacing: 0.6,
+    fontFamily: 'SpaceMono-Bold',
+    fontSize: 10,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
   },
   hint: {
     fontFamily: 'DMSans',
     fontStyle: 'italic',
     fontSize: 11,
-    color: '#B8A9A4',
+    color: 'rgba(58,46,43,0.5)',
     letterSpacing: 0.3,
   },
 });

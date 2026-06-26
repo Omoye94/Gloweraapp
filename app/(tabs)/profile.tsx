@@ -447,7 +447,7 @@ export default function ProfileScreen() {
 
         {/* ── Settings & Preferences ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>SETTINGS & PREFERENCES</Text>
+          <Text style={styles.sectionLabel}>settings & preferences</Text>
           <View style={styles.card}>
             <SettingsRow
               iconName="pen-new-square-bold"
@@ -480,7 +480,7 @@ export default function ProfileScreen() {
 
         {/* ── Glowera Community ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>GLOWERA COMMUNITY</Text>
+          <Text style={styles.sectionLabel}>glowera community</Text>
           <View style={styles.card}>
             <SettingsRow
               iconName="users-group-rounded-bold"
@@ -768,7 +768,7 @@ export default function ProfileScreen() {
         >
           <Pressable style={styles.inviteSheet} onPress={(e) => e.stopPropagation()}>
             <View style={styles.inviteHandle} />
-            <Text style={styles.inviteEyebrow}>INVITE A FRIEND</Text>
+            <Text style={styles.inviteEyebrow}>invite a friend</Text>
             <Text style={styles.inviteTitle}>Grow with someone you care about.</Text>
 
             <LinearGradient
@@ -1108,11 +1108,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   sectionLabel: {
-    fontSize: 11,
-    fontFamily: 'SpaceMono-Bold',
-    color: '#5C3D2E',
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
+    fontSize: 15,
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontStyle: 'italic',
+    color: 'rgba(196,90,130,0.85)',
+    letterSpacing: 0.2,
     paddingHorizontal: 4,
     marginBottom: 12,
   },
@@ -1523,10 +1523,11 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   inviteEyebrow: {
-    fontFamily: 'SpaceMono-Bold',
-    fontSize: 10,
-    letterSpacing: 1.4,
-    color: '#C45A82',
+    fontFamily: 'PlayfairDisplay-Italic',
+    fontStyle: 'italic',
+    fontSize: 14,
+    letterSpacing: 0.2,
+    color: 'rgba(196,90,130,0.85)',
     textAlign: 'center',
     marginBottom: 10,
   },

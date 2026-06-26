@@ -16,7 +16,7 @@ export default function NotFoundScreen() {
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
       <LinearGradient
-        colors={['#F5E6E0', '#EDD5CB', '#E8C9BC']}
+        colors={['#FFF4EF', '#F1DAD0', '#E7C8BA']}
         start={{ x: 0, y: 0 }}
         end={{ x: 0.3, y: 1 }}
         style={StyleSheet.absoluteFillObject}
@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
     fontFamily: 'SpaceMono-Bold',
     fontSize: 11,
     letterSpacing: 1.6,
-    color: '#C45A82',
+    color: '#9E3F66',
     marginBottom: 20,
   },
   headline: {
@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
     fontFamily: 'DMSans',
     fontStyle: 'italic',
     fontSize: 16,
-    color: '#8C7670',
+    color: '#5F4C46',
     lineHeight: 24,
     letterSpacing: 0.1,
   },

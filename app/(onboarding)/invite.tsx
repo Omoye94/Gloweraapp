@@ -1,8 +1,8 @@
 import { View, Text, StyleSheet, Pressable, Share, Image } from 'react-native';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import { OnboardingScreen } from '../../src/components/onboarding';
 
 const PLANT_BUD = require('../../assets/plants/bud.png');
 
@@ -31,14 +31,7 @@ export default function InviteScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={['#1A1028', '#2A1A38', '#1A1028']}
-        start={{ x: 0.3, y: 0 }}
-        end={{ x: 0.7, y: 1 }}
-        style={StyleSheet.absoluteFillObject}
-      />
-
+    <OnboardingScreen variant="warm">
       <View style={[styles.inner, { paddingBottom: insets.bottom + 32 }]}>
         {/* Plant */}
         <View style={styles.plantCircle}>
@@ -69,12 +62,11 @@ export default function InviteScreen() {
           </Pressable>
         </View>
       </View>
-    </View>
+    </OnboardingScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   inner: {
     flex: 1,
     alignItems: 'center',
@@ -86,34 +78,41 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 70,
-    backgroundColor: 'rgba(255,255,255,0.07)',
-    borderWidth: 1,
-    borderColor: 'rgba(242,180,204,0.20)',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: 'rgba(196,90,130,0.25)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 36,
+    shadowColor: '#C45A82',
+    shadowOpacity: 0.32,
+    shadowRadius: 36,
+    shadowOffset: { width: 0, height: 14 },
+    elevation: 10,
   },
   plantImage: { width: 110, height: 110 },
 
   eyebrow: {
     fontFamily: 'SpaceMono-Bold',
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 2,
-    color: '#E87FA6',
+    color: '#C45A82',
     marginBottom: 14,
   },
   title: {
     fontFamily: 'PlayfairDisplay',
     fontSize: 32,
-    color: '#FFF6F2',
+    fontWeight: '600',
+    color: '#3A2E2B',
     textAlign: 'center',
     lineHeight: 42,
+    letterSpacing: -0.3,
     marginBottom: 18,
   },
   body: {
     fontFamily: 'DMSans',
-    fontSize: 15,
-    color: 'rgba(255,246,242,0.62)',
+    fontSize: 16,
+    color: 'rgba(58,46,43,0.75)',
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 48,
@@ -121,20 +120,21 @@ const styles = StyleSheet.create({
 
   actions: { width: '100%', gap: 14 },
   inviteBtn: {
-    backgroundColor: '#E87FA6',
+    backgroundColor: '#3A2E2B',
     borderRadius: 100,
     paddingVertical: 18,
     alignItems: 'center',
-    shadowColor: '#E87FA6',
-    shadowOpacity: 0.35,
+    shadowColor: '#3A2E2B',
+    shadowOpacity: 0.28,
     shadowRadius: 24,
-    shadowOffset: { width: 0, height: 6 },
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
   },
   inviteBtnText: {
     fontFamily: 'DMSans',
     fontSize: 12,
     fontWeight: '500',
-    color: '#1A1028',
+    color: '#FFF6F2',
     letterSpacing: 1.6,
     textTransform: 'uppercase',
   },
@@ -145,6 +145,6 @@ const styles = StyleSheet.create({
   skipBtnText: {
     fontFamily: 'DMSans',
     fontSize: 14,
-    color: 'rgba(255,246,242,0.40)',
+    color: 'rgba(58,46,43,0.55)',
   },
 });

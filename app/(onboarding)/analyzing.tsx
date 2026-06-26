@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { OnboardingScreen } from '../../src/components/onboarding';
 import { useOnboardingStore } from '../../src/stores/onboardingStore';
 
 const STEP_DELAY = 1100;
@@ -43,7 +44,7 @@ function AnimatedStep({ label, index }: { label: string; index: number }) {
           <Text style={styles.checkmark}>✓</Text>
         </Animated.View>
       </View>
-      <Animated.Text style={[styles.stepLabel, { color: checkOpacity.interpolate({ inputRange: [0, 1], outputRange: ['rgba(255,255,255,0.7)', '#F2B4CC'] }) }]}>
+      <Animated.Text style={[styles.stepLabel, { color: checkOpacity.interpolate({ inputRange: [0, 1], outputRange: ['rgba(58,46,43,0.65)', '#C45A82'] }) }]}>
         {label}
       </Animated.Text>
     </Animated.View>
@@ -70,7 +71,7 @@ export default function AnalyzingScreen() {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <OnboardingScreen variant="warm" tone="transformation">
       <View style={styles.content}>
         <View style={styles.logoCircle}>
           <Text style={styles.logoText}>🌱</Text>
@@ -83,34 +84,35 @@ export default function AnalyzingScreen() {
           ))}
         </View>
       </View>
-    </View>
+    </OnboardingScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   content: { flex: 1, paddingHorizontal: 24, paddingTop: 48, alignItems: 'center' },
   logoCircle: {
     width: 100, height: 100, borderRadius: 50,
-    backgroundColor: 'rgba(232,127,166,0.15)',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2, borderColor: 'rgba(196,90,130,0.25)',
     alignItems: 'center', justifyContent: 'center',
     marginBottom: 32,
-    shadowColor: '#E87FA6', shadowOpacity: 0.2, shadowRadius: 40, shadowOffset: { width: 0, height: 0 },
+    shadowColor: '#C45A82', shadowOpacity: 0.32, shadowRadius: 36, shadowOffset: { width: 0, height: 14 }, elevation: 10,
   },
   logoText: { fontSize: 48 },
-  kicker: { fontSize: 10, fontFamily: 'SpaceMono-Bold', color: 'rgba(242,180,204,0.58)', letterSpacing: 1.4, marginBottom: 10 },
-  headline: { fontSize: 30, fontFamily: 'PlayfairDisplay', fontWeight: '600', color: '#FEFAF9', textAlign: 'center', lineHeight: 37, marginBottom: 40 },
+  kicker: { fontSize: 11, fontFamily: 'SpaceMono-Bold', color: '#C45A82', letterSpacing: 1.6, marginBottom: 10 },
+  headline: { fontSize: 32, fontFamily: 'PlayfairDisplay', fontWeight: '600', color: '#3A2E2B', textAlign: 'center', lineHeight: 40, letterSpacing: -0.3, marginBottom: 40 },
   steps: { width: '100%', gap: 16 },
   stepRow: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: 4 },
   iconWrap: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
   spinnerWrap: { position: 'absolute' },
   checkCircle: {
     width: 28, height: 28, borderRadius: 14,
-    backgroundColor: 'rgba(232,127,166,0.2)',
-    borderWidth: 1.5, borderColor: '#E87FA6',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2, borderColor: '#C45A82',
     alignItems: 'center', justifyContent: 'center',
     position: 'absolute',
+    shadowColor: '#C45A82', shadowOpacity: 0.22, shadowRadius: 8, shadowOffset: { width: 0, height: 2 },
   },
-  checkmark: { color: '#E87FA6', fontSize: 13, fontWeight: '700' },
-  stepLabel: { fontSize: 16, fontFamily: 'DMSans', flex: 1 },
+  checkmark: { color: '#C45A82', fontSize: 13, fontWeight: '700' },
+  stepLabel: { fontSize: 16, fontFamily: 'DMSans', fontWeight: '500', flex: 1 },
 });

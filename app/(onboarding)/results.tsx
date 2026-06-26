@@ -1,7 +1,6 @@
 import { ScrollView, View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import { PrimaryButton } from '../../src/components/onboarding';
+import { OnboardingScreen, PrimaryButton } from '../../src/components/onboarding';
 import { useOnboardingStore } from '../../src/stores/onboardingStore';
 
 function getGlowType(focusAreas: string[]) {
@@ -35,14 +34,9 @@ export default function ResultsScreen() {
   const topRituals = selected_rituals.slice(0, 3);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <LinearGradient
-        pointerEvents="none"
-        colors={['rgba(242,180,204,0.20)', 'rgba(155,134,212,0.10)', 'rgba(20,12,32,0)']}
-        style={styles.backdrop}
-      />
-
-      <View style={styles.main}>
+    <OnboardingScreen tone="transformation">
+      <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.main}>
         <Text style={styles.label}>YOUR GLOW TYPE</Text>
         <View style={styles.revealCard}>
           <Text style={styles.revealEyebrow}>You&apos;re a</Text>
@@ -84,56 +78,64 @@ export default function ResultsScreen() {
         </View>
       </View>
 
-      <View style={styles.bottom}>
-        <PrimaryButton
-          title="Enter my glow garden"
-          onPress={() => router.push('/(onboarding)/dailyglow')}
-        />
-      </View>
-    </ScrollView>
+        <View style={styles.bottom}>
+          <PrimaryButton
+            title="Enter my glow garden"
+            onPress={() => router.push('/(onboarding)/firstgrowth')}
+          />
+        </View>
+      </ScrollView>
+    </OnboardingScreen>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 40, justifyContent: 'space-between' },
-  backdrop: { position: 'absolute', top: 0, left: 0, right: 0, height: 520 },
   main: { flex: 1, paddingTop: 8 },
   label: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: 'SpaceMono-Bold',
-    color: 'rgba(242,180,204,0.62)',
-    letterSpacing: 1.4,
+    color: '#C45A82',
+    letterSpacing: 1.6,
     marginBottom: 14,
   },
   revealCard: {
-    minHeight: 214,
+    minHeight: 224,
     borderRadius: 28,
-    padding: 24,
+    padding: 28,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(255,255,255,0.07)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(242,180,204,0.24)',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2.5,
+    borderColor: '#C45A82',
+    borderLeftWidth: 6,
+    borderLeftColor: '#C45A82',
     marginBottom: 18,
+    shadowColor: '#C45A82',
+    shadowOpacity: 0.42,
+    shadowRadius: 38,
+    shadowOffset: { width: 0, height: 18 },
+    elevation: 14,
   },
   revealEyebrow: {
     fontSize: 16,
     fontFamily: 'PlayfairDisplay-Italic',
-    color: 'rgba(242,180,204,0.76)',
+    color: '#C45A82',
     marginBottom: 4,
   },
   revealTitle: {
     fontSize: 38,
     fontFamily: 'PlayfairDisplay',
     fontWeight: '600',
-    color: '#FEFAF9',
+    color: '#3A2E2B',
     lineHeight: 45,
+    letterSpacing: -0.5,
     marginBottom: 12,
   },
   revealLine: {
     fontSize: 15,
     fontFamily: 'DMSans',
-    color: 'rgba(255,255,255,0.62)',
+    color: 'rgba(58,46,43,0.75)',
     lineHeight: 23,
   },
   planBlock: {
@@ -141,75 +143,94 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   blockLabel: {
-    fontSize: 9,
+    fontSize: 10,
     fontFamily: 'SpaceMono-Bold',
-    color: 'rgba(242,180,204,0.50)',
-    letterSpacing: 1.2,
+    color: '#C45A82',
+    letterSpacing: 1.4,
     marginBottom: 8,
   },
   gardenName: {
     fontSize: 28,
     fontFamily: 'PlayfairDisplay',
     fontWeight: '600',
-    color: '#FEFAF9',
+    color: '#3A2E2B',
+    letterSpacing: -0.4,
     marginBottom: 8,
   },
   planText: {
     fontSize: 15,
     fontFamily: 'DMSans',
-    color: 'rgba(255,255,255,0.52)',
+    color: 'rgba(58,46,43,0.72)',
     lineHeight: 23,
   },
-  ritualStack: { gap: 8, marginBottom: 16 },
+  ritualStack: { gap: 10, marginBottom: 16 },
   ritualRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 13,
-    paddingHorizontal: 16,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.055)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: 'rgba(58,46,43,0.14)',
+    shadowColor: '#3A2E2B',
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
   ritualNumber: {
     fontSize: 10,
     fontFamily: 'SpaceMono-Bold',
-    color: 'rgba(242,180,204,0.55)',
+    color: '#C45A82',
     width: 22,
+    letterSpacing: 0.8,
   },
   ritualText: {
     flex: 1,
     fontSize: 15,
     fontFamily: 'DMSans',
-    color: 'rgba(255,255,255,0.72)',
+    fontWeight: '500',
+    color: '#3A2E2B',
   },
   intentionCard: {
-    borderRadius: 20,
-    padding: 18,
-    backgroundColor: 'rgba(232,127,166,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(232,127,166,0.18)',
+    borderRadius: 22,
+    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: 'rgba(196,90,130,0.3)',
     marginBottom: 16,
+    shadowColor: '#C45A82',
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 6,
   },
   intentionText: {
     fontSize: 16,
     fontFamily: 'PlayfairDisplay-Italic',
-    color: 'rgba(255,255,255,0.68)',
+    color: 'rgba(58,46,43,0.78)',
     lineHeight: 24,
   },
   proofStrip: {
     borderRadius: 999,
-    paddingVertical: 13,
-    paddingHorizontal: 18,
-    backgroundColor: 'rgba(184,207,177,0.10)',
-    borderWidth: 1,
-    borderColor: 'rgba(184,207,177,0.20)',
+    paddingVertical: 14,
+    paddingHorizontal: 22,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: 'rgba(143,168,134,0.55)',
+    shadowColor: '#3A2E2B',
+    shadowOpacity: 0.1,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 3,
   },
   proofText: {
     fontSize: 13,
     fontFamily: 'DMSans',
-    color: 'rgba(255,255,255,0.58)',
+    fontWeight: '500',
+    color: '#3A2E2B',
     textAlign: 'center',
     lineHeight: 19,
   },

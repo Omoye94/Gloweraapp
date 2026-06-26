@@ -179,7 +179,7 @@ export default function GardenScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerLabel}>INNER GARDEN</Text>
+          <Text style={styles.headerLabel}>inner garden</Text>
           <Text style={styles.headerTitle}>Nurturing your ritual</Text>
         </View>
 
@@ -204,7 +204,7 @@ export default function GardenScreen() {
           <View style={styles.card}>
             <View style={styles.glowHeader}>
               <View>
-                <Text style={styles.monoLabel}>GLOW METER</Text>
+                <Text style={styles.monoLabel}>glow meter</Text>
                 <Text style={styles.glowStageName}>{STAGE_LABELS[stage]} Stage</Text>
               </View>
               <Text style={styles.glowPct}>{progressPercent}%</Text>
@@ -223,17 +223,17 @@ export default function GardenScreen() {
         {/* Stats row */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <Text style={styles.monoLabelSm}>STREAK</Text>
+            <Text style={styles.monoLabelSm}>streak</Text>
             <Text style={styles.statValue}>{streak}</Text>
             <Text style={styles.statUnit}>days</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.monoLabelSm}>THIS WEEK</Text>
+            <Text style={styles.monoLabelSm}>this week</Text>
             <Text style={styles.statValue}>{thisWeekCount}/7</Text>
             <Text style={styles.statUnit}>days</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.monoLabelSm}>BEST</Text>
+            <Text style={styles.monoLabelSm}>best</Text>
             <Text style={styles.statValue}>{longestStreak}</Text>
             <Text style={styles.statUnit}>days</Text>
           </View>
@@ -241,7 +241,7 @@ export default function GardenScreen() {
 
         {/* Growth Journey */}
         <View style={styles.journeySection}>
-          <Text style={styles.journeyLabel}>GROWTH JOURNEY</Text>
+          <Text style={styles.journeyLabel}>growth journey</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.journeyScroll}>
             {STAGE_ORDER.map((s, idx) => {
               const reached    = plant.totalLifetimePoints >= GROWTH_THRESHOLDS[s];
@@ -273,7 +273,7 @@ export default function GardenScreen() {
         {stage === 'glow' && (
           <View style={styles.prestigeSection}>
             <View style={styles.prestigeHeader}>
-              <Text style={styles.journeyLabel}>GLOW ERA · PRESTIGE REWARDS</Text>
+              <Text style={styles.journeyLabel}>glow era · prestige rewards</Text>
               <View style={styles.prestigePtsPill}>
                 <Text style={styles.prestigePtsPillText}>✦ {prestigePts.toLocaleString()} pts</Text>
               </View>
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#EDD5CB' },
 
   header: { alignItems: 'center', paddingHorizontal: 24, marginBottom: 8 },
-  headerLabel: { fontFamily: 'SpaceMono-Bold', fontSize: 10, color: '#5C3D2E', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 6 },
+  headerLabel: { fontFamily: 'PlayfairDisplay-Italic', fontStyle: 'italic', fontSize: 14, color: 'rgba(196,90,130,0.85)', letterSpacing: 0.2, marginBottom: 6 },
   headerTitle: { fontFamily: 'Raleway-SemiBold', fontSize: 28, fontWeight: '500', color: '#1A0A06', letterSpacing: -0.3, textAlign: 'center' },
 
   plantArea: { alignItems: 'center', paddingHorizontal: 24, paddingTop: 32, paddingBottom: 0, position: 'relative' },
@@ -385,8 +385,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF', borderRadius: 24, padding: 20,
     shadowColor: '#C4A99A', shadowOpacity: 0.07, shadowRadius: 16, shadowOffset: { width: 0, height: 2 },
   },
-  monoLabel: { fontFamily: 'SpaceMono-Bold', fontSize: 10, color: '#5C3D2E', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 4 },
-  monoLabelSm: { fontFamily: 'SpaceMono-Bold', fontSize: 8, color: '#5C3D2E', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 6 },
+  monoLabel: { fontFamily: 'PlayfairDisplay-Italic', fontStyle: 'italic', fontSize: 14, color: 'rgba(196,90,130,0.85)', letterSpacing: 0.2, marginBottom: 4 },
+  monoLabelSm: { fontFamily: 'PlayfairDisplay-Italic', fontStyle: 'italic', fontSize: 12, color: 'rgba(196,90,130,0.85)', letterSpacing: 0.2, marginBottom: 6 },
   glowHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 12 },
   glowStageName: { fontFamily: 'Raleway-SemiBold', fontSize: 17, fontWeight: '500', color: '#C45A82' },
   glowPct: { fontFamily: 'DMSans', fontSize: 13, fontWeight: '500', color: '#5C3D2E' },
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
   statUnit: { fontFamily: 'DMSans', fontSize: 11, color: '#5C3D2E', marginTop: 2 },
 
   journeySection: { paddingHorizontal: 24, paddingTop: 20 },
-  journeyLabel: { fontFamily: 'SpaceMono-Bold', fontSize: 10, color: '#5C3D2E', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 20 },
+  journeyLabel: { fontFamily: 'PlayfairDisplay-Italic', fontStyle: 'italic', fontSize: 15, color: 'rgba(196,90,130,0.85)', letterSpacing: 0.2, marginBottom: 20 },
   journeyScroll: { alignItems: 'center', paddingBottom: 12, paddingHorizontal: 4 },
   connector: { flexDirection: 'row', alignItems: 'center', gap: 2, marginBottom: 28 },
   connectorLine: { width: 10, height: 2, backgroundColor: '#EADBD4', borderRadius: 1 },

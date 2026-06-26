@@ -98,8 +98,11 @@ function RootLayoutNav() {
       const inAuthGroup = segments[0] === '(auth)';
       const inOnboardingGroup = segments[0] === '(onboarding)';
       const inTabsGroup = segments[0] === '(tabs)';
+      // Top-level pushable stack routes (registered in this root layout).
+      // These are legit destinations — guard must NOT bounce them back to tabs.
+      const inPushableStack = segments[0] === 'beauty';
 
-      console.log('[Layout] inAuthGroup:', inAuthGroup, 'inOnboardingGroup:', inOnboardingGroup, 'inTabsGroup:', inTabsGroup);
+      console.log('[Layout] inAuthGroup:', inAuthGroup, 'inOnboardingGroup:', inOnboardingGroup, 'inTabsGroup:', inTabsGroup, 'inPushableStack:', inPushableStack);
 
       // If user is in onboarding group, check if they should stay there
       // (handles the case where user reset onboarding from profile)
@@ -137,10 +140,11 @@ function RootLayoutNav() {
             }
           }
 
-          // New user — show landing page first, then onboarding
+          // New user — drop them straight into the onboarding quiz.
+          // Returning users can hit "Sign in" from the problem screen footer.
           if (!inOnboardingGroup && !inAuthGroup) {
-            console.log('[Layout] Redirecting to /(auth)/welcome');
-            router.replace('/(auth)/welcome');
+            console.log('[Layout] Redirecting new user to /(onboarding)/problem');
+            router.replace('/(onboarding)/problem');
           }
           break;
 
@@ -148,7 +152,8 @@ function RootLayoutNav() {
           if (!isAuthenticated) {
             // Local onboarding unlocks the app shell before account creation.
             // Logout still lands in the auth group, where this guard leaves it alone.
-            if (inTabsGroup || inAuthGroup) {
+            // Pushable stacks (e.g. /beauty) are also legit destinations from tabs.
+            if (inTabsGroup || inAuthGroup || inPushableStack) {
               return;
             }
 
@@ -176,7 +181,8 @@ function RootLayoutNav() {
           useJourneyStore.getState().checkFutureMessages();
 
           // Authenticated users can be in onboarding (preview mode) — only redirect from auth.
-          if (!inTabsGroup && !inOnboardingGroup) {
+          // Pushable stacks (e.g. /beauty) are valid destinations from tabs.
+          if (!inTabsGroup && !inOnboardingGroup && !inPushableStack) {
             console.log('[Layout] Redirecting to /(tabs)');
             router.replace('/(tabs)');
           }
@@ -214,10 +220,6 @@ function RootLayoutNav() {
       >
         <Stack.Screen name="index" />
         <Stack.Screen
-          name="welcome-preview"
-          options={{ headerShown: false, animation: 'fade' }}
-        />
-        <Stack.Screen
           name="(auth)"
           options={{
             gestureEnabled: false,
@@ -236,6 +238,12 @@ function RootLayoutNav() {
           options={{
             gestureEnabled: false,
             animation: 'fade',
+          }}
+        />
+        <Stack.Screen
+          name="beauty"
+          options={{
+            animation: 'slide_from_right',
           }}
         />
       </Stack>
