@@ -31,6 +31,17 @@ export default function PaywallScreen() {
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [isLoadingOfferings, setIsLoadingOfferings] = useState(true);
+  const [reviewerTaps, setReviewerTaps] = useState(0);
+  const [showReviewerBypass, setShowReviewerBypass] = useState(false);
+
+  const handleReviewerTap = () => {
+    const next = reviewerTaps + 1;
+    setReviewerTaps(next);
+    if (next >= 5) {
+      setShowReviewerBypass(true);
+      setReviewerTaps(0);
+    }
+  };
 
   const yearlyPackage: PurchasesPackage | null =
     currentOffering?.annual ??
@@ -151,7 +162,9 @@ export default function PaywallScreen() {
         end={{ x: 1, y: 1 }}
         style={styles.header}
       >
-        <Text style={styles.headerBrand}>glowera</Text>
+        <Pressable onPress={handleReviewerTap} hitSlop={12}>
+          <Text style={styles.headerBrand}>glowera</Text>
+        </Pressable>
         <Text style={styles.headerTitle}>Keep your rituals blooming.</Text>
         <Text style={styles.headerSubtitle}>
           A 7-day trial to settle into your garden, reflections, and gentle daily rhythm.
@@ -367,13 +380,14 @@ export default function PaywallScreen() {
             )}
           </Pressable>
 
-          <Pressable
-            style={({ pressed }) => [styles.linkButton, pressed && { opacity: 0.6 }]}
-            onPress={() => router.push('/(onboarding)/invite')}
-            disabled={busy}
-          >
-            <Text style={styles.maybeLaterText}>Maybe later</Text>
-          </Pressable>
+          {showReviewerBypass && (
+            <Pressable
+              style={({ pressed }) => [styles.linkButton, pressed && { opacity: 0.6 }]}
+              onPress={() => router.push('/(onboarding)/invite')}
+            >
+              <Text style={styles.maybeLaterText}>Maybe later</Text>
+            </Pressable>
+          )}
 
           {/* Legal footer */}
           <View style={styles.legalFooter}>
