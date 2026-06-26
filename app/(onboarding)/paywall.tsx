@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert, ActivityIndicator, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -31,15 +31,14 @@ export default function PaywallScreen() {
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [isLoadingOfferings, setIsLoadingOfferings] = useState(true);
-  const [reviewerTaps, setReviewerTaps] = useState(0);
+  const reviewerTapCount = useRef(0);
   const [showReviewerBypass, setShowReviewerBypass] = useState(false);
 
   const handleReviewerTap = () => {
-    const next = reviewerTaps + 1;
-    setReviewerTaps(next);
-    if (next >= 5) {
+    reviewerTapCount.current += 1;
+    if (reviewerTapCount.current >= 5) {
+      reviewerTapCount.current = 0;
       setShowReviewerBypass(true);
-      setReviewerTaps(0);
     }
   };
 
